@@ -1,15 +1,6 @@
 #include "XSecAna/CrossSectionAnalysis.h"
 
-// cafana includes
-#include "CAFAna/Core/Spectrum.h"
-#include "CAFAna/Unfold/UnfoldIterative.h"
-#include "CAFAna/Unfold/UnfoldTikhonov.h"
-#include "CAFAna/Unfold/UnfoldSVD.h"
-#include "CAFAna/Unfold/UnfoldMaxEnt.h"
-
 // root includes
-#include "TH2.h"
-#include "TH3.h"
 #include "TDirectory.h"
 
 #include <iostream>
@@ -19,11 +10,13 @@ namespace xsec {
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator>
-  TH1 * 
+	   class UncertaintyPropogator,
+	   class HistType>
+  const HistType * 
   CrossSectionAnalysis<CrossSectionType,
 		       UnfoldType,
-		       UncertaintyPropogator>::
+		       UncertaintyPropogator,
+		       HistType>::
   UnfoldedCrossSection(std::string syst_name,
 		       double ntargets)
   {    
@@ -38,7 +31,7 @@ namespace xsec {
     else {
       if(fUnfoldedShiftedXSec.find(syst_name) == fUnfoldedShiftedXSec.end()) {
 	fUnfoldedShiftedXSec[syst_name] = 
-	  fShiftedXSec.at(syst_name)->Invoke(CrossSectionType::UnfoldedCrossSection,
+	  fShiftedXSec.at(syst_name)->Invoke(&CrossSectionType::UnfoldedCrossSection,
 					     fData,
 					     fUnfold,
 					     ntargets);
@@ -50,11 +43,13 @@ namespace xsec {
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator>
+	   class UncertaintyPropogator,
+	   class HistType>
   void
   CrossSectionAnalysis<CrossSectionType,
 		       UnfoldType,
-		       UncertaintyPropogator>::
+		       UncertaintyPropogator,
+		       HistType>::
   SaveTo(TDirectory * dir, std::string subdir) const
   {
     TDirectory * tmp = gDirectory;
@@ -82,13 +77,16 @@ namespace xsec {
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator>
+	   class UncertaintyPropogator,
+	   class HistType>
   std::unique_ptr<CrossSectionAnalysis<CrossSectionType,
 				       UnfoldType, 
-				       UncertaintyPropogator> > 
+				       UncertaintyPropogator,
+				       HistType> > 
   CrossSectionAnalysis<CrossSectionType,
 		       UnfoldType,
-		       UncertaintyPropogator>::
+		       UncertaintyPropogator,
+		       HistType>::
   LoadFrom(TDirectory * dir, std::string subdir)
   {
     TDirectory * tmp = gDirectory;
@@ -100,7 +98,7 @@ namespace xsec {
 
     auto unfold = UnfoldType::LoadFrom(dir, "fUnfold");
 
-    auto data = ana::Spectrum::LoadFrom(dir, "fData");
+    auto data = HistType::LoadFrom(dir, "fData");
 
     auto nominal_xsec = CrossSectionType::LoadFrom(dir, "fNominalXSec");
     std::map<std::string, Systematic<CrossSectionType> > shifted_xsec;
@@ -112,7 +110,8 @@ namespace xsec {
 
     return std::make_unique<CrossSectionAnalysis<CrossSectionType,
 						 UnfoldType, 
-						 UncertaintyPropogator> > 
+						 UncertaintyPropogator,
+						 HistType> > 
       (nominal_xsec,
        shifted_xsec,
        unfold,
@@ -124,16 +123,24 @@ namespace xsec {
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator>
+	   class UncertaintyPropogator,
+	   class HistType>
   CrossSectionAnalysis<CrossSectionType,
 		       UnfoldType,
-		       UncertaintyPropogator>::
+		       UncertaintyPropogator,
+		       HistType>::
   ~CrossSectionAnalysis()
   {
-    delete fSelectionCut;
-    delete fSignalCut;
-    delete fRecoAxis;
-    delete fTruthAxis;
+    delete fUnfold;
+    delete fData;
+    delete fNominalXSec;
+    for(auto map_it = fUnfoldedShiftedXSec.begin(); map_it != fUnfoldedShiftedXSec.end(); map_it++) {
+      delete map_it->second;
+    }
+    for(auto map_it = fShiftedXSec.begin(); map_it != fShiftedXSec.end(); map_it++) {
+      delete map_it->second;
+    }
+    fUnfoldedShiftedXSec.clear();
   }
 
 

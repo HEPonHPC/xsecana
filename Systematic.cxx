@@ -1,14 +1,10 @@
 #include "XSecAna/Systematic.h"
 
-#include "TH1.h"
 #include "TDirectory.h"
 #include "TObjString.h"
 #include "TString.h"
 
 namespace xsec {
-  template class Systematic<TH1>;
-  template class OneSidedSystematic<TH1>;
-  template class TwoSidedSystematic<TH1>;
 
   ////////////////////////////////////////////////////////////
   template<class T>
@@ -18,13 +14,9 @@ namespace xsec {
   {
     OneSidedSystematic<T> * ret;
     ret->fName = this->fName;
-    if constexpr(std::is_same<T, TH1>::value) {
-	ret->fShift = (TH1*) fShift->Clone();
-      }
-    else {
-      ret->fShift = new T(*fShift);
-    }
-    std::invoke(&f, ret->fShift, args...);
+    ret->fShift = new T(*fShift);
+
+    std::invoke(f, ret->fShift, args...);
     return ret;
   }
 
@@ -50,12 +42,7 @@ namespace xsec {
 
     ret->fUniverses = std::vector<T>(this->fUniverses.size());
     for(auto i = 0u; i < fUniverses.size(); i++) {
-      if constexpr(std::is_same<T, TH1>::value) {
-	  ret->fUniverses[i] = (TH1*) fUniverses[i]->Clone();
-	}
-      else {
-	ret->fUniverses[i] = new T(*fUniverses[i]);
-      }
+      ret->fUniverses[i] = new T(*fUniverses[i]);
       std::invoke(&f, ret->fUniverses[i], args...);
     }
     return ret;
@@ -98,12 +85,8 @@ namespace xsec {
     TObjString("OneSidedSystematic").Write("type");
     TObjString(this->fName.c_str()).Write("fName");
 
-    if constexpr(std::is_same<T, TH1>::value) {
-	fShift->Write("fShift");
-      }
-    else {
-      fShift->SaveTo(dir, "fShift");
-    }
+    fShift->SaveTo(dir, "fShift");
+
 
     delete dir;
     tmp->cd();
@@ -181,15 +164,50 @@ namespace xsec {
     delete ptag;
     
     std::string name = ((TObjString*) dir->Get("fName"))->GetString().Data();
-    T * shift;
-    if constexpr(std::is_same<T, TH1>::value) {
-	shift = (T*) dir->Get("fShift");
-      }
-    else {
-      shift = T::LoadFrom(dir, "fShift").release();
-    }
+    T * shift = T::LoadFrom(dir, "fShift").release();
 
     return std::make_unique<OneSidedSystematic<T> >(name, shift);
   }
-  
+
+  /*
+  ////////////////////////////////////////////////////////////
+  template<class T>
+  T *
+  MultiverseSystematic<T>::Shift(const T * nominal, double nsigma) const
+  {  
+    MultiverseSystematic<T> hists = this->Invoke(ToHist);
+  }
+
+  ///////////////////////////////////////////////////////////////////////
+  // Calculate the universe that marks the n sigma shift
+  // copied from ana::GenieMultiverse::BinSigma()
+  double
+  MultiverseSystematic<T>::BinSigma(std::vector<double> events,
+				    double nsigma, 
+				    double pivot)
+  {
+    int pivotbin = 0;
+    double pivotbincenter = 0;
+    std::sort(events.begin(), events.end());
+    for(int i = 0; i < (int) events.size() - 1; i++) {
+      if(pivot >= events[i] && pivot < events[i+1]) {
+	pivotbin = i;
+	break;
+      }
+    }
+    pivotbincenter = pivotbin+0.5;
+    double count_fraction = 2.0 * (ROOT::Math::normal_cdf(nsigma) - ROOT::Math::normal_cdf(0));
+
+    int nsideevents = 0;
+    int lastbinindex = (int) events.size() - 1;
+    if(nsigma >= 0) nsideevents = lastbinindex - pivotbin;
+    else nsideevents = pivotbin;
+    int boundIdx = pivotbincenter + count_fraction*(double)nsideevents;
+
+    int index = 0;
+    if(nsigma >= 0) index = std::min(boundIdx, (int)events.size() - 1);
+    else index = std::max(boundIdx, 0);
+    return events.at(index);
+  }
+  */
 }

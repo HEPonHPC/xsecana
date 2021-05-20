@@ -3,56 +3,37 @@
 #include <string>
 #include <map>
 
-#include "TGraphAsymmErrors.h"
-#include "TH1.h"
-#include "TVector3.h"
-
-#include "CAFAna/Core/Cut.h"
-#include "CAFAna/Core/HistAxis.h"
-#include "CAFAna/Core/SystShifts.h"
-
 #include "XSecAna/Systematic.h"
+#include "XSecAna/Hist.h"
 
 namespace xsec {
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator>
+	   class UncertaintyPropogator,
+	   class HistType>
   class CrossSectionAnalysis {
 
   public:
-    CrossSectionAnalysis(const ana::NuTruthCut & signal_cut,
-			 const ana::Cut & selection_cut,
-			 const ana::NuTruthHistAxis & truth_axis,
-			 const ana::HistAxis & reco_axis)
-      : fSignalCut(new ana::NuTruthCut(signal_cut)),
-	fSelectionCut(new ana::Cut(selection_cut)),
-	fTruthAxis(new ana::NuTruthHistAxis(truth_axis)),
-	fRecoAxis(new ana::HistAxis(reco_axis))
-    {}
-			  
+    /// \brief Forward to UncertaintyPropogator
+
+    HistType * RelativeXSecUncertainty(std::string syst_name);
 
     /// \brief Forward to UncertaintyPropogator
-    TH1 * RelativeXSecUncertainty(std::string syst_name);
-
-    /// \brief Forward to UncertaintyPropogator
-    std::pair<TH1*, TH1*> TotalXSecUncertainty();
+    std::pair<HistType, HistType> TotalXSecUncertainty();
     
-    TH1 * UnfoldedCrossSection(std::string syst_name, double ntargets);
-
-    /// \brief call Go on all loaders
-    void Go();
+    const HistType * UnfoldedCrossSection(std::string syst_name, double ntargets);
 
     ~CrossSectionAnalysis();
+
     void SaveTo(TDirectory * dir, std::string subdir) const;
     static std::unique_ptr<CrossSectionAnalysis> LoadFrom(TDirectory * dir, std::string name);
-
 
   protected:
     ///\brief constructor for loading analysis from file
     CrossSectionAnalysis(CrossSectionType * nominal_xsec,
 			 std::map<std::string, Systematic<CrossSectionType> > shifted_xsec,
 			 UnfoldType * unfold,
-			 ana::Spectrum * data)
+			 HistType * data)
       : fNominalXSec(nominal_xsec),
 	fShiftedXSec(shifted_xsec),
 	fUnfold(unfold),
@@ -65,19 +46,12 @@ namespace xsec {
     std::map<std::string, Systematic<CrossSectionType> > fShiftedXSec;
 
     UnfoldType * fUnfold = NULL;
-    const ana::Spectrum * fData  = NULL;
+    const HistType * fData  = NULL;
 
     // cache the nominal unfolded results
-    TH1 * fUnfoldedNominalXSec;
+    HistType * fUnfoldedNominalXSec;
 
     // cache the unfolded shifted results
-    std::map<std::string, Systematic<TH1> > fUnfoldedShiftedXSec;
-
-    const ana::Cut * fSelectionCut          = NULL;
-    const ana::HistAxis * fRecoAxis         = NULL;
-    const ana::NuTruthCut * fSignalCut      = NULL;
-    const ana::NuTruthHistAxis * fTruthAxis = NULL;
-
-
+    std::map<std::string, Systematic<HistType> > fUnfoldedShiftedXSec;
   };
 }

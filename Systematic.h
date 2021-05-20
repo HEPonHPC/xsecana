@@ -83,9 +83,13 @@ namespace xsec {
     MultiverseSystematic<T> * Invoke(F f, Args... args) const;
 
     void SaveTo(TDirectory * dir, std::string name) const; 
+    
+    T * Shift(const T * nominal, double nsigma = 1) const;
+    
     static std::unique_ptr<MultiverseSystematic> LoadFrom(TDirectory * dir, std::string name); 
 
   private:
+    double BinSigma(std::vector<double> values, double nsigma, double pivot);
     std::vector<T> fUniverses;
 
   };
