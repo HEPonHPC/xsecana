@@ -14,13 +14,23 @@ namespace xsec {
   class CrossSectionAnalysis {
 
   public:
-    /// \brief Forward to UncertaintyPropogator
-
-    HistType * RelativeXSecUncertainty(std::string syst_name);
 
     /// \brief Forward to UncertaintyPropogator
-    std::pair<HistType, HistType> TotalXSecUncertainty();
-    
+    HistType * AbsoluteUncertaintyXSec(std::string syst_name, double ntargets);
+    HistType * AbsoluteUncertaintyUnfoldedXSec(std::string syst_name, double ntargets);
+
+    /// \brief Forward to UncertaintyPropogator
+    HistType * FractionalUncertaintyXSec(std::string syst_name, double ntargets);
+    HistType * FractionalUncertaintyUnfoldedXSec(std::string syst_name, double ntargets);
+
+    /// \brief Forward to UncertaintyPropogator
+    std::pair<HistType*, HistType*> TotalAbsoluteUncertaintyXSec          (double ntargets);
+    std::pair<HistType*, HistType*> TotalAbsoluteUncertaintyUnfoldedXSec  (double ntargets);
+    std::pair<HistType*, HistType*> TotalFractionalUncertaintyXSec        (double ntargets);
+    std::pair<HistType*, HistType*> TotalFractionalUncertaintyUnfoldedXSec(double ntargets);
+
+    /// \brief Return an unfolded cross section result for the input systematic 
+    /// pass syst_name = "nominal" for the nominal result
     const HistType * UnfoldedCrossSection(std::string syst_name, double ntargets);
 
     ~CrossSectionAnalysis();

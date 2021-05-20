@@ -50,11 +50,14 @@ namespace xsec {
 	fDown(new OneSidedSystematic<T>(name+"_dw", dw))
     {}
 
-    void SaveTo(TDirectory * dir, std::string name) const; 
-    static std::unique_ptr<TwoSidedSystematic> LoadFrom(TDirectory * dir, std::string name); 
-
+    std::pair<const T *, const T *> GetShifts() const
+    { return std::pair<const T *, const T *>{fUp->GetShift(), fDown->GetShift()}; }
+    
     template<class F, class... Args>
     TwoSidedSystematic<T> * Invoke(F f, Args... args) const;
+
+    void SaveTo(TDirectory * dir, std::string name) const; 
+    static std::unique_ptr<TwoSidedSystematic> LoadFrom(TDirectory * dir, std::string name); 
 
     // LoadFrom constructor
     TwoSidedSystematic(std::string name,
@@ -84,7 +87,7 @@ namespace xsec {
 
     void SaveTo(TDirectory * dir, std::string name) const; 
     
-    T * Shift(const T * nominal, double nsigma = 1) const;
+    const std::vector<T> GetUniverses() const { return fUniverses; }
     
     static std::unique_ptr<MultiverseSystematic> LoadFrom(TDirectory * dir, std::string name); 
 

@@ -168,46 +168,4 @@ namespace xsec {
 
     return std::make_unique<OneSidedSystematic<T> >(name, shift);
   }
-
-  /*
-  ////////////////////////////////////////////////////////////
-  template<class T>
-  T *
-  MultiverseSystematic<T>::Shift(const T * nominal, double nsigma) const
-  {  
-    MultiverseSystematic<T> hists = this->Invoke(ToHist);
-  }
-
-  ///////////////////////////////////////////////////////////////////////
-  // Calculate the universe that marks the n sigma shift
-  // copied from ana::GenieMultiverse::BinSigma()
-  double
-  MultiverseSystematic<T>::BinSigma(std::vector<double> events,
-				    double nsigma, 
-				    double pivot)
-  {
-    int pivotbin = 0;
-    double pivotbincenter = 0;
-    std::sort(events.begin(), events.end());
-    for(int i = 0; i < (int) events.size() - 1; i++) {
-      if(pivot >= events[i] && pivot < events[i+1]) {
-	pivotbin = i;
-	break;
-      }
-    }
-    pivotbincenter = pivotbin+0.5;
-    double count_fraction = 2.0 * (ROOT::Math::normal_cdf(nsigma) - ROOT::Math::normal_cdf(0));
-
-    int nsideevents = 0;
-    int lastbinindex = (int) events.size() - 1;
-    if(nsigma >= 0) nsideevents = lastbinindex - pivotbin;
-    else nsideevents = pivotbin;
-    int boundIdx = pivotbincenter + count_fraction*(double)nsideevents;
-
-    int index = 0;
-    if(nsigma >= 0) index = std::min(boundIdx, (int)events.size() - 1);
-    else index = std::max(boundIdx, 0);
-    return events.at(index);
-  }
-  */
 }
