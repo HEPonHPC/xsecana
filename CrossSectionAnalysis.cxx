@@ -24,13 +24,14 @@ namespace xsec {
   CrossSectionAnalysis<CrossSectionType,
 		       UnfoldType,
 		       UncertaintyPropogator>::
-  UnfoldedCrossSection(std::string syst_name)
+  UnfoldedCrossSection(std::string syst_name,
+		       double ntargets)
   {    
     if(syst_name == "nominal") {
       if(!fUnfoldedNominalXSec)  {
 	fUnfoldedNominalXSec = fNominalXSec->UnfoldedCrossSection(fData, 
 								  fUnfold, 
-								  this->NTargets());
+								  ntargets);
       }
       return fUnfoldedNominalXSec;
     }
@@ -40,7 +41,7 @@ namespace xsec {
 	  fShiftedXSec.at(syst_name)->Invoke(CrossSectionType::UnfoldedCrossSection,
 					     fData,
 					     fUnfold,
-					     this->NTargets());
+					     ntargets);
 									     
       }
     }

@@ -37,7 +37,7 @@ namespace xsec {
     /// \brief Forward to UncertaintyPropogator
     std::pair<TH1*, TH1*> TotalXSecUncertainty();
     
-    TH1 * UnfoldedCrossSection(std::string syst_name);
+    TH1 * UnfoldedCrossSection(std::string syst_name, double ntargets);
 
     /// \brief call Go on all loaders
     void Go();
