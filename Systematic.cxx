@@ -1,8 +1,9 @@
 #include "XSecAna/Systematic.h"
 
-#include "TDirectory.h"
 #include "TObjString.h"
 #include "TString.h"
+
+#include <functional>
 
 namespace xsec {
 

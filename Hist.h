@@ -1,4 +1,7 @@
+#pragma once
+
 #include <Eigen/Dense>
+#include "TDirectory.h"
 
 namespace xsec {
   // Histograming object used internally by the framework
@@ -13,6 +16,7 @@ namespace xsec {
     Hist(const Eigen::Array<Scalar, Rows, Cols> & contents,
 	 const Eigen::Array<Scalar, Rows, Cols> & Edges);
 
+    void SaveTo(TDirectory * dir, std::string subdir) const;
 
     Hist operator-(const Hist& rhs) const;
     Hist operator+(const Hist& rhs) const;
@@ -37,7 +41,8 @@ namespace xsec {
   private:
     Eigen::Array<Scalar, Rows, Cols> fEdges;
     Eigen::Array<Scalar, Rows, Cols> fContents;
-
   };
 
+  typedef Hist<double, Eigen::Dynamic, Eigen::Dynamic> HistXXd;
+  typedef Hist<float , Eigen::Dynamic, Eigen::Dynamic> HistXXf;
 }

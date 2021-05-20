@@ -1,7 +1,6 @@
 #pragma once
 
-#include "CAFAna/Core/Spectrum.h"
-#include "CAFAna/XSec/Multiverse.h"
+#include "TDirectory.h"
 
 namespace xsec {
   //-------------------------------------------------------

@@ -9,8 +9,8 @@
 namespace xsec {
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
-	   class HistType>
+	   template<class, class, class> class UncertaintyPropogator,
+	   class HistType = HistXXd>
   class CrossSectionAnalysis {
 
   public:
@@ -63,5 +63,8 @@ namespace xsec {
 
     // cache the unfolded shifted results
     std::map<std::string, Systematic<HistType> > fUnfoldedShiftedXSec;
+
+    // 
+    UncertaintyPropogator<CrossSectionType, UnfoldType, HistType> * fUncertaintyPropogator = 0;
   };
 }

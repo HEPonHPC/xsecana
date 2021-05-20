@@ -3,13 +3,24 @@
 // root includes
 #include "TDirectory.h"
 
-#include <iostream>
+#include "XSecAna/Hist.h"
+#include "XSecAna/ICrossSection.h"
+#include "XSecAna/IUncertaintyPropogator.h"
+#include "XSecAna/ISignalEstimator.h"
+#include "XSecAna/IEfficiency.h"
+#include "XSecAna/IUnfold.h"
+#include "XSecAna/IFlux.h"
 
 namespace xsec {
+  // make sure the interface compiles
+//  template class CrossSectionAnalysis<ICrossSection<ISignalEstimator, IEfficiency, IFlux>,
+//				      IUnfold,
+//				      IUncertaintyPropogator>;
+
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   HistType * 
   CrossSectionAnalysis<CrossSectionType,
@@ -18,16 +29,17 @@ namespace xsec {
 		       HistType>::
   AbsoluteUncertaintyUnfoldedXSec(std::string syst_name, double ntargets) 
   {
-    return UncertaintyPropogator::Instance().AbsoluteUncertaintyUnfolded(fUnfold,
-									 fNominalXSec,
-									 fShiftedXSec.at(syst_name),
-									 ntargets);
+    return fUncertaintyPropogator->AbsoluteUncertaintyUnfolded(fUnfold,
+							       fNominalXSec,
+							       fShiftedXSec.at(syst_name),
+							       ntargets);
   }
+
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   HistType * 
   CrossSectionAnalysis<CrossSectionType,
@@ -36,15 +48,15 @@ namespace xsec {
 		       HistType>::
   AbsoluteUncertaintyXSec(std::string syst_name, double ntargets)
   {
-    return UncertaintyPropogator::Instance().AbsoluteUncertaintyXSec(fNominalXSec,
-								     fShiftedXSec.at(syst_name),
-								     ntargets);
+    return fUncertaintyPropogator->AbsoluteUncertaintyXSec(fNominalXSec,
+							   fShiftedXSec.at(syst_name),
+							   ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   HistType * 
   CrossSectionAnalysis<CrossSectionType,
@@ -53,16 +65,16 @@ namespace xsec {
 		       HistType>::
   FractionalUncertaintyUnfoldedXSec(std::string syst_name, double ntargets)
   {
-    return UncertaintyPropogator::Instance().FractionalUncertaintyUnfoldedXSec(fUnfold,
-									       fNominalXSec,
-									       fShiftedXSec.at(syst_name),
-									       ntargets);
+    return fUncertaintyPropogator->FractionalUncertaintyUnfoldedXSec(fUnfold,
+								     fNominalXSec,
+								     fShiftedXSec.at(syst_name),
+								     ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   HistType * 
   CrossSectionAnalysis<CrossSectionType,
@@ -71,15 +83,15 @@ namespace xsec {
 		       HistType>::
   FractionalUncertaintyXSec(std::string syst_name, double ntargets)
   {
-    return UncertaintyPropogator::Instance().FractionalUncertaintyXSec(fNominalXSec,
-								       fShiftedXSec.at(syst_name),
-								       ntargets);
+    return fUncertaintyPropogator->FractionalUncertaintyXSec(fNominalXSec,
+							     fShiftedXSec.at(syst_name),
+							     ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   std::pair<HistType*,HistType*> 
   CrossSectionAnalysis<CrossSectionType,
@@ -88,16 +100,16 @@ namespace xsec {
 		       HistType>::
   TotalAbsoluteUncertaintyUnfoldedXSec(double ntargets)
   {
-    return UncertaintyPropogator::Instance().TotalAbsoluteUncertaintyUnfoldedXSec(fUnfold,
-										  fNominalXSec,
-										  fShiftedXSec,
-										  ntargets);
+    return fUncertaintyPropogator->TotalAbsoluteUncertaintyUnfoldedXSec(fUnfold,
+									fNominalXSec,
+									fShiftedXSec,
+									ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   std::pair<HistType*,HistType*> 
   CrossSectionAnalysis<CrossSectionType,
@@ -106,15 +118,15 @@ namespace xsec {
 		       HistType>::
   TotalAbsoluteUncertaintyXSec(double ntargets)
   {
-    return UncertaintyPropogator::Instance().TotalAbsoluteUncertaintyXSec(fNominalXSec,
-									  fShiftedXSec,
-									  ntargets);
+    return fUncertaintyPropogator->TotalAbsoluteUncertaintyXSec(fNominalXSec,
+								fShiftedXSec,
+								ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   std::pair<HistType*,HistType*> 
   CrossSectionAnalysis<CrossSectionType,
@@ -123,16 +135,16 @@ namespace xsec {
 		       HistType>::
   TotalFractionalUncertaintyUnfoldedXSec(double ntargets)
   {
-    return UncertaintyPropogator::Instance().TotalFractionalUncertaintyUnfoldedXSec(fUnfold,
-										    fNominalXSec,
-										    fShiftedXSec,
-										    ntargets);
+    return fUncertaintyPropogator->TotalFractionalUncertaintyUnfoldedXSec(fUnfold,
+									  fNominalXSec,
+									  fShiftedXSec,
+									  ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   std::pair<HistType*,HistType*> 
   CrossSectionAnalysis<CrossSectionType,
@@ -141,16 +153,16 @@ namespace xsec {
 		       HistType>::
   TotalFractionalUncertaintyXSec(double ntargets)
   {
-    return UncertaintyPropogator::Instance().TotalFractionalUncertaintyXSec(fNominalXSec,
-									    fShiftedXSec,
-									    ntargets);
+    return fUncertaintyPropogator->TotalFractionalUncertaintyXSec(fNominalXSec,
+								  fShiftedXSec,
+								  ntargets);
   }
   
 
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   const HistType * 
   CrossSectionAnalysis<CrossSectionType,
@@ -183,7 +195,7 @@ namespace xsec {
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   void
   CrossSectionAnalysis<CrossSectionType,
@@ -217,7 +229,7 @@ namespace xsec {
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   std::unique_ptr<CrossSectionAnalysis<CrossSectionType,
 				       UnfoldType, 
@@ -263,7 +275,7 @@ namespace xsec {
   ///////////////////////////////////////////////////////////////////////
   template<class CrossSectionType,
 	   class UnfoldType,
-	   class UncertaintyPropogator,
+	   template<class, class, class> class UncertaintyPropogator,
 	   class HistType>
   CrossSectionAnalysis<CrossSectionType,
 		       UnfoldType,
@@ -282,6 +294,5 @@ namespace xsec {
     }
     fUnfoldedShiftedXSec.clear();
   }
-
 
 }

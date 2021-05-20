@@ -1,17 +1,29 @@
 #include "XSecAna/ICrossSection.h"
 
+#include "XSecAna/SimpleSignalEstimator.h"
+#include "XSecAna/SimpleEfficiency.h"
+#include "XSecAna/SimpleFlux.h"
+
+
 namespace xsec {
+  // make sure the interface compiles
+  template class ICrossSection<SimpleSignalEstimator<HistXXd>,
+			       SimpleEfficiency<HistXXd>,
+			       SimpleFlux<HistXXd> >;
+
   ////////////////////////////////////////////////
-  TH1 * CalculateCrossSection(TH1 * unfolded_selected_signal,
-			      TH1 * efficiency,
-			      TH1 * flux,
-			      double ntargets,
-			      bool is_differential)
+  template<class HistType>
+  HistType * CalculateCrossSection(HistType * unfolded_selected_signal,
+				   HistType * efficiency,
+				   HistType * flux,
+				   double ntargets,
+				   bool is_differential)
   {
-    TH1 * xsec = (TH1*) unfolded_selected_signal->Clone(ana::UniqueName().c_str());
-    xsec->Divide(efficiency);
-    xsec->Divide(flux);
-    xsec->Scale(1e4/ntargets, is_differential? "width" : ""); // Convert nu/m^2 to nu/cm^2
+    HistType * xsec = new HistType(*unfolded_selected_signal);
+    xsec /= efficiency;
+    xsec /= flux;
+    xsec *= 1e4/ntargets; // Convert nu/m^2 to nu/cm^2
+    if(is_differential) xsec->Normalize("width");
     return xsec;
   }
 
@@ -19,39 +31,42 @@ namespace xsec {
   template<class SignalEstimatorType, 
 	   class EfficiencyType, 
 	   class FluxType,
-	   int IsDifferential>
-  template<class UnfoldType,
-	   int UnfoldReg>
-  TH1 *
-  CrossSection<SignalEstimatorType, 
+	   bool IsDifferential,
+	   class HistType>
+  template<class UnfoldType>
+  HistType *
+  ICrossSection<SignalEstimatorType, 
 	       EfficiencyType, 
 	       FluxType,
-	       IsDifferential>::
-  UnfoldedCrossSection(const ana::Spectrum * data, UnfoldType unfold, double ntargets)
+	       IsDifferential,
+	       HistType>::
+  UnfoldedCrossSection(const HistType * data, UnfoldType unfold, double ntargets)
   {
     return CalculateCrossSection(unfold->Truth(fSignalEstimator->Signal(data)),
-						 fEfficiency(),
-						 fFlux(),
-						 ntargets,
-						 IsDifferential);
+				 fEfficiency->Efficiency(),
+				 fFlux->Flux(),
+				 ntargets,
+				 IsDifferential);
   }
 
   ////////////////////////////////////////////////
   template<class SignalEstimatorType, 
 	   class EfficiencyType, 
 	   class FluxType,
-	   int IsDifferential>
+	   bool IsDifferential,
+	   class HistType>
   void
-  CrossSection<SignalEstimatorType, 
+  ICrossSection<SignalEstimatorType, 
 	       EfficiencyType, 
 	       FluxType,
-	       IsDifferential>::
+	       IsDifferential,
+	       HistType>::
   SaveTo(TDirectory * dir, std::string subdir) const
   {
     TDirectory * tmp = gDirectory;
     dir = dir->mkdir(subdir.c_str());
     dir->cd();
-    TObjString("CrossSection").Write("type");
+    TObjString("ICrossSection").Write("type");
     
     if(fEfficiency     ) fEfficiency     ->SaveTo(dir, "fEfficiency"     );
     if(fFlux           ) fFlux           ->SaveTo(dir, "fFlux"           );
@@ -65,15 +80,18 @@ namespace xsec {
   template<class SignalEstimatorType, 
 	   class EfficiencyType, 
 	   class FluxType,
-	   int IsDifferential>
-  std::unique_ptr<CrossSection<SignalEstimatorType, 
+	   bool IsDifferential,
+	   class HistType>
+  std::unique_ptr<ICrossSection<SignalEstimatorType, 
 			       EfficiencyType, 
 			       FluxType,
-			       IsDifferential> >
-  CrossSection<SignalEstimatorType, 
+			       IsDifferential,
+			       HistType> >
+  ICrossSection<SignalEstimatorType, 
 	       EfficiencyType, 
 	       FluxType,
-	       IsDifferential>::
+	       IsDifferential,
+	       HistType>::
   LoadFrom(TDirectory * dir, std::string subdir)    
   {
     dir = dir->GetDirectory(subdir.c_str());
@@ -86,6 +104,10 @@ namespace xsec {
     if(dir->GetDirectory("fFlux"           )) flux = FluxType::           LoadFrom(dir, "fFlux"           ).release();
     if(dir->GetDirectory("fSignalEstimator")) sig  = SignalEstimatorType::LoadFrom(dir, "fSignalEstimator").release();
 
-    return std::make_unique<CrossSection<SignalEstimatorType, EfficiencyType, FluxType, IsDifferential> >(eff, sig, flux);
+    return std::make_unique<ICrossSection<SignalEstimatorType, 
+					  EfficiencyType, 
+					  FluxType, 
+					  IsDifferential,
+					  HistType> >(eff, sig, flux);
   }
 }
