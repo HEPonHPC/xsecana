@@ -17,13 +17,13 @@ namespace xsec {
   template<class CrossSectionType,
 	   class UnfoldType,
 	   class UncertaintyPropogator>
-  class ICrossSectionAnalysis {
+  class CrossSectionAnalysis {
 
   public:
-    ICrossSectionAnalysis(const ana::NuTruthCut & signal_cut,
-			  const ana::Cut & selection_cut,
-			  const ana::NuTruthHistAxis & truth_axis,
-			  const ana::HistAxis & reco_axis)
+    CrossSectionAnalysis(const ana::NuTruthCut & signal_cut,
+			 const ana::Cut & selection_cut,
+			 const ana::NuTruthHistAxis & truth_axis,
+			 const ana::HistAxis & reco_axis)
       : fSignalCut(new ana::NuTruthCut(signal_cut)),
 	fSelectionCut(new ana::Cut(selection_cut)),
 	fTruthAxis(new ana::NuTruthHistAxis(truth_axis)),
@@ -42,17 +42,17 @@ namespace xsec {
     /// \brief call Go on all loaders
     void Go();
 
-    ~ICrossSectionAnalysis();
+    ~CrossSectionAnalysis();
     void SaveTo(TDirectory * dir, std::string subdir) const;
-    static std::unique_ptr<ICrossSectionAnalysis> LoadFrom(TDirectory * dir, std::string name);
+    static std::unique_ptr<CrossSectionAnalysis> LoadFrom(TDirectory * dir, std::string name);
 
 
   protected:
     ///\brief constructor for loading analysis from file
-    ICrossSectionAnalysis(CrossSectionType * nominal_xsec,
-			  std::map<std::string, Systematic<CrossSectionType> > shifted_xsec,
-			  UnfoldType * unfold,
-			  ana::Spectrum * data)
+    CrossSectionAnalysis(CrossSectionType * nominal_xsec,
+			 std::map<std::string, Systematic<CrossSectionType> > shifted_xsec,
+			 UnfoldType * unfold,
+			 ana::Spectrum * data)
       : fNominalXSec(nominal_xsec),
 	fShiftedXSec(shifted_xsec),
 	fUnfold(unfold),

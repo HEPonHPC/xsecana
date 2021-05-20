@@ -1,4 +1,4 @@
-#include "XSecAna/CrossSection.h"
+#include "XSecAna/ICrossSection.h"
 
 namespace xsec {
   ////////////////////////////////////////////////

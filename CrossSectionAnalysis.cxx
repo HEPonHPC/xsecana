@@ -1,4 +1,4 @@
-#include "XSecAna/ICrossSectionAnalysis.h"
+#include "XSecAna/CrossSectionAnalysis.h"
 
 // cafana includes
 #include "CAFAna/Core/Spectrum.h"
@@ -10,6 +10,7 @@
 // root includes
 #include "TH2.h"
 #include "TH3.h"
+#include "TDirectory.h"
 
 #include <iostream>
 
@@ -20,9 +21,9 @@ namespace xsec {
 	   class UnfoldType,
 	   class UncertaintyPropogator>
   TH1 * 
-  ICrossSectionAnalysis<CrossSectionType,
-			UnfoldType,
-			UncertaintyPropogator>::
+  CrossSectionAnalysis<CrossSectionType,
+		       UnfoldType,
+		       UncertaintyPropogator>::
   UnfoldedCrossSection(std::string syst_name)
   {    
     if(syst_name == "nominal") {
@@ -50,16 +51,16 @@ namespace xsec {
 	   class UnfoldType,
 	   class UncertaintyPropogator>
   void
-  ICrossSectionAnalysis<CrossSectionType,
-			UnfoldType,
-			UncertaintyPropogator>::
+  CrossSectionAnalysis<CrossSectionType,
+		       UnfoldType,
+		       UncertaintyPropogator>::
   SaveTo(TDirectory * dir, std::string subdir) const
   {
     TDirectory * tmp = gDirectory;
 
     dir = dir->mkdir(subdir.c_str()); // switch to subdir
     dir->cd();
-    TObjString("ICrossSectionAnalysis").Write("type");
+    TObjString("CrossSectionAnalysis").Write("type");
 
     fNominalXSec->SaveTo(dir, "fNominalXSec");
     dir->cd();
@@ -81,19 +82,19 @@ namespace xsec {
   template<class CrossSectionType,
 	   class UnfoldType,
 	   class UncertaintyPropogator>
-  std::unique_ptr<ICrossSectionAnalysis<CrossSectionType,
-					UnfoldType, 
-					UncertaintyPropogator> > 
-  ICrossSectionAnalysis<CrossSectionType,
-			UnfoldType,
-			UncertaintyPropogator>::
+  std::unique_ptr<CrossSectionAnalysis<CrossSectionType,
+				       UnfoldType, 
+				       UncertaintyPropogator> > 
+  CrossSectionAnalysis<CrossSectionType,
+		       UnfoldType,
+		       UncertaintyPropogator>::
   LoadFrom(TDirectory * dir, std::string subdir)
   {
     TDirectory * tmp = gDirectory;
     dir = dir->GetDirectory(subdir.c_str());
 
     TObjString * ptag = (TObjString*) dir->Get("type");
-    assert(ptag->GetString() == "ICrossSectionAnalysis" && "Type does not match ICrossSectionAnalysis");
+    assert(ptag->GetString() == "CrossSectionAnalysis" && "Type does not match CrossSectionAnalysis");
     delete ptag;
 
     auto unfold = UnfoldType::LoadFrom(dir, "fUnfold");
@@ -108,9 +109,9 @@ namespace xsec {
 										  syst_name->GetName()).release();
     }
 
-    return std::make_unique<ICrossSectionAnalysis<CrossSectionType,
-						  UnfoldType, 
-						  UncertaintyPropogator> > 
+    return std::make_unique<CrossSectionAnalysis<CrossSectionType,
+						 UnfoldType, 
+						 UncertaintyPropogator> > 
       (nominal_xsec,
        shifted_xsec,
        unfold,
@@ -123,10 +124,10 @@ namespace xsec {
   template<class CrossSectionType,
 	   class UnfoldType,
 	   class UncertaintyPropogator>
-  ICrossSectionAnalysis<CrossSectionType,
-			UnfoldType,
-			UncertaintyPropogator>::
-  ~ICrossSectionAnalysis()
+  CrossSectionAnalysis<CrossSectionType,
+		       UnfoldType,
+		       UncertaintyPropogator>::
+  ~CrossSectionAnalysis()
   {
     delete fSelectionCut;
     delete fSignalCut;
