@@ -2,73 +2,44 @@
 
 #include "TDirectory.h"
 
+#include <functional>
 namespace xsec {
+
   //-------------------------------------------------------
   template<class T>
   class Systematic {
   public:
-    Systematic(std::string name) 
-      : fName(name) 
+    Systematic(std::string name,
+	       T up,
+	       T dw)
+      : fName(name),
+	fUp(new T(up)),
+	fDown(new T(dw))
     {}
-    std::string GetName() const { return fName; }
-
-  protected:
-    std::string fName;
-  };
-
-  //-------------------------------------------------------
-  template<class T>
-  class OneSidedSystematic : public Systematic<T> {
-  public:
-    OneSidedSystematic(std::string name,
-		       T * shift)
-      : Systematic<T>(name), fShift(shift)
-    {}
-    
-    const T * GetShift() const { return fShift; }
-
-    template<class F, class... Args>
-    OneSidedSystematic<T> * Invoke(F f, Args... args) const;
-
-    void SaveTo(TDirectory * dir, std::string name) const; 
-    static std::unique_ptr<OneSidedSystematic> LoadFrom(TDirectory * dir, std::string name); 
-  private:
-    T * fShift;
-    
-  };
-
-  //-------------------------------------------------------
-  template<class T>
-  class TwoSidedSystematic : public Systematic<T> {
-  public:
-    TwoSidedSystematic(std::string name,
-		       T * up,
-		       T * dw)
-      : Systematic<T>(name),
-	fUp(new OneSidedSystematic<T>(name+"_up", up)),
-	fDown(new OneSidedSystematic<T>(name+"_dw", dw))
+    Systematic(std::string name,
+	       T shift)
+      : fName(name),
+	fUp(new T(shift)),
+	fDown(NULL)
     {}
 
     std::pair<const T *, const T *> GetShifts() const
-    { return std::pair<const T *, const T *>{fUp->GetShift(), fDown->GetShift()}; }
+    { return std::pair<const T *, const T *>{fUp, fDown ? fDown : fUp}; }
     
     template<class F, class... Args>
-    TwoSidedSystematic<T> * Invoke(F f, Args... args) const;
+    Systematic<std::invoke_result_t<F, T, Args...> > Invoke(F f, Args... args) const;
 
     void SaveTo(TDirectory * dir, std::string name) const; 
-    static std::unique_ptr<TwoSidedSystematic> LoadFrom(TDirectory * dir, std::string name); 
+    static std::unique_ptr<Systematic> LoadFrom(TDirectory * dir, std::string name); 
 
-    // LoadFrom constructor
-    TwoSidedSystematic(std::string name,
-		       OneSidedSystematic<T> * up,
-		       OneSidedSystematic<T> * dw)
-      : Systematic<T>(name),
-	fUp(up),
-	fDown(dw)
-    {}
+    const T & Up  () const { return fUp  ; }
+    const T & Down() const { return fDown ? fDown : fUp; }
+
+  protected:
+    std::string fName;
   private:
-    OneSidedSystematic<T> * fUp;
-    OneSidedSystematic<T> * fDown;
+    T * fUp;
+    T * fDown;
   };
     
   //-------------------------------------------------------
@@ -82,10 +53,12 @@ namespace xsec {
     {}
       
     template<class F, class... Args>
-    MultiverseSystematic<T> * Invoke(F f, Args... args) const;
+    Systematic<std::invoke_result_t<F, T, Args...> > Invoke(F f, Args... args) const;
 
     void SaveTo(TDirectory * dir, std::string name) const; 
     
+    std::pair<const T *, const T *> GetShifts() const;
+
     const std::vector<T> GetUniverses() const { return fUniverses; }
     
     static std::unique_ptr<MultiverseSystematic> LoadFrom(TDirectory * dir, std::string name); 
@@ -96,4 +69,116 @@ namespace xsec {
 
   };
 
+  ////////////////////////////////////////////////////////////
+  template<class T>
+  template<class F, class... Args>
+  Systematic<std::invoke_result_t<F, T, Args...> >
+  Systematic<T>::Invoke(F f, Args... args) const
+  {
+    if(fDown) {
+      return Systematic<std::invoke_result_t<F, T, Args...> >(this->fName,
+							      std::invoke(f, *fUp  , args...),
+							      std::invoke(f, *fDown, args...));
+    }
+    else {
+      return Systematic<std::invoke_result_t<F, T, Args...> >(this->fName,
+							      std::invoke(f, *fUp  , args...));
+    }
+
+  }
+
+  ////////////////////////////////////////////////////////////
+  template<class T>
+  template<class F, class... Args>
+  Systematic<std::invoke_result_t<F, T, Args...> > 
+  MultiverseSystematic<T>::Invoke(F f, Args... args) const
+  {
+    std::vector<std::invoke_result_t<F, T, Args...> > universes(this->fUniverses.size());
+    for(auto i = 0u; i < fUniverses.size(); i++) {
+      universes[i] = std::invoke(&f, *this->fUniverses[i], args...);
+    }
+    return MultiverseSystematic<std::invoke_result_t<F, T, Args...> >(this->fName,
+								      universes);
+  }
+
+  ////////////////////////////////////////////////////////////
+  template<class T> 
+  void 
+  MultiverseSystematic<T>::SaveTo(TDirectory * dir, std::string subdir) const
+  {
+    TDirectory * tmp = gDirectory;
+    dir->mkdir(subdir.c_str());
+    dir = dir->GetDirectory(subdir.c_str());
+    dir->cd();
+
+    TObjString("MultiverseSystematic").Write("type");
+    TObjString(this->fName.c_str()).Write("fName");
+
+    auto mv_dir = dir->mkdir("fUniverses");
+    for(auto i = 0u; i < fUniverses.size(); i++) {
+      fUniverses[i]->SaveTo(mv_dir, std::to_string(i));
+    }
+
+    delete dir;
+    tmp->cd();
+  }
+
+  ////////////////////////////////////////////////////////////
+  template<class T> 
+  void 
+  Systematic<T>::SaveTo(TDirectory * dir, std::string subdir) const
+  {
+    TDirectory * tmp = gDirectory;
+    dir->mkdir(subdir.c_str());
+    dir = dir->GetDirectory(subdir.c_str());
+    dir->cd();
+
+    TObjString("Systematic").Write("type");
+    TObjString(this->fName.c_str()).Write("fName");
+    fUp->SaveTo(dir, "fUp");
+    fDown->SaveTo(dir, "fDown");
+
+    delete dir;
+    tmp->cd();
+  }
+
+  ////////////////////////////////////////////////////////////
+  template<class T> 
+  std::unique_ptr<MultiverseSystematic<T> >
+  MultiverseSystematic<T>::LoadFrom(TDirectory * dir, std::string subdir)
+  {
+    dir = dir->GetDirectory(subdir.c_str());
+
+    // make sure we're loading the right type
+    TObjString * ptag = (TObjString*) dir->Get("type");
+    assert(ptag->GetString() == "MultiverseSystematic" && "Type does not match MultiverseSystematic");
+    delete ptag;
+    
+    std::string name = ((TObjString*) dir->Get("fName"))->GetString().Data();
+    std::vector<T*> universes;
+    auto mv_dir = dir->GetDirectory("fUniverses");
+    for(auto universe : *mv_dir->GetListOfKeys()) {
+      universes.push_back(T::LoadFrom(dir, universe->GetName()).release());
+    }
+    return std::make_unique<MultiverseSystematic<T> >(name, universes);
+  }
+
+  ////////////////////////////////////////////////////////////
+  template<class T> 
+  std::unique_ptr<Systematic<T> >
+  Systematic<T>::LoadFrom(TDirectory * dir, std::string subdir)
+  {
+    dir = dir->GetDirectory(subdir.c_str());
+
+    // make sure we're loading the right type
+    TObjString * ptag = (TObjString*) dir->Get("type");
+    assert(ptag->GetString() == "Systematic" && "Type does not match Systematic");
+    delete ptag;
+    
+    std::string name = ((TObjString*) dir->Get("fName"))->GetString().Data();
+    auto up = T::LoadFrom(dir, "fUp").release();
+    auto dw = T::LoadFrom(dir, "fDown").release();
+    
+    return std::make_unique<Systematic<T> >(name, up->GetShift(), dw->GetShift());
+  }
 }

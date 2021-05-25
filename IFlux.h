@@ -3,7 +3,7 @@
 #include "Hist.h"
 
 namespace xsec {
-  template<class HistType = HistXXd>
+  template<class HistType = HistXd>
   class IFlux {
   public:
     virtual HistType * Flux() = 0; 

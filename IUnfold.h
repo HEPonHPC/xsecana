@@ -1,7 +1,7 @@
 #pragma once
 
 namespace xsec {
-  template<class HistType = HistXXd>
+  template<class HistType = HistXd>
   class IUnfold {
   public:
     virtual HistType * Truth(const HistType * reco) const = 0; 

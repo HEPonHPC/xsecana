@@ -7,7 +7,7 @@
 namespace xsec {
   
   ///\brief Define an interface for saving, loading, and calculating an efficiency
-  template<class HistType = HistXXd>
+  template<class HistType = HistXd>
   class IEfficiency {
 
   public:

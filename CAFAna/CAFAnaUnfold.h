@@ -9,7 +9,7 @@
 namespace xsec {
   template<class CAFAnaUnfoldType,
 	   int UnfoldReg,
-	   class HistType=HistXXd>
+	   class HistType=HistXd>
   class CAFAnaUnfold : IUnfold<HistType> {
   public:
     HistType * Truth(const HistType * reco) const;
@@ -18,7 +18,7 @@ namespace xsec {
     static std::unique_ptr<CAFAnaUnfold> LoadFrom(TDirectory * dir, const std::string & subdir);
     
   private:
-    HistXXd * fMat;
+    HistXd * fMat;
     CAFAnaUnfoldType * fUnfold;
   };
 }
