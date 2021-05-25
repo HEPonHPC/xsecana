@@ -8,6 +8,9 @@
 #include <iostream>
 
 namespace xsec {
+  // compile time expression for determining size of Eigen Array holding 
+  // bin edges
+  constexpr int EdgesSize(int Cols) { return Cols == Eigen::Dynamic ? Eigen::Dynamic : Cols + 1; }
 
   // Histograming object used internally by the framework
   // Wraps Eigen arrays
@@ -18,10 +21,16 @@ namespace xsec {
   class Hist {
   public:
     Hist() {}
-    Hist(const Eigen::Array<Scalar, 1, Cols  > & contents,
-	 const Eigen::Array<Scalar, 1, Cols+1> & edges)
+    Hist(const Eigen::Array<Scalar, 1, Cols> & contents,
+	 const Eigen::Array<Scalar, 1, EdgesSize(Cols)> & edges)
       : fContents(contents), fEdges(edges)
     {}
+
+    // convenience constructor.
+    // works for dynamic and fixed-size histograms
+    Hist(const int & nbins,
+	 const Scalar & min,
+	 const Scalar & max);
 
     unsigned int NBins() const { return fContents.size(); }
 
@@ -57,7 +66,7 @@ namespace xsec {
     Hist sqrt() const;
 
     const Eigen::Array<Scalar, 1, Cols  > & Contents() const { return fContents; }
-    const Eigen::Array<Scalar, 1, Cols+1> & Edges()    const { return fEdges   ; }
+    const Eigen::Array<Scalar, 1, EdgesSize(Cols)> & Edges()    const { return fEdges   ; }
 
     void SaveTo(TDirectory * dir, std::string subdir) const;
     static Hist LoadFrom(TDirectory * dir, std::string subdir);
@@ -70,8 +79,8 @@ namespace xsec {
     template<class F, class... Args>
     Hist Invoke(F f, Args... args) const;
 
-    Eigen::Array<Scalar, 1, Cols  > fContents;
-    Eigen::Array<Scalar, 1, Cols+1> fEdges;
+    Eigen::Array<Scalar, 1, Cols     > fContents;
+    Eigen::Array<Scalar, 1, EdgesSize(Cols)> fEdges;
   };
 
   typedef Hist<double, Eigen::Dynamic> HistXd;
@@ -119,9 +128,20 @@ namespace xsec {
 
       // TODO this won't work for dynamic-sized arrays
       // Probaly lots of work needs to be done to handle this case.
-      return Hist<Scalar, Cols>(Eigen::Map<Eigen::Array<Scalar, 1, Cols  > >(contents, h->GetNbinsX()  ),
-				Eigen::Map<Eigen::Array<Scalar, 1, Cols+1> >(edges   , h->GetNbinsX()+1));
+      return Hist<Scalar, Cols>(Eigen::Map<Eigen::Array<Scalar, 1, Cols     > >(contents, h->GetNbinsX()  ),
+				Eigen::Map<Eigen::Array<Scalar, 1, EdgesSize(Cols)> >(edges   , h->GetNbinsX()+1));
     }
+  }
+
+  /////////////////////////////////////////////////////////
+  template<typename Scalar, int Cols> 
+  Hist<Scalar, Cols>::
+  Hist(const int & nbins,
+       const Scalar & min,
+       const Scalar & max)
+  {
+    fContents = Eigen::Array<Scalar, 1, Cols>::Zeros(nbins);
+    fEdges    = Eigen::Array<Scalar, 1, EdgesSize(Cols)>::LinSpaced(nbins+1, min, max);
   }
 
   /////////////////////////////////////////////////////////
@@ -205,7 +225,7 @@ namespace xsec {
   Hist<Scalar, Cols>::
   BinWidths() const 
   {
-    return fEdges.tail(Cols) - fEdges.head(Cols);
+    return fEdges.tail(fContents.size()) - fEdges.head(fContents.size());
   }
 
   /////////////////////////////////////////////////////////
