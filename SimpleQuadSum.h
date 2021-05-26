@@ -24,7 +24,6 @@ namespace xsec {
     TotalFractionalUncertaintyUnfoldedXSec(const HistType & data,
 					   CrossSectionType & nominal_xsec,
 					   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-					   const IUnfold<HistType> * unfold,
 					   double ntargets) override;
 
     std::pair<HistType*, HistType*> 
@@ -37,7 +36,6 @@ namespace xsec {
     TotalAbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 					 CrossSectionType & nominal_xsec,
 					 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-					 const IUnfold<HistType> * unfold,
 					 double ntargets) override;
 
     std::pair<HistType*, HistType*> 
@@ -50,7 +48,6 @@ namespace xsec {
     FractionalUncertaintyUnfoldedXSec(const HistType & data,
 				      CrossSectionType & nominal_xsec,
 				      Systematic<CrossSectionType> & shifted_xsec,
-				      const IUnfold<HistType> * unfold,
 				      double ntargets) override;
 
     HistType *
@@ -63,7 +60,6 @@ namespace xsec {
     AbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 				    CrossSectionType & nominal_xsec,
 				    Systematic<CrossSectionType> & shifted_xsec,
-				    const IUnfold<HistType> * unfold,
 				    double ntargets) override;
     HistType *
     AbsoluteUncertaintyXSec(const HistType & data,
@@ -116,15 +112,13 @@ namespace xsec {
   AbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 				  CrossSectionType & nominal_xsec,
 				  Systematic<CrossSectionType> & shifted_xsec,
-				  const IUnfold<HistType> * unfold,
 				  double ntargets)
   {
     Systematic<HistType> * shifts = shifted_xsec.Invoke(&CrossSectionType::UnfoldedCrossSection, 
 							data, 
-							*unfold, 
 							ntargets);
 
-    shifts = shifts->Invoke(&HistType::operator-, nominal_xsec->UnfoldedCrossSection(data, *unfold, ntargets));
+    shifts = shifts->Invoke(&HistType::operator-, nominal_xsec->UnfoldedCrossSection(data, ntargets));
     shifts = shifts->Invoke(&HistType::abs);
     
     return MaxShift(shifts->Up()->Data(),
@@ -140,11 +134,10 @@ namespace xsec {
   FractionalUncertaintyUnfoldedXSec(const HistType & data,
 				    CrossSectionType & nominal_xsec,
 				    Systematic<CrossSectionType> & shifted_xsec,
-				    const IUnfold<HistType> * unfold,
 				    double ntargets)
   {
-    HistType * abs = AbsoluteUncertaintyUnfoldedXSec(data, nominal_xsec, shifted_xsec, unfold, ntargets);
-    return *abs / *nominal_xsec->UnfoldedCrossSection(data, *unfold, ntargets);
+    HistType * abs = AbsoluteUncertaintyUnfoldedXSec(data, nominal_xsec, shifted_xsec, ntargets);
+    return *abs / *nominal_xsec->UnfoldedCrossSection(data, ntargets);
   }
 
   /////////////////////////////////////////////////////////////////////////

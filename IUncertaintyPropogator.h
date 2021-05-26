@@ -17,7 +17,6 @@ namespace xsec {
     TotalFractionalUncertaintyUnfoldedXSec(const HistType & data,
 					   CrossSectionType & nominal_xsec,
 					   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-					   const IUnfold<HistType> * unfold,
 					   double ntargets) = 0;
 
     virtual std::pair<HistType*, HistType*> 
@@ -30,7 +29,6 @@ namespace xsec {
     TotalAbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 					 CrossSectionType & nominal_xsec,
 					 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-					 const IUnfold<HistType> * unfold,
 					 double ntargets) = 0;
 
     virtual std::pair<HistType*, HistType*> 
@@ -43,7 +41,6 @@ namespace xsec {
     FractionalUncertaintyUnfoldedXSec(const HistType & data,
 				      CrossSectionType & nominal_xsec,
 				      Systematic<CrossSectionType> & shifted_xsec,
-				      const IUnfold<HistType> * unfold,
 				      double ntargets) = 0;
 
     virtual HistType *
@@ -56,7 +53,6 @@ namespace xsec {
     AbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 				    CrossSectionType & nominal_xsec,
 				    Systematic<CrossSectionType> & shifted_xsec,
-				    const IUnfold<HistType> * unfold,
 				    double ntargets) = 0;
     virtual HistType *
     AbsoluteUncertaintyXSec(const HistType & data,

@@ -84,7 +84,7 @@ bool run_tests(bool verbose)
   TFile * input = TFile::Open("test_hist.root");
   auto loaded = Hist<Scalar, Cols>::LoadFrom(input, "hist");
 
-  TEST_HIST("saveto/loadfrom", loaded, hist.Contents(), hist.Edges(), verbose, 0);
+  TEST_HIST("saveto/loadfrom", (*loaded), hist.Contents(), hist.Edges(), verbose, 0);
 
   return pass;
 }

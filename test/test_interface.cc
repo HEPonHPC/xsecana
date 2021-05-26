@@ -18,13 +18,13 @@ using namespace xsec;
 int main(int argc, char ** argv)
 {
   typedef ICrossSection<SimpleSignalEstimator<HistXd>,
+			CAFAnaUnfold<ana::UnfoldIterative, 1>,
 			SimpleEfficiency<HistXd>,
 			SimpleFlux<HistXd> > SimpleCrossSection;
 
   HistXd hist;
   SimpleFlux<HistXd> flux;
   CrossSectionAnalysis<SimpleCrossSection,
-		       CAFAnaUnfold<ana::UnfoldIterative, 1>,
 		       SimpleQuadSum<HistXd> > analysis;
 
   std::cout << "Success!" << std::endl;

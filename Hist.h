@@ -69,7 +69,7 @@ namespace xsec {
     const Eigen::Array<Scalar, 1, EdgesSize(Cols)> & Edges()    const { return fEdges   ; }
 
     void SaveTo(TDirectory * dir, std::string subdir) const;
-    static Hist LoadFrom(TDirectory * dir, std::string subdir);
+    static std::unique_ptr<Hist> LoadFrom(TDirectory * dir, std::string subdir);
     
   private:
     /// \brief Call memeber function
@@ -165,7 +165,7 @@ namespace xsec {
   /////////////////////////////////////////////////////////
   template<class Scalar,
 	   int Cols>
-  Hist<Scalar, Cols>
+  std::unique_ptr<Hist<Scalar, Cols> >
   Hist<Scalar, Cols>::
   LoadFrom(TDirectory * dir, std::string subdir)
   {
@@ -189,7 +189,7 @@ namespace xsec {
       exit(1);
     }
       
-    return root::FromTH1<Scalar, Cols>(h);
+    return std::make_unique<Hist<Scalar, Cols> > (root::FromTH1<Scalar, Cols>(h));
   }
 
   /////////////////////////////////////////////////////////

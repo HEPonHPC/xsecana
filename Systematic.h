@@ -136,9 +136,8 @@ namespace xsec {
     TObjString("Systematic").Write("type");
     TObjString(this->fName.c_str()).Write("fName");
     fUp->SaveTo(dir, "fUp");
-    fDown->SaveTo(dir, "fDown");
+    if(fDown) fDown->SaveTo(dir, "fDown");
 
-    delete dir;
     tmp->cd();
   }
 
@@ -176,9 +175,16 @@ namespace xsec {
     delete ptag;
     
     std::string name = ((TObjString*) dir->Get("fName"))->GetString().Data();
-    auto up = T::LoadFrom(dir, "fUp").release();
-    auto dw = T::LoadFrom(dir, "fDown").release();
-    
-    return std::make_unique<Systematic<T> >(name, up->GetShift(), dw->GetShift());
+
+    if(dir->GetDirectory("fDown")) {
+      std::unique_ptr<T> up = T::LoadFrom(dir, "fUp");
+      std::unique_ptr<T> dw = T::LoadFrom(dir, "fDown");
+      return std::make_unique<Systematic<T> >(name, *up, *dw);
+    }
+    else {
+      std::unique_ptr<T> up = T::LoadFrom(dir, "fUp");
+      return std::make_unique<Systematic<T> >(name, *up);
+    }
+
   }
 }
