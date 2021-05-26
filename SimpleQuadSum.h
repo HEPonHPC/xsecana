@@ -3,12 +3,12 @@
 #include "XSecAna/Systematic.h"
 #include "XSecAna/Hist.h"
 #include "XSecAna/IUnfold.h"
-#include "XSecAna/IUncertaintyPropogator.h"
+#include "XSecAna/IUncertaintyPropagator.h"
 
 #include <Eigen/Dense>
 
 namespace xsec {
-  /// \brief an UncertaintyPropogator is module
+  /// \brief an UncertaintyPropagator is module
   /// that calculates uncertainty for an analysis
   ///
   /// SimpleQuadSum performs the quadrature sum of systematic shifts
@@ -16,7 +16,7 @@ namespace xsec {
   /// the shift is symmeterized by taking the largest shift
   template<class CrossSectionType,
 	   class HistType = HistXd>
-  class SimpleQuadSum : IUncertaintyPropogator<CrossSectionType,
+  class SimpleQuadSum : IUncertaintyPropagator<CrossSectionType,
 					       HistType>
   {
   public:

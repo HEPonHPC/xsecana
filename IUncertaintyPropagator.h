@@ -4,14 +4,14 @@
 #include "XSecAna/Hist.h"
 #include "XSecAna/IUnfold.h"
 namespace xsec {
-  /// \brief an UncertaintyPropogator is module
+  /// \brief an UncertaintyPropagator is module
   /// that calculates uncertainty for an analysis
   ///
-  /// IUncertaintyPropogator defines the interface assumed
+  /// IUncertaintyPropagator defines the interface assumed
   /// by the analysis object
   template<class CrossSectionType,
 	   class HistType = HistXd>
-  class IUncertaintyPropogator {
+  class IUncertaintyPropagator {
   public:
     virtual std::pair<HistType*, HistType*> 
     TotalFractionalUncertaintyUnfoldedXSec(const HistType & data,
