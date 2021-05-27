@@ -1,4 +1,5 @@
 #include "XSecAna/Hist.h"
+#include "XSecAna/Type.h"
 
 #include <Eigen/Dense>
 
@@ -94,11 +95,14 @@ int main(int argc, char ** argv)
   bool verbose = false;
   if(argc > 1 && std::strcmp(argv[1], "-v") == 0)  verbose = true;
   bool pass = true;
+
   pass &= run_tests<double, 10>(verbose);
   pass &= run_tests<double, Eigen::Dynamic>(verbose);
   pass &= run_tests<float, 10>(verbose);
   pass &= run_tests<float, Eigen::Dynamic>(verbose);
 
-  // TODO need to test dynamic arrays
+  pass &= !type::IsHist<double>();
+  pass &=  type::IsHist<Hist<double, 1> >();
+  
   if(pass) std::cout << "Success!" << std::endl;
 }
