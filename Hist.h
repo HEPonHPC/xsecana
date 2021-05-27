@@ -31,10 +31,6 @@ namespace xsec {
     Hist(const int & nbins,
 	 const Scalar & min,
 	 const Scalar & max);
-
-    unsigned int NBins() const { return fContents.size(); }
-
-    Eigen::Array<Scalar, 1, Cols> BinWidths() const;
     
     void Normalize(std::string how);
     Hist operator-(const Hist& rhs) const;
@@ -67,6 +63,12 @@ namespace xsec {
 
     const Eigen::Array<Scalar, 1, Cols  > & Contents() const { return fContents; }
     const Eigen::Array<Scalar, 1, EdgesSize(Cols)> & Edges()    const { return fEdges   ; }
+
+    unsigned int NBins() const { return fContents.size(); }
+    Eigen::Array<Scalar, 1, Cols> BinWidths() const;
+
+    Scalar GetBinContent(int i) const { return fContents(i); }
+    void SetBinContent(int i, Scalar val) { fContents(i) = val; }
 
     void SaveTo(TDirectory * dir, std::string subdir) const;
     static std::unique_ptr<Hist> LoadFrom(TDirectory * dir, std::string subdir);
