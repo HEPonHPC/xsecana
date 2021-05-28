@@ -7,33 +7,44 @@ namespace xsec {
   template<class HistType = HistXd>
   class SimpleSignalEstimator : ISignalEstimator<HistType> {
   public:
-    const HistType * Background(const HistType & data) const override;
-    const HistType * Signal(const HistType & data) const override;
+    SimpleSignalEstimator() {}
+    SimpleSignalEstimator(const HistType & bkgd)
+      : fBackground(bkgd)
+    {}
+
+    /// background could be dependent on data
+    /// in this case it isn't
+    const HistType & Background(const HistType & data) override;
+    const HistType & Signal(const HistType & data) override;
 
     void SaveTo(TDirectory * dir, const std::string & name) const;
     static std::unique_ptr<SimpleSignalEstimator<HistType> > LoadFrom(TDirectory * dir, const std::string & subdir);
     
   private:
-    HistType * fBackground;
+    HistType fBackground;
+
+    // cache signal hist
+    HistType * fSignal = 0;
     
   };
 
   //////////////////////////////////////////////////////////
   template<class HistType>
-  const HistType *
+  const HistType &
   SimpleSignalEstimator<HistType>::
-  Background(const HistType & data) const
+  Background(const HistType & data)
   {
     return fBackground;
   }
 
   //////////////////////////////////////////////////////////
   template<class HistType>
-  const HistType *
+  const HistType &
   SimpleSignalEstimator<HistType>::
-  Signal(const HistType & data) const
+  Signal(const HistType & data)
   {
-    return data - fBackground;
+    if(!fSignal) fSignal = new HistType(data - fBackground);
+    return *fSignal;
   }
   
   //////////////////////////////////////////////////////////
@@ -43,13 +54,12 @@ namespace xsec {
   SaveTo(TDirectory * dir, const std::string & subdir) const
   {
     TDirectory * tmp = gDirectory;
-    dir = dir->GetDirectory(subdir.c_str());
+    dir = dir->mkdir(subdir.c_str());
     dir->cd();
 
     TObjString("SimpleSignalEstimator").Write("type");
-    fBackground->SaveTo(dir, "fBackground");
+    fBackground.SaveTo(dir, "fBackground");
 
-    delete dir;
     tmp->cd();
   }
   
@@ -66,7 +76,7 @@ namespace xsec {
     assert(ptag->GetString() == "SimpleSignalEstimator" && "Type does not match SimpleSignalEstimator");
     delete ptag;
     
-    HistType * background   = HistType::LoadFrom(dir, "fBackground");
+    HistType background = *HistType::LoadFrom(dir, "fBackground");
     return std::make_unique<SimpleSignalEstimator<HistType> >(background);
   }
   

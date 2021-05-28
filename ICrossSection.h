@@ -71,9 +71,13 @@ namespace xsec {
 		HistType>::
   CrossSection(const HistType & data, double ntargets)
   {
+    // invoke FluxType::operator* in case we want the integrated flux
+    // Pass a histogram of ones through the flux parameter of
+    // CalculateCrossSection to divide by one
     return CalculateCrossSection(fSignalEstimator->Signal(data),
-				 fEfficiency->Efficiency(),
-				 fFlux->Flux(),
+				 (fFlux * fEfficiency->ToHist()),
+				 std::decay_t<decltype(fEfficiency.ToHist().Contents())>
+				 ::Ones(fEfficiency.ToHist().Contents().size()),
 				 ntargets,
 				 IsDifferential);
   }
@@ -94,9 +98,13 @@ namespace xsec {
 		HistType>::
   UnfoldedCrossSection(const HistType & data, double ntargets)
   {
+    // invoke FluxType::operator* in case we want the integrated flux
+    // Pass a histogram of ones through the flux parameter of
+    // CalculateCrossSection to divide by one
     return CalculateCrossSection(fUnfold->Truth(fSignalEstimator->Signal(data)),
-				 fEfficiency->Efficiency(),
-				 fFlux->Flux(),
+				 (fFlux * fEfficiency->ToHist()),
+				 std::decay_t<decltype(fEfficiency.ToHist().Contents())>
+				 ::Ones(fEfficiency.ToHist().Contents().size()),
 				 ntargets,
 				 IsDifferential);
   }

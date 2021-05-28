@@ -12,7 +12,7 @@ namespace xsec {
 
   public:
     ///\brief return the calculated efficiency
-    virtual HistType * Efficiency() = 0;
+    virtual const HistType & ToHist() = 0;
     virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
     /// \brief children must override

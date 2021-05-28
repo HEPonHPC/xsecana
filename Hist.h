@@ -33,6 +33,7 @@ namespace xsec {
 	 const Scalar & max);
     
     void Normalize(std::string how);
+    Scalar Integrate() const;
     Hist operator-(const Hist& rhs) const;
     Hist operator+(const Hist& rhs) const;
     Hist operator/(const Hist& rhs) const;
@@ -133,6 +134,15 @@ namespace xsec {
       return Hist<Scalar, Cols>(Eigen::Map<Eigen::Array<Scalar, 1, Cols     > >(contents, h->GetNbinsX()  ),
 				Eigen::Map<Eigen::Array<Scalar, 1, EdgesSize(Cols)> >(edges   , h->GetNbinsX()+1));
     }
+  }
+
+  /////////////////////////////////////////////////////////
+  template<typename Scalar, int Cols>
+  Scalar
+  Hist<Scalar, Cols>::
+  Integrate() const
+  {
+    return fContents.sum();
   }
 
   /////////////////////////////////////////////////////////

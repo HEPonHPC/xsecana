@@ -2,7 +2,10 @@
 BINS =  test_compile \
 	test_hist \
 	test_interface \
-	test_systematic
+	test_systematic \
+	test_simple_efficiency \
+	test_simple_flux \
+	test_simple_signal_estimator
 SIMPLEBINS=$(BINS)
 
 LIB_TYPE    := 
