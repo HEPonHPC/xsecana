@@ -8,8 +8,7 @@ namespace xsec {
 	   class UnfoldType,
 	   class EfficiencyType,
 	   class FluxType,
-	   bool IsDifferential = false,
-	   class HistType = HistXd>
+	   bool IsDifferential = false>
   class ICrossSection {
   public:
     ICrossSection() {}
@@ -27,9 +26,18 @@ namespace xsec {
     void SaveTo(TDirectory * dir, std::string subdir) const;
     std::unique_ptr<ICrossSection> LoadFrom(TDirectory * dir, std::string subdir);
 
-    HistType * UnfoldedCrossSection(const HistType & data, double ntargets);
+    template<class Scalar, int Cols>
+    Hist<Scalar, Cols> UnfoldedCrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets);
 
-    HistType * CrossSection(const HistType & data, double ntargets);
+    template<class Scalar, int Cols>
+    Hist<Scalar, Cols> CrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets);
+
+    ICrossSection<SignalEstimatorType,
+		  UnfoldType,
+		  EfficiencyType,
+		  FluxType,
+		  true>
+    ToDifferential();
     
   public:
     EfficiencyType      * fEfficiency;
@@ -40,18 +48,51 @@ namespace xsec {
   };
 
   ////////////////////////////////////////////////
-  template<typename Scalar, int Cols>
-  Hist<Scalar, Cols> * CalculateCrossSection(const Hist<Scalar, Cols> * unfolded_selected_signal,
-					     const Hist<Scalar, Cols> * efficiency,
-					     const Hist<Scalar, Cols> * flux,
-					     const Scalar ntargets,
-					     const bool is_differential)
+  template<class SignalEstimatorType, 
+	   class UnfoldType,
+	   class EfficiencyType, 
+	   class FluxType,
+	   bool IsDifferential>
+  ICrossSection<SignalEstimatorType,
+		UnfoldType,
+		EfficiencyType,
+		FluxType,
+		true>
+  ICrossSection<SignalEstimatorType,
+		UnfoldType,
+		EfficiencyType,
+		FluxType,
+		IsDifferential>::
+  ToDifferential()
   {
-    Hist<Scalar, Cols> * xsec = new Hist<Scalar, Cols>(*unfolded_selected_signal);
-    *xsec /= *efficiency;
-    *xsec /= *flux;
-    *xsec *= 1e4/ntargets; // Convert nu/m^2 to nu/cm^2
-    if(is_differential) xsec->Normalize("width");
+    if constexpr(IsDifferential) {
+	return *this;
+      }
+    else {
+      return ICrossSection<SignalEstimatorType,
+			   UnfoldType,
+			   EfficiencyType,
+			   FluxType,
+			   true>(fEfficiency,
+				 fSignalEstimator,
+				 fFlux,
+				 fUnfold);
+    }
+  }
+
+  ////////////////////////////////////////////////
+  template<typename Scalar, int Cols>
+  Hist<Scalar, Cols> CalculateCrossSection(const Hist<Scalar, Cols> & unfolded_selected_signal,
+					   const Hist<Scalar, Cols> & efficiency,
+					   const Hist<Scalar, Cols> & flux,
+					   const Scalar ntargets,
+					   const bool is_differential)
+  {
+    Hist<Scalar, Cols>  xsec = unfolded_selected_signal;
+    xsec /= efficiency;
+    xsec /= flux;
+    xsec *= 1e4/ntargets; // Convert nu/m^2 to nu/cm^2
+    if(is_differential) xsec.Normalize("width");
     return xsec;
   }
 
@@ -60,26 +101,26 @@ namespace xsec {
 	   class UnfoldType,
 	   class EfficiencyType, 
 	   class FluxType,
-	   bool IsDifferential,
-	   class HistType>
-  HistType *
+	   bool IsDifferential>
+  template<class Scalar, int Cols>
+  Hist<Scalar, Cols> 
   ICrossSection<SignalEstimatorType, 
 		UnfoldType,
 		EfficiencyType, 
 		FluxType,
-		IsDifferential,
-		HistType>::
-  CrossSection(const HistType & data, double ntargets)
+		IsDifferential>::
+  CrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets)
   {
     // invoke FluxType::operator* in case we want the integrated flux
     // Pass a histogram of ones through the flux parameter of
     // CalculateCrossSection to divide by one
-    return CalculateCrossSection(fSignalEstimator->Signal(data),
-				 (fFlux * fEfficiency->ToHist()),
-				 std::decay_t<decltype(fEfficiency.ToHist().Contents())>
-				 ::Ones(fEfficiency.ToHist().Contents().size()),
-				 ntargets,
-				 IsDifferential);
+    return CalculateCrossSection<Scalar, Cols>(fSignalEstimator->Signal(data),
+					       (*fFlux * fEfficiency->ToHist()),
+					       Hist<Scalar, Cols>(Eigen::Array<Scalar, 1, Cols>
+								  ::Ones(fEfficiency->ToHist().Contents().size()),
+								  fEfficiency->ToHist().Edges()),
+					       ntargets,
+					       IsDifferential);
   }
 
   ////////////////////////////////////////////////
@@ -87,26 +128,26 @@ namespace xsec {
 	   class UnfoldType,
 	   class EfficiencyType, 
 	   class FluxType,
-	   bool IsDifferential,
-	   class HistType>
-  HistType *
+	   bool IsDifferential>
+  template<class Scalar, int Cols>
+  Hist<Scalar, Cols>
   ICrossSection<SignalEstimatorType, 
 		UnfoldType,
 		EfficiencyType, 
 		FluxType,
-		IsDifferential,
-		HistType>::
-  UnfoldedCrossSection(const HistType & data, double ntargets)
+		IsDifferential>::
+  UnfoldedCrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets)
   {
     // invoke FluxType::operator* in case we want the integrated flux
     // Pass a histogram of ones through the flux parameter of
     // CalculateCrossSection to divide by one
-    return CalculateCrossSection(fUnfold->Truth(fSignalEstimator->Signal(data)),
-				 (fFlux * fEfficiency->ToHist()),
-				 std::decay_t<decltype(fEfficiency.ToHist().Contents())>
-				 ::Ones(fEfficiency.ToHist().Contents().size()),
-				 ntargets,
-				 IsDifferential);
+    return CalculateCrossSection<Scalar, Cols>(fUnfold->Truth(fSignalEstimator->Signal(data)),
+					       (*fFlux * fEfficiency->ToHist()),
+					       Hist<Scalar,Cols>(Eigen::Array<Scalar, 1, Cols>
+								 ::Ones(fEfficiency->ToHist().Contents().size()),
+								 fEfficiency->ToHist().Edges()),
+					       ntargets,
+					       IsDifferential);
   }
 
   ////////////////////////////////////////////////
@@ -114,15 +155,13 @@ namespace xsec {
 	   class UnfoldType,
 	   class EfficiencyType, 
 	   class FluxType,
-	   bool IsDifferential,
-	   class HistType>
+	   bool IsDifferential>
   void
   ICrossSection<SignalEstimatorType, 
 		UnfoldType,
 		EfficiencyType, 
 		FluxType,
-		IsDifferential,
-		HistType>::
+		IsDifferential>::
   SaveTo(TDirectory * dir, std::string subdir) const
   {
     TDirectory * tmp = gDirectory;
@@ -143,20 +182,17 @@ namespace xsec {
 	   class UnfoldType,
 	   class EfficiencyType, 
 	   class FluxType,
-	   bool IsDifferential,
-	   class HistType>
+	   bool IsDifferential>
   std::unique_ptr<ICrossSection<SignalEstimatorType, 
 				UnfoldType,
 				EfficiencyType, 
 				FluxType,
-				IsDifferential,
-				HistType> >
+				IsDifferential> >
   ICrossSection<SignalEstimatorType, 
 		UnfoldType,
 		EfficiencyType, 
 		FluxType,
-		IsDifferential,
-		HistType>::
+		IsDifferential>::
   LoadFrom(TDirectory * dir, std::string subdir)    
   {
     dir = dir->GetDirectory(subdir.c_str());
@@ -175,7 +211,7 @@ namespace xsec {
 					  UnfoldType,
 					  EfficiencyType, 
 					  FluxType, 
-					  IsDifferential,
-					  HistType> >(eff, sig, flux, unfold);
+					  IsDifferential> >
+      (eff, sig, flux, unfold);
   }
 }

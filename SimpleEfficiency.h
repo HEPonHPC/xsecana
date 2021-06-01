@@ -10,8 +10,8 @@ namespace xsec {
   template<class HistType = HistXd>
   class SimpleEfficiency : public IEfficiency<HistType> {
   public:
-    SimpleEfficiency(const HistType num,
-		     const HistType den)
+    SimpleEfficiency(HistType num,
+		     HistType den)
       : fNumerator(num), fDenominator(den)
     {}
 

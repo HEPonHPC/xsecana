@@ -5,7 +5,8 @@ BINS =  test_compile \
 	test_systematic \
 	test_simple_efficiency \
 	test_simple_flux \
-	test_simple_signal_estimator
+	test_simple_signal_estimator \
+	test_simple_xsec 	
 SIMPLEBINS=$(BINS)
 
 LIB_TYPE    := 
