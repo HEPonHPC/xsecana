@@ -20,6 +20,11 @@ namespace xsec {
 	   int Cols=-1>
   class Hist {
   public:
+    
+    typedef Scalar scalar_type;
+    typedef Eigen::Array<Scalar, 1, Cols> array_type;
+    typedef Eigen::Array<Scalar, 1, EdgesSize(Cols)> edges_type;
+
     Hist() {}
     Hist(const Eigen::Array<Scalar, 1, Cols> & contents,
 	 const Eigen::Array<Scalar, 1, EdgesSize(Cols)> & edges)

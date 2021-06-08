@@ -26,11 +26,11 @@ namespace xsec {
     void SaveTo(TDirectory * dir, std::string subdir) const;
     std::unique_ptr<ICrossSection> LoadFrom(TDirectory * dir, std::string subdir);
 
-    template<class Scalar, int Cols>
-    Hist<Scalar, Cols> UnfoldedCrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets);
+    template<class HistType>
+    HistType UnfoldedCrossSection(const HistType & data, typename HistType::scalar_type ntargets);
 
-    template<class Scalar, int Cols>
-    Hist<Scalar, Cols> CrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets);
+    template<class HistType>
+    HistType CrossSection(const HistType & data, typename HistType::scalar_type ntargets);
 
     ICrossSection<SignalEstimatorType,
 		  UnfoldType,
@@ -81,14 +81,14 @@ namespace xsec {
   }
 
   ////////////////////////////////////////////////
-  template<typename Scalar, int Cols>
-  Hist<Scalar, Cols> CalculateCrossSection(const Hist<Scalar, Cols> & unfolded_selected_signal,
-					   const Hist<Scalar, Cols> & efficiency,
-					   const Hist<Scalar, Cols> & flux,
-					   const Scalar ntargets,
-					   const bool is_differential)
+  template<class HistType>
+  HistType CalculateCrossSection(const HistType & unfolded_selected_signal,
+				 const HistType & efficiency,
+				 const HistType & flux,
+				 const typename HistType::scalar_type ntargets,
+				 const bool is_differential)
   {
-    Hist<Scalar, Cols>  xsec = unfolded_selected_signal;
+    HistType  xsec = unfolded_selected_signal;
     xsec /= efficiency;
     xsec /= flux;
     xsec *= 1e4/ntargets; // Convert nu/m^2 to nu/cm^2
@@ -102,25 +102,24 @@ namespace xsec {
 	   class EfficiencyType, 
 	   class FluxType,
 	   bool IsDifferential>
-  template<class Scalar, int Cols>
-  Hist<Scalar, Cols> 
+  template<class HistType>
+  HistType
   ICrossSection<SignalEstimatorType, 
 		UnfoldType,
 		EfficiencyType, 
 		FluxType,
 		IsDifferential>::
-  CrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets)
+  CrossSection(const HistType & data, typename HistType::scalar_type ntargets)
   {
     // invoke FluxType::operator* in case we want the integrated flux
     // Pass a histogram of ones through the flux parameter of
     // CalculateCrossSection to divide by one
-    return CalculateCrossSection<Scalar, Cols>(fSignalEstimator->Signal(data),
-					       (*fFlux * fEfficiency->ToHist()),
-					       Hist<Scalar, Cols>(Eigen::Array<Scalar, 1, Cols>
-								  ::Ones(fEfficiency->ToHist().Contents().size()),
-								  fEfficiency->ToHist().Edges()),
-					       ntargets,
-					       IsDifferential);
+    return CalculateCrossSection(fSignalEstimator->Signal(data),
+				 (*fFlux * fEfficiency->ToHist()),
+				 HistType(HistType::array_type::Ones(fEfficiency->ToHist().Contents().size()),
+					  fEfficiency->ToHist().Edges()),
+				 ntargets,
+				 IsDifferential);
   }
 
   ////////////////////////////////////////////////
@@ -129,25 +128,24 @@ namespace xsec {
 	   class EfficiencyType, 
 	   class FluxType,
 	   bool IsDifferential>
-  template<class Scalar, int Cols>
-  Hist<Scalar, Cols>
+  template<class HistType>
+  HistType
   ICrossSection<SignalEstimatorType, 
 		UnfoldType,
 		EfficiencyType, 
 		FluxType,
 		IsDifferential>::
-  UnfoldedCrossSection(const Hist<Scalar, Cols> & data, Scalar ntargets)
+  UnfoldedCrossSection(const HistType & data, typename HistType::scalar_type ntargets)
   {
     // invoke FluxType::operator* in case we want the integrated flux
     // Pass a histogram of ones through the flux parameter of
     // CalculateCrossSection to divide by one
-    return CalculateCrossSection<Scalar, Cols>(fUnfold->Truth(fSignalEstimator->Signal(data)),
-					       (*fFlux * fEfficiency->ToHist()),
-					       Hist<Scalar,Cols>(Eigen::Array<Scalar, 1, Cols>
-								 ::Ones(fEfficiency->ToHist().Contents().size()),
-								 fEfficiency->ToHist().Edges()),
-					       ntargets,
-					       IsDifferential);
+    return CalculateCrossSection(fUnfold->Truth(fSignalEstimator->Signal(data)),
+				 (*fFlux * fEfficiency->ToHist()),
+				 HistType(HistType::array_type::Ones(fEfficiency->ToHist().Contents().size()),
+					  fEfficiency->ToHist().Edges()),
+				 ntargets,
+				 IsDifferential);
   }
 
   ////////////////////////////////////////////////
