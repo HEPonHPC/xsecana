@@ -2,232 +2,155 @@
 
 #include "TDirectory.h"
 
-#include <functional>
 #include "XSecAna/Type.h"
-namespace xsec {
 
-  //-------------------------------------------------------
+#include <exception>
+#include <cstdio>
+
+namespace xsec {
+  enum SystType_t {
+    kOneSided,
+    kTwoSided,
+    kMultiverse,
+    kOneOrTwoSided,
+  };
+
+  namespace exceptions {
+    class SystematicTypeError : public std::exception {
+    public:
+      SystematicTypeError(const char * caller,
+			  SystType_t expected_type,
+			  SystType_t tried_type)
+      {
+	if(expected_type == kOneSided  ) fExpected = "kOneSided";
+	if(expected_type == kTwoSided  ) fExpected = "kTwoSided";
+	if(expected_type == kMultiverse) fExpected = "kMultiverse";
+	if(expected_type == kOneOrTwoSided) fExpected = "kOneOrTwoSided";
+	if(tried_type == kOneSided  ) fTried = "kOneSided";
+	if(tried_type == kTwoSided  ) fTried = "kTwoSided";
+	if(tried_type == kMultiverse) fTried = "kMultiverse";
+	if(tried_type == kOneOrTwoSided) fTried = "kOneOrTwoSided";
+	std::sprintf(fMsg,
+		     "Invalid use of %s. Expected type %s, got %s.",
+		     caller, 
+		     fExpected.c_str(),
+		     fTried.c_str());
+      }
+      const char * what() const throw() {
+	return &fMsg[0];
+      }
+    private:
+      char fMsg[500];
+      std::string fExpected;
+      std::string fTried;
+    };
+  }
   template<class T>
   class Systematic {
   public:
-    Systematic(std::string name) 
-      : fName(name)
-    {}
+    Systematic(std::string name,
+	       const T & shift)
+      : fContainer({shift}),
+	fType(kOneSided),
+	fName(name)
+    {fContainer.shrink_to_fit();}
 
     Systematic(std::string name,
-	       T up,
-	       T dw)
-      : fName(name),
-	fUp(new T(up)),
-	fDown(new T(dw))
-    {}
+	       const T & up, 
+	       const T & down)
+      :	fContainer({up, down}),
+	fType(kTwoSided),
+	fName(name)
+    {fContainer.shrink_to_fit();}
+    
     Systematic(std::string name,
-	       T shift)
-      : fName(name),
-	fUp(new T(shift)),
-	fDown(NULL)
-    {}
+	       const std::vector<T> & universes)
+      : fContainer(universes),
+	fType(kMultiverse),
+	fName(name)
+    {fContainer.shrink_to_fit();}
 
-    std::pair<const T *, const T *> GetShifts() const
-    { return std::pair<const T *, const T *>{fUp, fDown ? fDown : fUp}; }
-    
+    Systematic(const std::vector<T> & container,
+	       SystType_t type,
+	       std::string name)
+      : fContainer(container),
+	fType(type),
+	fName(name)
+    {fContainer.shrink_to_fit();}
+
     template<class F, class... Args>
-    Systematic<std::invoke_result_t<F, T, Args...> > Invoke(F f, Args... args) const;
-
-    void SaveTo(TDirectory * dir, std::string name) const; 
-    static std::unique_ptr<Systematic> LoadFrom(TDirectory * dir, std::string name); 
-
-    const T & Up  () const { return fUp  ; }
-    const T & Down() const { return fDown ? fDown : fUp; }
-
-  protected:
-    std::string fName;
-  private:
-    T * fUp;
-    T * fDown;
-  };
-    
-  //-------------------------------------------------------
-  template<class T>
-  class MultiverseSystematic : public Systematic<T> {
-  public:
-    MultiverseSystematic(std::string name,
-			 std::vector<T>  universes)
-      : Systematic<T>(name),
-	fUniverses(universes)
-    {}
-      
+    Systematic<std::invoke_result_t<F, T, Args...> > Invoke(F&& f, Args&&... args);
     template<class F, class... Args>
-    MultiverseSystematic<std::invoke_result_t<F, T, Args...> > Invoke(F f, Args... args) const;
+    Systematic<std::invoke_result_t<F, T, Args...> > Invoke(F&& f, Args&&... args) const;
 
-    void SaveTo(TDirectory * dir, std::string name) const; 
+    void SaveTo(TDirectory * dir, std::string subdir) const;
     
-    std::pair<const T *, const T *> GetShifts() const;
+    static std::unique_ptr<Systematic<T> > LoadFrom(TDirectory * dir, std::string subdir);
 
-    const std::vector<T> GetUniverses() const { return fUniverses; }
-    
-    static std::unique_ptr<MultiverseSystematic> LoadFrom(TDirectory * dir, std::string name); 
+    const std::vector<T> & GetShifts() { return fContainer; }
+    const T &  Up() const;
+    const T &  Down() const;    
 
+    ///\brief calculates nsigma shift from nominal
+    /// --If T is not an instantiation of Hist
+    ///   create a new MultiverseSystematic<Hist>
+    ///   by calling T::ToHist on each universe and the
+    ///   nominal argument, and MultiverseSystematic<Hist>::NSigmaShift
+    ///   is called
+    /// --If T is an instantiation of Hist, BinSigma is called
+    ///
+    /// In either case, return type is an instantiation 
+    /// of Hist, determined by return type of T::ToHist, or T itself
     auto NSigmaShift(double nsigma,
 		     const T & nominal) const;
-  private:
+    
 
+  private:
     template<class Scalar>
     Scalar BinSigma(const double & nsigma, std::vector<Scalar> & universes, const Scalar & nominal) const;
-    std::vector<T> fUniverses;
 
+
+    std::vector<T> fContainer;
+    SystType_t fType;
+    std::string fName;
   };
 
-  ////////////////////////////////////////////////////////////
+  
+  /////////////////////////////////////////////////////////////////////////
   template<class T>
   template<class F, class... Args>
   Systematic<std::invoke_result_t<F, T, Args...> >
-  Systematic<T>::Invoke(F f, Args... args) const
+  Systematic<T>::Invoke(F&& f, Args&&... args)
   {
-    if(fDown) {
-      return Systematic<std::invoke_result_t<F, T, Args...> >(this->fName,
-							      std::invoke(f, *fUp  , args...),
-							      std::invoke(f, *fDown, args...));
+    std::vector<std::invoke_result_t<F, T, Args...> > container(this->fContainer.size());
+    for(auto i = 0u; i < fContainer.size(); i++) {
+      container[i] = std::invoke(std::forward<F>(f), fContainer[i], std::forward<Args>(args)...);
     }
-    else {
-      return Systematic<std::invoke_result_t<F, T, Args...> >(this->fName,
-							      std::invoke(f, *fUp  , args...));
-    }
-
+    return Systematic<std::invoke_result_t<F, T, Args...> >(container,
+							    fType,
+							    this->fName);
   }
 
-  ////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////
   template<class T>
   template<class F, class... Args>
-  MultiverseSystematic<std::invoke_result_t<F, T, Args...> > 
-  MultiverseSystematic<T>::Invoke(F f, Args... args) const
+  Systematic<std::invoke_result_t<F, T, Args...> >
+  Systematic<T>::Invoke(F&& f, Args&&... args) const
   {
-    std::vector<std::invoke_result_t<F, T, Args...> > universes(this->fUniverses.size());
-    for(auto i = 0u; i < fUniverses.size(); i++) {
-      universes[i] = std::invoke(f, this->fUniverses[i], args...);
+    std::vector<std::invoke_result_t<F, T, Args...> > container(this->fContainer.size());
+    for(auto i = 0u; i < fContainer.size(); i++) {
+      container[i] = std::invoke(std::forward<F>(f), fContainer[i], std::forward<Args>(args)...);
     }
-    return MultiverseSystematic<std::invoke_result_t<F, T, Args...> >(this->fName,
-								      universes);
+    return Systematic<std::invoke_result_t<F, T, Args...> >(container,
+							    fType,
+							    this->fName);
   }
 
-  ////////////////////////////////////////////////////////////
-  template<class T> 
-  void 
-  MultiverseSystematic<T>::SaveTo(TDirectory * dir, std::string subdir) const
-  {
-    TDirectory * tmp = gDirectory;
-    dir->mkdir(subdir.c_str());
-    dir = dir->GetDirectory(subdir.c_str());
-    dir->cd();
-
-    TObjString("MultiverseSystematic").Write("type");
-    TObjString(this->fName.c_str()).Write("fName");
-    TObjString(std::to_string(this->fUniverses.size()).c_str()).Write("NUniverses");
-    
-    
-    auto mv_dir = dir->mkdir("fUniverses");
-    for(auto i = 0u; i < fUniverses.size(); i++) {
-      fUniverses[i].SaveTo(mv_dir, std::to_string(i));
-    }
-
-    tmp->cd();
-  }
-
-  ////////////////////////////////////////////////////////////
-  template<class T> 
-  void 
-  Systematic<T>::SaveTo(TDirectory * dir, std::string subdir) const
-  {
-    TDirectory * tmp = gDirectory;
-    dir->mkdir(subdir.c_str());
-    dir = dir->GetDirectory(subdir.c_str());
-    dir->cd();
-
-    TObjString("Systematic").Write("type");
-    TObjString(this->fName.c_str()).Write("fName");
-    fUp->SaveTo(dir, "fUp");
-    if(fDown) fDown->SaveTo(dir, "fDown");
-
-    tmp->cd();
-  }
-
-  ////////////////////////////////////////////////////////////
-  template<class T> 
-  std::unique_ptr<MultiverseSystematic<T> >
-  MultiverseSystematic<T>::LoadFrom(TDirectory * dir, std::string subdir)
-  {
-    dir = dir->GetDirectory(subdir.c_str());
-
-    // make sure we're loading the right type
-    TObjString * ptag = (TObjString*) dir->Get("type");
-    assert(ptag->GetString() == "MultiverseSystematic" && "Type does not match MultiverseSystematic");
-    delete ptag;
-    
-    std::string name = ((TObjString*) dir->Get("fName"))->GetString().Data();
-    int nuniverses = std::atoi(((TObjString*) dir->Get("NUniverses"))->GetString().Data());
-    std::vector<T> universes(nuniverses);
-    auto mv_dir = dir->GetDirectory("fUniverses");
-    for(auto imv = 0; imv < nuniverses; imv++) {
-      universes[imv] = *T::LoadFrom(mv_dir, std::to_string(imv)).release();
-    }
-    return std::make_unique<MultiverseSystematic<T> >(name, universes);
-  }
-
-  ////////////////////////////////////////////////////////////
-  template<class T> 
-  std::unique_ptr<Systematic<T> >
-  Systematic<T>::LoadFrom(TDirectory * dir, std::string subdir)
-  {
-    dir = dir->GetDirectory(subdir.c_str());
-
-    // make sure we're loading the right type
-    TObjString * ptag = (TObjString*) dir->Get("type");
-    assert(ptag->GetString() == "Systematic" && "Type does not match Systematic");
-    delete ptag;
-    
-    std::string name = ((TObjString*) dir->Get("fName"))->GetString().Data();
-
-    if(dir->GetDirectory("fDown")) {
-      std::unique_ptr<T> up = T::LoadFrom(dir, "fUp");
-      std::unique_ptr<T> dw = T::LoadFrom(dir, "fDown");
-      return std::make_unique<Systematic<T> >(name, *up, *dw);
-    }
-    else {
-      std::unique_ptr<T> up = T::LoadFrom(dir, "fUp");
-      return std::make_unique<Systematic<T> >(name, *up);
-    }
-  }
-
-  ////////////////////////////////////////////////////////////
-  /*
-  template<class T>
-  template<template<class, int> Hist,
-	   class Scalar,
-	   int Cols>  
-  Hist<Scalar, Cols>
-  MultiverseSystematic<T>::
-  NSigmaShift(double sigma,
-	      const std::vector<Hist<Scalar, Cols> > & universes,
-	      const Hist<Scalar, Cols> & nominal)
-  {
-    Eigen::Array<Scalar, 1,  Cols> shift(nominal.NBins());
-
-    for(auto ibin = 0u; ibin < nominal.NBins(); ibin++) {
-      std::vector<Scalar> vals;
-      for(auto iuniv = 0u; iuniv < universes.size(); iuniv++) {
-	vals.push_back(universes.Contents()(ibin));
-      }
-      shift(ibin) = BinSigma(sigma, vals, nominal.Contents(ibin));
-    }
-
-    return shift;
-  }
-  */
-  ////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////
   template<class T>
   template<class Scalar>
   Scalar
-  MultiverseSystematic<T>::
+  Systematic<T>::
   BinSigma(const double & nsigma,
 	   std::vector<Scalar> & universes,
 	   const Scalar & nominal) const
@@ -255,21 +178,24 @@ namespace xsec {
     else index = std::max(boundIdx, 0);
     return universes.at(index);
   }
-
-  ////////////////////////////////////////////////////////////
+  
+  /////////////////////////////////////////////////////////////////////////
   template<class T>
-  auto 
-  MultiverseSystematic<T>::
+  auto
+  Systematic<T>::
   NSigmaShift(double nsigma, 
 	      const T & nominal) const
   {
+    if(fType != kMultiverse) {
+      throw exceptions::SystematicTypeError(__PRETTY_FUNCTION__, kMultiverse, fType);
+    }
     if constexpr(type::IsHist<T>()) {
 	T shift = nominal;
 
 	for(auto ibin = 0u; ibin < nominal.NBins(); ibin++) {
 	  std::vector<decltype(std::declval<T>().GetBinContent(1))> vals;
-	  for(auto iuniv = 0u; iuniv < fUniverses.size(); iuniv++) {
-	    vals.push_back(fUniverses[iuniv].GetBinContent(ibin));
+	  for(auto iuniv = 0u; iuniv < fContainer.size(); iuniv++) {
+	    vals.push_back(fContainer[iuniv].GetBinContent(ibin));
 	  }
 	  shift.SetBinContent(ibin, BinSigma(nsigma, vals, nominal.GetBinContent(ibin)));
 	}
@@ -280,4 +206,81 @@ namespace xsec {
     }
   }
 
+  /////////////////////////////////////////////////////////////////////////
+  template<class T>
+  const T & 
+  Systematic<T>::
+  Up() const
+  {
+    if(fType == kMultiverse) {
+      throw exceptions::SystematicTypeError(__PRETTY_FUNCTION__, kOneOrTwoSided, fType);
+    }
+    else return this->fContainer[0];
+  }
+
+  /////////////////////////////////////////////////////////////////////////
+  template<class T>
+  const T & 
+  Systematic<T>::
+  Down() const
+  {
+    if(fType == kMultiverse) {
+      throw exceptions::SystematicTypeError(__PRETTY_FUNCTION__, kOneOrTwoSided, fType);
+    }
+    if(fType == kOneSided) return this->fContainer[0];
+    else return this->fContainer[1];
+  }
+
+  /////////////////////////////////////////////////////////////////////////
+  template<class T> 
+  void 
+  Systematic<T>::SaveTo(TDirectory * dir, std::string subdir) const
+  {
+    TDirectory * tmp = gDirectory;
+    dir->mkdir(subdir.c_str());
+    dir = dir->GetDirectory(subdir.c_str());
+    dir->cd();
+
+    TObjString("Systematic").Write("type");
+    TObjString(this->fName.c_str()).Write("fName");
+    TObjString(std::to_string(this->fContainer.size()).c_str()).Write("NShifts");
+    TObjString(std::to_string(this->fType).c_str()).Write("fType");
+    
+    auto mv_dir = dir->mkdir("fContainer");
+    for(auto i = 0u; i < fContainer.size(); i++) {
+      fContainer[i].SaveTo(mv_dir, std::to_string(i));
+    }
+
+    tmp->cd();
+  }
+
+  /////////////////////////////////////////////////////////////////////////
+  template<class T> 
+  std::unique_ptr<Systematic<T> >
+  Systematic<T>::LoadFrom(TDirectory * dir, std::string subdir)
+  {
+    TDirectory * tmp = gDirectory;
+    dir = dir->GetDirectory(subdir.c_str());
+    dir->cd();
+
+    // make sure we're loading the right type
+    TObjString * ptag = (TObjString*) dir->Get("type");
+    assert(ptag->GetString() == "Systematic" && "Type does not match Systematic");
+    delete ptag;
+
+    std::string name = ((TObjString*) dir->Get("fName"))->GetString().Data();
+    int nshifts = std::atoi(((TObjString*) dir->Get("NShifts"))->GetString().Data());
+    int ftype = std::atoi(((TObjString*) dir->Get("fType"))->GetString().Data());
+ 
+    auto container_dir = dir->GetDirectory("fContainer");
+    std::vector<T> container(nshifts);
+    for(auto ishift = 0; ishift < nshifts; ishift++) {
+      container[ishift] = *T::LoadFrom(container_dir, std::to_string(ishift)).release();
+    }   
+
+    tmp->cd();
+    return std::make_unique<Systematic<T> >(container, 
+					    (SystType_t) ftype,
+					    name);
+  }
 }

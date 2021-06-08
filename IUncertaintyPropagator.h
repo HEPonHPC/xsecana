@@ -13,48 +13,48 @@ namespace xsec {
 	   class HistType = HistXd>
   class IUncertaintyPropagator {
   public:
-    virtual std::pair<HistType*, HistType*> 
+    virtual std::pair<HistType, HistType> 
     TotalFractionalUncertaintyUnfoldedXSec(const HistType & data,
 					   CrossSectionType & nominal_xsec,
 					   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
 					   double ntargets) = 0;
 
-    virtual std::pair<HistType*, HistType*> 
+    virtual std::pair<HistType, HistType> 
     TotalFractionalUncertaintyXSec(const HistType & data,
 				   CrossSectionType & nominal_xsec,
 				   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
 				   double ntargets) = 0;
 
-    virtual std::pair<HistType*, HistType*> 
+    virtual std::pair<HistType, HistType> 
     TotalAbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 					 CrossSectionType & nominal_xsec,
 					 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
 					 double ntargets) = 0;
 
-    virtual std::pair<HistType*, HistType*> 
+    virtual std::pair<HistType, HistType> 
     TotalAbsoluteUncertaintyXSec(const HistType & data,
 				 CrossSectionType & nominal_xsec,
 				 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
 				 double ntargets) = 0;
 
-    virtual HistType *
+    virtual HistType
     FractionalUncertaintyUnfoldedXSec(const HistType & data,
 				      CrossSectionType & nominal_xsec,
 				      Systematic<CrossSectionType> & shifted_xsec,
 				      double ntargets) = 0;
 
-    virtual HistType *
+    virtual HistType
     FractionalUncertaintyXSec(const HistType & data,
 			      CrossSectionType & nominal_xsec,
-			      Systematic<CrossSectionType>  & shifted_xsec,
+			      Systematic<CrossSectionType> & shifted_xsec,
 			      double ntargets) = 0;
 
-    virtual HistType *
+    virtual HistType
     AbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 				    CrossSectionType & nominal_xsec,
 				    Systematic<CrossSectionType> & shifted_xsec,
 				    double ntargets) = 0;
-    virtual HistType *
+    virtual HistType
     AbsoluteUncertaintyXSec(const HistType & data,
 			    CrossSectionType & nominal_xsec,
 			    Systematic<CrossSectionType> & shifted_xsec,
@@ -69,13 +69,11 @@ namespace xsec {
   MaxShift(const Hist<Scalar, Cols> & h1,
 	   const Hist<Scalar, Cols> & h2)
   {
-    Hist<Scalar, Cols> ret = h1; // copy binning
-
-    // stack
+    // stack then take max value in each column
     Eigen::Matrix<Scalar, 2, Cols> stack;
-    stack << h1->Contents(),h2->Contents();
-    ret.fContents = stack.colwise().maxCoeff();
-    return ret;
+    stack << h1.Contents(),h2.Contents();
+
+    return Hist<Scalar,Cols>(stack.colwise().maxCoeff(), h1.Edges());
   }
 
   template<typename Scalar,
@@ -88,6 +86,7 @@ namespace xsec {
     for(auto irow = 0u; irow < deltas.size(); irow++) {
       mat.row(irow) = deltas[irow].Contents();
     }
-    return mat.colwise().abs2();
+    return Hist<Scalar, Cols>(mat.colwise().norm(),
+			      deltas[0].Edges());
   }
 }
