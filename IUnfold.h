@@ -15,13 +15,13 @@ namespace xsec {
 	   int Cols>
   class DummyUnfold : IUnfold<Hist<Scalar, Cols> > {
   public:
-    DummyUnfold(int nbins)
+    DummyUnfold(int nbins, double scale = 1)
     {
-      fMat = Eigen::Matrix<Scalar, Cols, Cols>::Identity(nbins, nbins);
+      fMat = Eigen::Matrix<Scalar, Cols, Cols>::Identity(nbins, nbins) * scale;
     }
   
     Hist<Scalar, Cols> Truth(const Hist<Scalar, Cols> & reco) const
-    { return reco*1; }
+    { return Hist<Scalar, Cols>(fMat * reco.Contents().matrix().transpose(), reco.Edges()); }
   
     void SaveTo(TDirectory * dir, std::string subdir)
     {

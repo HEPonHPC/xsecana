@@ -87,9 +87,12 @@ namespace xsec {
     
     static std::unique_ptr<Systematic<T> > LoadFrom(TDirectory * dir, std::string subdir);
 
-    const std::vector<T> & GetShifts() { return fContainer; }
+    const std::vector<T> & GetShifts() const { return fContainer; }
     const T &  Up() const;
     const T &  Down() const;    
+
+    SystType_t GetType() const { return fType; }
+    std::string GetName() const { return fName; }
 
     ///\brief calculates nsigma shift from nominal
     /// --If T is not an instantiation of Hist

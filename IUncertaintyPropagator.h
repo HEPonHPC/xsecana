@@ -86,7 +86,7 @@ namespace xsec {
     for(auto irow = 0u; irow < deltas.size(); irow++) {
       mat.row(irow) = deltas[irow].Contents();
     }
-    return Hist<Scalar, Cols>(mat.colwise().norm(),
+    return Hist<Scalar, Cols>(mat.colwise().squaredNorm(),
 			      deltas[0].Edges());
   }
 }
