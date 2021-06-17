@@ -45,11 +45,12 @@ bool run_tests(bool verbose)
   TEST_ARRAY("contiguous", hist.Contents(), test::utils::is_contiguous(hist.Contents()), 0);
 
   // saveto/loadfrom
-  TFile * output = new TFile("test_hist.root", "recreate");
+  std::string test_file_name = test::utils::test_dir() + "test_hist.root";
+  TFile * output = new TFile(test_file_name.c_str(), "recreate");
   hist.SaveTo(output, "hist");
   output->Close();
   
-  TFile * input = TFile::Open("test_hist.root");
+  TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded = Hist<Scalar, Cols>::LoadFrom(input, "hist");
 
   TEST_HIST("saveto/loadfrom", (*loaded), hist.Contents(), hist.Edges(), 0);
@@ -71,5 +72,5 @@ int main(int argc, char ** argv)
   pass &= !type::IsHist<double>();
   pass &=  type::IsHist<Hist<double, 1> >();
   
-  if(pass) std::cout << "Success!" << std::endl;
+  return pass;
 }

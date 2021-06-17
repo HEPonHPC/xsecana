@@ -15,3 +15,7 @@ include SoftRelTools/standard.mk
 ## errors...
 #override LIBLIBS += `root-config --libs` -L$(SRT_PRIVATE_CONTEXT)/lib/$(SRT_SUBDIR) -L$(SRT_PUBLIC_CONTEXT)/lib/$(SRT_SUBDIR) -L$(IFDHC_FQ_DIR)/lib/ -lifdh
 
+test : 
+	$(SRT_PRIVATE_CONTEXT)/XSecAna/test/run_tests.sh
+
+all : test

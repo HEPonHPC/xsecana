@@ -28,5 +28,5 @@ int main(int argc, char ** argv)
   CrossSectionAnalysis<SimpleCrossSection,
 		       SimpleQuadSum<HistXd> > analysis;
 
-  std::cout << "Success!" << std::endl;
+  return 1;
 }

@@ -50,14 +50,15 @@ bool run_tests(bool verbose, std::string dir)
   auto syst_div_1 = syst_diff_1.Invoke(static_cast<histtype(histtype::*)(const histtype&) const>(&histtype::operator/), nominal);
   TEST_SYSTEMATIC("one sided division", syst_div_1, (up - nominal) / nominal, (up - nominal) / nominal);
 
-  TFile * output = new TFile("test_systematic.root", "update");
+  std::string test_file_name = test::utils::test_dir() + "test_systematic.root";
+  TFile * output = new TFile(test_file_name.c_str(), "update");
   TDirectory * to = output->mkdir(dir.c_str());
   syst_2.SaveTo(to, "syst_2");
   syst_1.SaveTo(to, "syst_1");
   output->Close();
   delete output;
 
-  TFile * input = TFile::Open("test_systematic.root");
+  TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded_2 = Systematic<histtype>::LoadFrom(input->GetDirectory(dir.c_str()), "syst_2");
   auto loaded_1 = Systematic<histtype>::LoadFrom(input->GetDirectory(dir.c_str()), "syst_1");
   input->Close();
@@ -222,5 +223,5 @@ int main(int argc, char ** argv)
     pass &= true;
   }
 
-  if(pass) std::cout << "Success!" << std::endl;
+  return pass;
 }

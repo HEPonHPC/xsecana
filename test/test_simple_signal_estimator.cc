@@ -1,36 +1,11 @@
 #include "XSecAna/Hist.h"
 #include "XSecAna/SimpleSignalEstimator.h"
-
+#include "XSecAna/test/test_utils.h"
 #include <iostream>
 
 #include "TFile.h"
 
 using namespace xsec;
-
-#define TEST_ARRAY(test_name, arr1, arr2, precision)			\
-  test = (arr1 - arr2).isZero(precision);					\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr1 << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr2 << std::endl; \
-    pass = false;							\
-  }									
-
-#define TEST_HIST(test_name,HIST, target_contents, target_edges, precision) \
-  test = (HIST.Contents() - target_contents).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_contents << std::endl; \
-    pass = false;							\
-  }									\
-  test = (HIST.Edges() - target_edges).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Edges() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_edges << std::endl; \
-    pass = false;							\
-  }								
 
 int main(int argc, char ** argv)
 {
@@ -47,17 +22,17 @@ int main(int argc, char ** argv)
   SimpleSignalEstimator signal_estimator(bkgd);
 
   TEST_HIST("signal", signal_estimator.Signal(data), bkgd.Contents(), bkgd.Edges(), 0);
-  
-  TFile * output = new TFile("test_simple_signal_estimator.root", "recreate");
+
+  std::string test_file_name = test::utils::test_dir() + "test_simple_signal_estimator.root";
+  TFile * output = new TFile(test_file_name.c_str(), "recreate");
   signal_estimator.SaveTo(output, "signal_estimator");
   output->Close();
   delete output;
 
-  TFile * input = TFile::Open("test_simple_signal_estimator.root");
+  TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded = *SimpleSignalEstimator<Hist<double, 10> >::LoadFrom(input, "signal_estimator");
 
   TEST_HIST("loadfrom", loaded.Background(data), bkgd.Contents(), bkgd.Edges(), 0);
 
-
-  if(pass) std::cout << "Success!" << std::endl;
+  return pass;
 }

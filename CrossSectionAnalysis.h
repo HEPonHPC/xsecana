@@ -62,7 +62,7 @@ namespace xsec {
     const HistType fData;
 
     // cache the nominal unfolded results
-    HistType * fUnfoldedNominalXSec;
+    HistType * fUnfoldedNominalXSec = 0;
 
     // cache the unfolded shifted results
     std::map<std::string, Systematic<HistType> > fUnfoldedShiftedXSec;
@@ -307,7 +307,7 @@ namespace xsec {
 		       HistType>::
   ~CrossSectionAnalysis()
   {
-    delete fUnfoldedNominalXSec;
+    if(fUnfoldedNominalXSec) delete fUnfoldedNominalXSec;
   }
 
 }

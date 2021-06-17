@@ -60,12 +60,13 @@ int main(int argc, char ** argv)
 	     0);
 
 
-  TFile * output = new TFile("test_simple_xsec.root", "recreate");
+  std::string test_file_name = test::utils::test_dir() + "test_simple_xsec.root";
+  TFile * output = new TFile(test_file_name.c_str(), "recreate");
   xsec.SaveTo(output, "xsec");
   output->Close();
   delete output;
   
   
 
-  if(pass) std::cout << "Success!" << std::endl;
+  return pass;
 }

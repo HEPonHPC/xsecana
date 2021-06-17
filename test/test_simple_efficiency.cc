@@ -31,12 +31,13 @@ int main(int argc, char ** argv)
 
   TEST_ARRAY("ratio calculation", eff.ToHist().Contents(), expected, 0);
 
-  TFile * output = new TFile("test_simple_efficiency.root", "recreate");
+  std::string test_file_name = test::utils::test_dir() + "test_simple_efficiency.root";
+  TFile * output = new TFile(test_file_name.c_str(), "recreate");
   eff.SaveTo(output, "simple_efficiency");
   output->Close();
   delete output;
 
-  TFile * input = TFile::Open("test_simple_efficiency.root");
+  TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded = SimpleEfficiency<Hist<double, 10> >::LoadFrom(input, "simple_efficiency");
   input->Close();
   delete input;
@@ -44,6 +45,6 @@ int main(int argc, char ** argv)
   TEST_HIST("saveto/loadfrom numerator", loaded->GetNumerator(), num.Contents(), num.Edges(), 0);
   TEST_HIST("saveto/loadfrom denominator", loaded->GetDenominator(), den.Contents(), den.Edges(), 0);
   TEST_HIST("saveto/loadfrom ratio", loaded->ToHist(), eff.ToHist().Contents(), eff.ToHist().Edges(), 0);
-    
-  if(pass) std::cout << "Success!" << std::endl;
+
+  return pass;
 }

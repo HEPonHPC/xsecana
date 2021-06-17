@@ -157,6 +157,12 @@ namespace xsec {
 	return a2;
       }
 
-    }
-  }
-}
+      /////////////////////////////////////////////////////////
+      std::string test_dir() 
+      {
+	return std::string(std::getenv("SRT_PRIVATE_CONTEXT")) + "/XSecAna/test/";
+      }
+
+    } // utils
+  } // test
+} // xsec

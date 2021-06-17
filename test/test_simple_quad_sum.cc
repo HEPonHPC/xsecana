@@ -192,5 +192,5 @@ int main(int argc, char ** argv)
 
 
 	     
-  if(pass) std::cout << "Success!" << std::endl;
+  return pass;
 }

@@ -17,5 +17,5 @@ using namespace xsec;
 
 int main(int argc, char ** argv)
 {
-  std::cout << "Success!" << std::endl;
+  return 1;
 }
