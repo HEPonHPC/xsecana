@@ -3,71 +3,12 @@
 
 #include "XSecAna/Hist.h"
 #include "XSecAna/Systematic.h"
+#include "XSecAna/test/test_utils.h"
 
 #include <Eigen/Dense>
 #include "TFile.h"
 
 using namespace xsec;
-
-template<class Scalar, 
-	 int Cols>
-struct Ratio {
-  Ratio() {}
-
-  Ratio(Hist<Scalar, Cols> num,
-	Hist<Scalar, Cols> den)
-    : numerator(num), denominator(den)
-  {}
-
-  Hist<Scalar, Cols> numerator;
-  Hist<Scalar, Cols> denominator;
-  
-  Hist<Scalar, Cols> ToHist() const
-  {
-    return numerator / denominator;
-  }
-  
-};
-
-#define TEST_ARRAY(test_name, arr1, arr2, precision)			\
-  test = (arr1 - arr2).isZero(precision);				\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr1 << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr2 << std::endl; \
-    pass = false;							\
-  }									
-
-#define TEST_SYSTEMATIC(test_name, syst, up, down)			\
-  test = syst.Up() == (up);						\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << syst.Up().Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (up).Contents() << std::endl; \
-    pass = false;							\
-  }									\
-  test = syst.Down() == (down);					\
-  if(!test || verbose) {				\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << syst.Down().Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (down).Contents() << std::endl; \
-    pass = false;							\
-  }									
-
-#define TEST_MULTIVERSE(test_name, mv1, mv2)	\
-  test = true;								\
-  for(auto imv = 0u; imv < (mv1).GetShifts().size(); imv++) {		\
-    test &= (mv1).GetShifts()[imv] == (mv2).GetShifts()[imv];	\
-  }									\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    for(auto imv = 0u; imv < (mv1).GetShifts().size(); imv++) {	\
-      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv1).GetShifts()[imv].Contents() << std::endl; \
-      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv2).GetShifts()[imv].Contents() << std::endl; \
-    }									\
-    pass = false;							\
-  }									\
-
 
 template<typename Scalar, int Cols>
 bool run_tests(bool verbose, std::string dir)
@@ -168,16 +109,16 @@ bool run_tests_mv(bool verbose, std::string dir)
 
   // Test the ability of Systematic<T> to call T::ToHist
   // No need to get too fancy here. If it compiles assume it passes
-  std::vector<Ratio<Scalar, Cols> >vratio_mv;
+  std::vector<test::utils::Ratio<Scalar, Cols> >vratio_mv;
   for(auto i = 0u; i < syst.GetShifts().size(); i++) {
-    vratio_mv.push_back(Ratio(syst.GetShifts()[i], nominal));
+    vratio_mv.push_back(test::utils::Ratio(syst.GetShifts()[i], nominal));
   }
   
   Systematic ratio_mv("ratio_mv", vratio_mv);
-  auto ratio_mv_hists = ratio_mv.Invoke(&Ratio<Scalar, Cols>::ToHist);
+  auto ratio_mv_hists = ratio_mv.Invoke(&test::utils::Ratio<Scalar, Cols>::ToHist);
 
-  auto ratio_plus_1sigma = ratio_mv.NSigmaShift(1, Ratio(nominal, nominal));
-  auto ratio_minus_1sigma = ratio_mv.NSigmaShift(-1, Ratio(nominal, nominal));
+  auto ratio_plus_1sigma = ratio_mv.NSigmaShift(1, test::utils::Ratio(nominal, nominal));
+  auto ratio_minus_1sigma = ratio_mv.NSigmaShift(-1, test::utils::Ratio(nominal, nominal));
   
   // save everything for later inspection
   TFile * output = new TFile("test_systematic.root", "update");
@@ -230,24 +171,24 @@ int main(int argc, char ** argv)
   auto bins = Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10);
   auto vnominal = Eigen::Array<double, 1, 10>::LinSpaced(10, -5, 5);
   Hist<double, 10> nominal(vnominal, bins);
-  Ratio<double, 10> up(nominal + 1, nominal);
-  Ratio<double, 10> dw(nominal - 1, nominal);
+  test::utils::Ratio<double, 10> up(nominal + 1, nominal);
+  test::utils::Ratio<double, 10> dw(nominal - 1, nominal);
 
   int nuniverses = 50;
   double maxy =  1;
   double miny = -1;
-  std::vector<Ratio<double, 10> > universes(nuniverses);
+  std::vector<test::utils::Ratio<double, 10> > universes(nuniverses);
   for(auto i = 0; i < nuniverses; i++) {
-    universes[i] = Ratio(nominal + (-1 + (maxy - miny) / (nuniverses-1) * i),
-			 nominal);
+    universes[i] = test::utils::Ratio(nominal + (-1 + (maxy - miny) / (nuniverses-1) * i),
+				      nominal);
   }
   
-  std::vector<Systematic<Ratio<double, 10> > * > systs;
-  systs.push_back(new Systematic<Ratio<double, 10> >("syst", up, dw));
-  systs.push_back(new Systematic<Ratio<double, 10> >("mv_syst", universes));
+  std::vector<Systematic<test::utils::Ratio<double, 10> > * > systs;
+  systs.push_back(new Systematic<test::utils::Ratio<double, 10> >("syst", up, dw));
+  systs.push_back(new Systematic<test::utils::Ratio<double, 10> >("mv_syst", universes));
 
   try {
-    systs[0]->NSigmaShift(0, Ratio(nominal, nominal));
+    systs[0]->NSigmaShift(0, test::utils::Ratio(nominal, nominal));
     pass &= false;
   }
   catch( exceptions::SystematicTypeError & e) {
@@ -265,7 +206,7 @@ int main(int argc, char ** argv)
 
 
   try {
-    systs[1]->NSigmaShift(0, Ratio(nominal, nominal));
+    systs[1]->NSigmaShift(0, test::utils::Ratio(nominal, nominal));
     pass &= true;
   }
   catch( exceptions::SystematicTypeError & e) {

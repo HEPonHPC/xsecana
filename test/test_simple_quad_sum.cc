@@ -5,40 +5,17 @@
 #include "XSecAna/IUnfold.h"
 #include "XSecAna/ICrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
+#include "XSecAna/test/test_utils.h"
+
 #include <iostream>
 
 #include "TFile.h"
 
 using namespace xsec;
 
-#define TEST_ARRAY(test_name, arr1, arr2, precision)			\
-  test = ((arr1) - (arr2)).isZero(precision);				\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (arr1) << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (arr2) << std::endl; \
-    pass &= test;							\
-  }									
-
-#define TEST_HIST(test_name,HIST, target_contents, target_edges, precision) \
-  test = (HIST.Contents() - target_contents).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_contents << std::endl; \
-    pass &= test;							\
-  }									\
-  test = (HIST.Edges() - target_edges).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Edges() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_edges << std::endl; \
-    pass &= test;							\
-  }								
-
 typedef Hist<double, 10> histtype;
 typedef ICrossSection<SimpleSignalEstimator<histtype>,
-		      DummyUnfold<double, 10>,
+		      test::utils::DummyUnfold<double, 10>,
 		      SimpleEfficiency<histtype>,
 		      SimpleFlux<histtype> > SimpleCrossSection;
 
@@ -53,7 +30,7 @@ SimpleCrossSection make_simple_xsec(Hist<double, 10> val)
   auto efficiency = new SimpleEfficiency<histtype>(ones, val);           // = 1 / val
   auto flux = new SimpleFlux(ones);                                      // = 1
   auto signal_estimator = new SimpleSignalEstimator(ones);               // = 1
-  auto unfold = new DummyUnfold<double, 10>(ones.Contents().size(), 2);  // = 2
+  auto unfold = new test::utils::DummyUnfold<double, 10>(ones.Contents().size(), 2);  // = 2
   return SimpleCrossSection(efficiency,
 			    signal_estimator,
 			    flux,

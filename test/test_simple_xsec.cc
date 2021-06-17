@@ -4,38 +4,14 @@
 #include "XSecAna/SimpleFlux.h"
 #include "XSecAna/IUnfold.h"
 #include "XSecAna/ICrossSection.h"
+#include "XSecAna/test/test_utils.h"
+
 
 #include <iostream>
 
 #include "TFile.h"
 
 using namespace xsec;
-
-#define TEST_ARRAY(test_name, arr1, arr2, precision)			\
-  test = (arr1 - arr2).isZero(precision);					\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr1 << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr2 << std::endl; \
-    pass = false;							\
-  }									
-
-#define TEST_HIST(test_name,HIST, target_contents, target_edges, precision) \
-  test = (HIST.Contents() - target_contents).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_contents << std::endl; \
-    pass = false;							\
-  }									\
-  test = (HIST.Edges() - target_edges).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Edges() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_edges << std::endl; \
-    pass = false;							\
-  }								
-
 
 
 int main(int argc, char ** argv)
@@ -64,7 +40,7 @@ int main(int argc, char ** argv)
   auto efficiency = new SimpleEfficiency<histtype>(eff_num, eff_den); // = 1/4
   auto flux = new SimpleFlux(flux_hist);                              // = 5
   auto signal_estimator = new SimpleSignalEstimator(bkgd);            // = 3
-  auto unfold = new DummyUnfold<double, 10>(bkgd.Contents().size());  // = 1
+  auto unfold = new test::utils::DummyUnfold<double, 10>(bkgd.Contents().size());  // = 1
 
   ICrossSection xsec(efficiency,
 		     signal_estimator,

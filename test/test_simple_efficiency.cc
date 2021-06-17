@@ -1,37 +1,12 @@
 #include "XSecAna/Hist.h"
 #include "XSecAna/SimpleEfficiency.h"
+#include "XSecAna/test/test_utils.h"
 
 #include <iostream>
 
 #include "TFile.h"
 
 using namespace xsec;
-
-#define TEST_ARRAY(test_name, arr1, arr2, precision)			\
-  test = (arr1 - arr2).isZero(precision);					\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr1 << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << arr2 << std::endl; \
-    pass = false;							\
-  }									
-
-#define TEST_HIST(test_name,HIST, target_contents, target_edges, precision) \
-  test = (HIST.Contents() - target_contents).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_contents << std::endl; \
-    pass = false;							\
-  }									\
-  test = (HIST.Edges() - target_edges).isZero(precision);			\
-  if(!test || verbose) {						\
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << HIST.Edges() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << target_edges << std::endl; \
-    pass = false;							\
-  }								
-
 
 int main(int argc, char ** argv)
 {

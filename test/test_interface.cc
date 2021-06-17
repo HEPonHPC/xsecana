@@ -12,13 +12,14 @@
 #include "XSecAna/SimpleFlux.h"
 #include "XSecAna/SimpleSignalEstimator.h"
 
+#include "XSecAna/test/test_utils.h"
 
 using namespace xsec;
 
 int main(int argc, char ** argv)
 {
   typedef ICrossSection<SimpleSignalEstimator<HistXd>,
-			CAFAnaUnfold<ana::UnfoldIterative, 1>,
+			test::utils::DummyUnfold<double, -1>,
 			SimpleEfficiency<HistXd>,
 			SimpleFlux<HistXd> > SimpleCrossSection;
 
