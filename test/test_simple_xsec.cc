@@ -13,6 +13,11 @@
 
 using namespace xsec;
 
+typedef Hist<double, 10> histtype;
+typedef ICrossSection<SimpleSignalEstimator<histtype>,
+		      test::utils::DummyUnfold<double, 10>,
+		      SimpleEfficiency<histtype>,
+		      SimpleFlux<histtype> > SimpleCrossSection;
 
 int main(int argc, char ** argv)
 {
@@ -40,12 +45,12 @@ int main(int argc, char ** argv)
   auto efficiency = new SimpleEfficiency<histtype>(eff_num, eff_den); // = 1/4
   auto flux = new SimpleFlux(flux_hist);                              // = 5
   auto signal_estimator = new SimpleSignalEstimator(bkgd);            // = 3
-  auto unfold = new test::utils::DummyUnfold<double, 10>(bkgd.Contents().size());  // = 1
+  auto unfold = new test::utils::DummyUnfold<double, 10>(bkgd.Contents().size(), 2);  // = 2
 
-  ICrossSection xsec(efficiency,
-		     signal_estimator,
-		     flux,
-		     unfold); // = 1 / 1e4
+  SimpleCrossSection xsec(efficiency,
+			  signal_estimator,
+			  flux,
+			  unfold); // = 1 / 1e4
 
   auto xsec_differential = xsec.ToDifferential();
   
@@ -53,12 +58,15 @@ int main(int argc, char ** argv)
 	     xsec.CrossSection(data, (double) (12. / 5. ) * 1e4).Contents(),
 	     (Eigen::Array<double, 1, 10>::Ones()),
 	     0);
+  TEST_ARRAY("xsec unfolded", 
+	     xsec.UnfoldedCrossSection(data, (double) (12. / 5. ) * 1e4).Contents(),
+	     (Eigen::Array<double, 1, 10>::Ones()*2),
+	     0);
 
   TEST_ARRAY("xsec_differential", 
 	     xsec_differential.CrossSection(data, (double) (12. / 5. ) * 1e4).Contents(),
 	     (Eigen::Array<double, 1, 10>::Ones() / 2),
 	     0);
-
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_xsec.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -66,6 +74,20 @@ int main(int argc, char ** argv)
   output->Close();
   delete output;
   
+  TFile * input = TFile::Open(test_file_name.c_str());
+  auto loaded_xsec = *SimpleCrossSection::LoadFrom(input, "xsec");
+  input->Close();
+  delete input;
+
+  TEST_ARRAY("loaded xsec", 
+	     loaded_xsec.CrossSection(data, (double) (12. / 5. ) * 1e4).Contents(),
+	     (Eigen::Array<double, 1, 10>::Ones()),
+	     0);
+
+  TEST_ARRAY("loaded xsec unfolded", 
+	     loaded_xsec.UnfoldedCrossSection(data, (double) (12. / 5. ) * 1e4).Contents(),
+	     (Eigen::Array<double, 1, 10>::Ones()*2),
+	     0);
   
 
   return pass;

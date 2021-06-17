@@ -24,7 +24,7 @@ namespace xsec {
     {}
 		    
     void SaveTo(TDirectory * dir, std::string subdir) const;
-    std::unique_ptr<ICrossSection> LoadFrom(TDirectory * dir, std::string subdir);
+    static std::unique_ptr<ICrossSection> LoadFrom(TDirectory * dir, std::string subdir);
 
     template<class HistType>
     HistType UnfoldedCrossSection(const HistType & data, typename HistType::scalar_type ntargets);

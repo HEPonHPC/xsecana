@@ -122,14 +122,15 @@ namespace xsec {
 								    std::string subdir)
 	{
 	  TDirectory * tmp = gDirectory;
-	  dir = dir->mkdir(subdir.c_str());
+	  dir = dir->GetDirectory(subdir.c_str());
 	  dir->cd();
 
 	  auto mat = *Hist<Scalar, Eigen::Dynamic>::LoadFrom(dir, "fMat");
     
 	  tmp->cd();
+
 	  return std::make_unique<DummyUnfold<Scalar, Cols > >(Eigen::Map<
-							       Eigen::Matrix<Scalar, Cols, Cols>
+							       const Eigen::Matrix<Scalar, Cols, Cols>
 							       >
 							       (mat.Contents().data(),
 								std::sqrt(mat.Contents().size()),

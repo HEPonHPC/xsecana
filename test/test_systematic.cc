@@ -10,6 +10,8 @@
 
 using namespace xsec;
 
+std::string test_file_name = test::utils::test_dir() + "test_systematic.root";
+
 template<typename Scalar, int Cols>
 bool run_tests(bool verbose, std::string dir)
 {
@@ -50,7 +52,6 @@ bool run_tests(bool verbose, std::string dir)
   auto syst_div_1 = syst_diff_1.Invoke(static_cast<histtype(histtype::*)(const histtype&) const>(&histtype::operator/), nominal);
   TEST_SYSTEMATIC("one sided division", syst_div_1, (up - nominal) / nominal, (up - nominal) / nominal);
 
-  std::string test_file_name = test::utils::test_dir() + "test_systematic.root";
   TFile * output = new TFile(test_file_name.c_str(), "update");
   TDirectory * to = output->mkdir(dir.c_str());
   syst_2.SaveTo(to, "syst_2");
@@ -122,7 +123,7 @@ bool run_tests_mv(bool verbose, std::string dir)
   auto ratio_minus_1sigma = ratio_mv.NSigmaShift(-1, test::utils::Ratio(nominal, nominal));
   
   // save everything for later inspection
-  TFile * output = new TFile("test_systematic.root", "update");
+  TFile * output = new TFile(test_file_name.c_str(), "update");
   syst.SaveTo(output->mkdir(dir.c_str()), "test_mv");
   nominal.SaveTo(output->GetDirectory(dir.c_str()), "nominal");
 
@@ -136,7 +137,7 @@ bool run_tests_mv(bool verbose, std::string dir)
   delete output;
 
   // serialization closure
-  TFile * input = TFile::Open("test_systematic.root");
+  TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded = Systematic<histtype>::LoadFrom(input->GetDirectory(dir.c_str()), "test_mv");
   input->Close();
   delete input;
@@ -154,7 +155,7 @@ int main(int argc, char ** argv)
 
   bool pass = true;
 
-  std::remove("test_systematic.root");
+  std::remove(test_file_name.c_str());
 
   pass &= run_tests<double, 10>(verbose, "double_10");
   pass &= run_tests<double, Eigen::Dynamic>(verbose, "double_dynamic");
