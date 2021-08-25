@@ -73,7 +73,7 @@ namespace xsec {
   /////////////////////////////////////////////////////////////////////////
   template<class HistType>
   inline Systematic<HistType> HandleMultiverseSystematic(const Systematic<HistType> & syst, 
-					       const HistType & nominal)
+							 const HistType & nominal)
   {
     // if given a multiverse systematic, return a new Systematic<HistType> that contains
     // +/- 1 sigma 
