@@ -48,6 +48,8 @@ namespace xsec {
   template<class T>
   class Systematic {
   public:
+    Systematic() {}
+
     Systematic(std::string name,
 	       const T & shift)
       : fContainer({shift}),
@@ -195,12 +197,12 @@ namespace xsec {
     if constexpr(type::IsHist<T>()) {
 	T shift = nominal;
 
-	for(auto ibin = 0u; ibin < nominal.NBins(); ibin++) {
-	  std::vector<decltype(std::declval<T>().GetBinContent(1))> vals;
+	for(auto ibin = 0u; ibin < nominal.size(); ibin++) {
+	  std::vector<typename T::scalar_type> vals;
 	  for(auto iuniv = 0u; iuniv < fContainer.size(); iuniv++) {
-	    vals.push_back(fContainer[iuniv].GetBinContent(ibin));
+	    vals.push_back(fContainer[iuniv][ibin]);
 	  }
-	  shift.SetBinContent(ibin, BinSigma(nsigma, vals, nominal.GetBinContent(ibin)));
+	  shift[ibin] = BinSigma(nsigma, vals, nominal[ibin]);
 	}
 	return shift;
       }
