@@ -7,7 +7,8 @@ BINS =  test_compile \
 	test_simple_flux \
 	test_simple_signal_estimator \
 	test_simple_xsec \
-	test_simple_quad_sum
+	test_simple_quad_sum \
+	test_simple_analysis
 
 SIMPLEBINS=$(BINS)
 
