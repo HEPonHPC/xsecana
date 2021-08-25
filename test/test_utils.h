@@ -177,7 +177,7 @@ namespace xsec {
       /////////////////////////////////////////////////////////
       std::string test_dir()
       {
-	return std::string(std::getenv("SRT_PRIVATE_CONTEXT")) + "/XSecAna/test/";
+	return "./";
       }
 
       const static double data_exposure = 0.5;
