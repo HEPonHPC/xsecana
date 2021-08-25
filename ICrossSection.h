@@ -89,7 +89,10 @@ namespace xsec {
 				 const bool is_differential)
   {
     HistType  xsec = unfolded_selected_signal;
-    xsec /= efficiency;
+
+    // don't scale efficiency by exposure
+    // since exposure cancels in the ratio
+    xsec = xsec.TrueDivide(efficiency);
     xsec /= flux;
     xsec *= 1e4/ntargets; // Convert nu/m^2 to nu/cm^2
     if(is_differential) xsec.Normalize("width");
@@ -111,10 +114,14 @@ namespace xsec {
 		IsDifferential>::
   CrossSection(const HistType & data, typename HistType::scalar_type ntargets)
   {
+    // calculate estimated signal and scale by the exposure of the data
+    auto signal = fSignalEstimator->Signal(data);
+    signal = signal.ScaleByExposure(data.Exposure());
+
     // invoke FluxType::operator* in case we want the integrated flux
     // Pass a histogram of ones through the flux parameter of
     // CalculateCrossSection to divide by one
-    return CalculateCrossSection(fSignalEstimator->Signal(data),
+    return CalculateCrossSection(signal,
 				 (*fFlux * fEfficiency->ToHist()),
 				 HistType(HistType::array_type::Ones(fEfficiency->ToHist().Contents().size()),
 					  fEfficiency->ToHist().Edges()),
@@ -137,10 +144,14 @@ namespace xsec {
 		IsDifferential>::
   UnfoldedCrossSection(const HistType & data, typename HistType::scalar_type ntargets)
   {
+    // calculate estimated signal and scale by the exposure of the data
+    auto signal = fSignalEstimator->Signal(data);
+    signal = signal.ScaleByExposure(data.Exposure());
+
     // invoke FluxType::operator* in case we want the integrated flux
     // Pass a histogram of ones through the flux parameter of
     // CalculateCrossSection to divide by one
-    return CalculateCrossSection(fUnfold->Truth(fSignalEstimator->Signal(data)),
+    return CalculateCrossSection(fUnfold->Truth(signal),
 				 (*fFlux * fEfficiency->ToHist()),
 				 HistType(HistType::array_type::Ones(fEfficiency->ToHist().Contents().size()),
 					  fEfficiency->ToHist().Edges()),
