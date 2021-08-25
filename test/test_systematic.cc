@@ -3,7 +3,7 @@
 
 #include "XSecAna/Hist.h"
 #include "XSecAna/Systematic.h"
-#include "XSecAna/test/test_utils.h"
+#include "test_utils.h"
 
 #include <Eigen/Dense>
 #include "TFile.h"

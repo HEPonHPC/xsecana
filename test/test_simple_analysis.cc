@@ -9,7 +9,7 @@
 #include "XSecAna/ICrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
 #include "XSecAna/CrossSectionAnalysis.h"
-#include "XSecAna/test/test_utils.h"
+#include "test_utils.h"
 
 #include <Eigen/Dense>
 #include "TFile.h"

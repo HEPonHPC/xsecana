@@ -12,7 +12,7 @@
 #include "XSecAna/SimpleFlux.h"
 #include "XSecAna/SimpleSignalEstimator.h"
 
-#include "XSecAna/test/test_utils.h"
+#include "test_utils.h"
 
 using namespace xsec;
 

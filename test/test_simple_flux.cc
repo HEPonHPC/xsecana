@@ -1,6 +1,6 @@
 #include "XSecAna/Hist.h"
 #include "XSecAna/SimpleFlux.h"
-#include "XSecAna/test/test_utils.h"
+#include "test_utils.h"
 #include <iostream>
 
 #include "TFile.h"

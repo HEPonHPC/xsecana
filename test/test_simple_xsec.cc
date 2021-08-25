@@ -4,7 +4,7 @@
 #include "XSecAna/SimpleFlux.h"
 #include "XSecAna/IUnfold.h"
 #include "XSecAna/ICrossSection.h"
-#include "XSecAna/test/test_utils.h"
+#include "test_utils.h"
 
 
 #include <iostream>
