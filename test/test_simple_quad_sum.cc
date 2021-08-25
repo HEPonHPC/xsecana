@@ -19,65 +19,48 @@ typedef ICrossSection<SimpleSignalEstimator<histtype>,
 		      SimpleEfficiency<histtype>,
 		      SimpleFlux<histtype> > SimpleCrossSection;
 
-// make a cross section object that evaluates out to 
-//  - the input array when folded
-//  - 2 times the input array when unfolded
-SimpleCrossSection make_simple_xsec(Hist<double, 10> val)
-{
-  Hist<double, 10> ones(Eigen::Array<double, 1, 10>::Ones(),
-			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
-
-  auto efficiency = new SimpleEfficiency<histtype>(ones, val);           // = 1 / val
-  auto flux = new SimpleFlux(ones);                                      // = 1
-  auto signal_estimator = new SimpleSignalEstimator(ones);               // = 1
-  auto unfold = new test::utils::DummyUnfold<double, 10>(ones.Contents().size(), 2);  // = 2
-  return SimpleCrossSection(efficiency,
-			    signal_estimator,
-			    flux,
-			    unfold);
-}
-
 int main(int argc, char ** argv)
 {
   bool verbose = false;
   if(argc > 1 && std::strcmp(argv[1], "-v") == 0)  verbose = true;
   bool pass = true;
   bool test;
-  
+
   SimpleQuadSum<SimpleCrossSection, histtype> prop;
-  
+
   Hist<double, 10> ones(Eigen::Array<double, 1, 10>::Ones(),
 			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
-  Hist<double, 10> data(Eigen::Array<double, 1, 10>::Ones() * 2,
-			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 20));
-  Hist<double, 10> hnominal = ones + 0.2;
-  double ntargets = 1e4;
+  auto hnominal = test::utils::get_simple_nominal_hist<double, 10>();
+  auto hup = test::utils::get_simple_up_hist<double, 10>();
+  auto hdown = test::utils::get_simple_down_hist<double, 10>();
+  auto hmax_shift = hnominal;
+  for(auto i = 0u; i < hmax_shift.size(); i++) {
+    hmax_shift[i] = std::max(std::abs(hnominal[i] - hup[i]),
+			     std::abs(hnominal[i] - hdown[i]));
+  }
 
-  SimpleCrossSection nominal_xsec = make_simple_xsec(hnominal);
-  SimpleCrossSection up   = make_simple_xsec(hnominal + std::sqrt(2) );  
-  SimpleCrossSection down = make_simple_xsec(hnominal - std::sqrt(2) / 2);
+  auto data = test::utils::get_simple_data<double, 10>();
 
-  /* 
-     multiverse example 
+  SimpleCrossSection nominal_xsec = test::utils::make_simple_xsec(hnominal);
+  SimpleCrossSection up   = test::utils::make_simple_xsec(hup);
+  SimpleCrossSection down = test::utils::make_simple_xsec(hdown);
+
+  /*
+     multiverse example
   */
   int nuniverses = 50;
-  double maxy =  1;
-  double miny = -1;
-  std::vector<SimpleCrossSection> xsec_universes(nuniverses);
-  std::vector<Hist<double, 10> > hist_universes(nuniverses);
-  for(auto i = 0; i < nuniverses; i++) {
-    xsec_universes[i] = make_simple_xsec(hnominal + (-1 + (maxy - miny) / (nuniverses-1) * i));
-    hist_universes[i] = hnominal + (-1 + (maxy - miny) / (nuniverses-1) * i);
-  }
-  
+
+  std::vector<SimpleCrossSection> xsec_universes = test::utils::make_simple_xsec_multiverse(hnominal, nuniverses);
+  std::vector<Hist<double, 10> > hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
+
   Systematic<SimpleCrossSection> syst_mv("mv_xsec", xsec_universes);
   Systematic<Hist<double, 10> > syst_mv_hist("mv_hist", hist_universes);
 
   auto abs_uncert_mv = prop.AbsoluteUncertaintyXSec(data,
 						    nominal_xsec,
 						    syst_mv,
-						    ntargets);
-  
+						    test::utils::ntargets);
+
   // index of universe representing minus 1 sigma shift
   int m1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses-1) + 1;
 
@@ -97,52 +80,68 @@ int main(int argc, char ** argv)
   auto abs_uncert_1sided = prop.AbsoluteUncertaintyXSec(data,
 							nominal_xsec,
 							syst_1sided,
-							ntargets);
+							test::utils::ntargets);
+
+  TEST_ARRAY("abs_uncert 1 sided",
+	     abs_uncert_1sided.Contents(),
+	     (hup - hnominal).Contents(),
+	     1e-14);
+
+  std::map<std::string, Systematic<SimpleCrossSection> > rmap = {
+    {"1sided", syst_1sided},
+  };
+  auto symmetrize = prop.TotalAbsoluteUncertaintyXSec(data,
+						      nominal_xsec,
+						      rmap,
+						      test::utils::ntargets);
+  TEST_ARRAY("symmeterize",
+	     symmetrize.first.Contents(),
+	     symmetrize.second.Contents(),
+	     0);
+
   auto abs_uncert_2sided = prop.AbsoluteUncertaintyXSec(data,
 							nominal_xsec,
 							syst_2sided,
-							ntargets);
-
-  TEST_ARRAY("abs_uncert",
-	     abs_uncert_1sided.Contents(),
-	     (ones * std::sqrt(2)).Contents(),
-	     0);
-  TEST_ARRAY("max shift",
-	     abs_uncert_1sided.Contents(),
+							test::utils::ntargets);
+  TEST_ARRAY("abs_uncert 2 sided",
 	     abs_uncert_2sided.Contents(),
-	     0);
+	     hmax_shift.Contents(),
+	     1e-14);
 
   // AbsoluteUncertaintyUnfoldedXSec
   auto abs_uncert_1sided_unfolded = prop.AbsoluteUncertaintyUnfoldedXSec(data,
 									 nominal_xsec,
 									 syst_1sided,
-									 ntargets);
+									 test::utils::ntargets);
 
-  TEST_ARRAY("abs_uncert unfolded",
+  TEST_ARRAY("abs_uncert 1 sided unfolded",
 	     abs_uncert_1sided_unfolded.Contents(),
-	     (ones * (2 * std::sqrt(2))).Contents(),
-	     0);
+	     (hup - hnominal).Contents() * 2,
+	     1e-14);
 
   // FractionalUncertaintyXSec
-  auto frac_uncert_1sided = prop.FractionalUncertaintyXSec(data, 
-							   nominal_xsec, 
+  auto frac_uncert_1sided = prop.FractionalUncertaintyXSec(data,
+							   nominal_xsec,
 							   syst_1sided,
-							   ntargets);
+							   test::utils::ntargets);
+  std::cout << "frac_uncert_1sided.Exposure()" << frac_uncert_1sided.Exposure() << std::endl;
+  std::cout << "hup.Exposure()" << hup.Exposure() << std::endl;
+  std::cout << "hnominal.Exposure()" << hnominal.Exposure() << std::endl;
   TEST_ARRAY("fractional uncert",
 	     frac_uncert_1sided.Contents(),
-	     (((hnominal + std::sqrt(2)) - hnominal) / hnominal).Contents(), 
-	     0);
+	     ((hup - hnominal) / hnominal).Contents(),
+	     1e-14);
 
   // FractionalUncertaintyUnfoldedXSec
-  auto frac_uncert_1sided_unfolded = prop.FractionalUncertaintyUnfoldedXSec(data, 
-									    nominal_xsec, 
+  auto frac_uncert_1sided_unfolded = prop.FractionalUncertaintyUnfoldedXSec(data,
+									    nominal_xsec,
 									    syst_1sided,
-									    ntargets);
-  TEST_ARRAY("fractional uncert",
+									    test::utils::ntargets);
+  TEST_ARRAY("fractional uncert unfolded",
 	     frac_uncert_1sided_unfolded.Contents(),
-	     (((hnominal + std::sqrt(2)) - hnominal) / hnominal).Contents(), 
-	     0);
-  
+	     ((hup - hnominal) / hnominal).Contents(),
+	     1e-14);
+
 
   // TotalAbsoluteUncertaintyXSec
   std::map<std::string, Systematic<SimpleCrossSection> > systs = {
@@ -154,43 +153,43 @@ int main(int argc, char ** argv)
   auto total_abs_uncert = prop.TotalAbsoluteUncertaintyXSec(data,
 							    nominal_xsec,
 							    systs,
-							    ntargets);
+							    test::utils::ntargets);
   TEST_ARRAY("total absolute uncert",
 	     total_abs_uncert.first.Contents(),
-	     ((hist_universes[m1_idx]-hnominal).Contents().abs().pow(2) + ones.Contents() * 4).sqrt(),
+	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt(),
 	     1e-14);
 
   // TotalAbsoluteUncertaintyUnfoldedXSec
   auto total_abs_uncert_unfolded = prop.TotalAbsoluteUncertaintyUnfoldedXSec(data,
 									     nominal_xsec,
 									     systs,
-									     ntargets);
+									     test::utils::ntargets);
   TEST_ARRAY("total absolute uncert unfolded",
 	     total_abs_uncert_unfolded.first.Contents(),
-	     ((hist_universes[m1_idx]-hnominal).Contents().abs().pow(2) + ones.Contents() * 4).sqrt() * 2,
+	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() * 2,
 	     1e-14);
 
   // TotalFractionalUncertaintyXSec
   auto total_frac_uncert = prop.TotalFractionalUncertaintyXSec(data,
 							       nominal_xsec,
 							       systs,
-							       ntargets);
+							       test::utils::ntargets);
   TEST_ARRAY("total frac uncert",
 	     total_frac_uncert.first.Contents(),
-	     ((hist_universes[m1_idx]-hnominal).Contents().abs().pow(2) + ones.Contents() * 4 ).sqrt() / hnominal.Contents(),
+	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
 	     1e-14);
 
   // TotalFractionalUncertaintyUnfoldedXSec
   auto total_frac_uncert_unfolded = prop.TotalFractionalUncertaintyUnfoldedXSec(data,
 										nominal_xsec,
 										systs,
-										ntargets);
+										test::utils::ntargets);
   TEST_ARRAY("total frac uncert unfolded",
 	     total_frac_uncert_unfolded.first.Contents(),
-	     ((hist_universes[m1_idx]-hnominal).Contents().abs().pow(2) + ones.Contents() * 4 ).sqrt() / hnominal.Contents(),
+	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
 	     1e-14);
 
 
-	     
+
   return pass;
 }

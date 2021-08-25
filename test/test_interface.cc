@@ -26,7 +26,7 @@ int main(int argc, char ** argv)
   HistXd hist;
   SimpleFlux<HistXd> flux;
   CrossSectionAnalysis<SimpleCrossSection,
-		       SimpleQuadSum<HistXd> > analysis;
+		       SimpleQuadSum<SimpleCrossSection> > analysis;
 
   return 1;
 }

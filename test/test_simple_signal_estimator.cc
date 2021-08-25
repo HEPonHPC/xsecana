@@ -14,14 +14,12 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  Hist<double, 10> bkgd(Eigen::Array<double, 1, 10>::Ones() / 2,
-			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
-  Hist<double, 10> data(Eigen::Array<double, 1, 10>::Ones(),
-			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+  auto data = test::utils::get_simple_data<double, 10>();
+  auto expected_signal = test::utils::get_simple_signal<double, 10>();
 
-  SimpleSignalEstimator signal_estimator(bkgd);
+  SimpleSignalEstimator signal_estimator(test::utils::get_simple_background<double, 10>());
 
-  TEST_HIST("signal", signal_estimator.Signal(data), bkgd.Contents(), bkgd.Edges(), 0);
+  TEST_HIST("signal", signal_estimator.Signal(data), expected_signal.Contents(), expected_signal.Edges(), 0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_signal_estimator.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -32,7 +30,7 @@ int main(int argc, char ** argv)
   TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded = *SimpleSignalEstimator<Hist<double, 10> >::LoadFrom(input, "signal_estimator");
 
-  TEST_HIST("loadfrom", loaded.Background(data), bkgd.Contents(), bkgd.Edges(), 0);
+  TEST_HIST("loadfrom", loaded.Signal(data), expected_signal.Contents(), expected_signal.Edges(), 0);
 
   return pass;
 }

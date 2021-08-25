@@ -17,15 +17,10 @@ bool run_tests(bool verbose, std::string dir)
 {
   bool pass = true;
   bool test;
-  auto bins = Eigen::Array<Scalar, 1, EdgesSize(Cols)>::LinSpaced(11, 0, 10);
   
-  auto vnominal = Eigen::Array<Scalar, 1, Cols>::Ones(10) * 5;
-  auto vup      = Eigen::Array<Scalar, 1, Cols>::LinSpaced(10, 4, 6);
-  auto vdown    = Eigen::Array<Scalar, 1, Cols>::LinSpaced(10, 4, 6).reverse();
-
-  Hist<Scalar, Cols> nominal(vnominal, bins);
-  Hist<Scalar, Cols> up     (vup     , bins);
-  Hist<Scalar, Cols> down   (vdown   , bins);
+  auto nominal = test::utils::get_simple_nominal_hist<Scalar, Cols>();
+  auto up      = test::utils::get_simple_up_hist<Scalar, Cols>();
+  auto down    = test::utils::get_simple_down_hist<Scalar, Cols>();
 
   // two sided sytematic construction
   Systematic<Hist<Scalar, Cols> > syst_2("syst", up, down);
@@ -79,17 +74,10 @@ bool run_tests_mv(bool verbose, std::string dir)
 
   bool pass = true;
   bool test;
-  auto bins = Eigen::Array<Scalar, 1, EdgesSize(Cols)>::LinSpaced(11, 0, 10);
   
-  auto vnominal = Eigen::Array<Scalar, 1, Cols>::LinSpaced(10, -5, 5);
-  Hist<Scalar, Cols> nominal(vnominal, bins);
+  auto nominal = test::utils::get_simple_nominal_hist<Scalar, Cols>();
   int nuniverses = 50;
-  Scalar maxy =  1;
-  Scalar miny = -1;
-  std::vector<Hist<Scalar, Cols> > universes(nuniverses);
-  for(auto i = 0; i < nuniverses; i++) {
-    universes[i] = nominal + (-1 + (maxy - miny) / (nuniverses-1) * i);
-  }
+  std::vector<Hist<Scalar, Cols> > universes = test::utils::make_simple_hist_multiverse(nominal, nuniverses);
   
   Systematic syst("test_mv", universes);
 
@@ -170,9 +158,7 @@ int main(int argc, char ** argv)
   
 
   // test of runtime
-  auto bins = Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10);
-  auto vnominal = Eigen::Array<double, 1, 10>::LinSpaced(10, -5, 5);
-  Hist<double, 10> nominal(vnominal, bins);
+  auto nominal = test::utils::get_simple_nominal_hist<double, 10>();
   test::utils::Ratio<double, 10> up(nominal + 1, nominal);
   test::utils::Ratio<double, 10> dw(nominal - 1, nominal);
 
