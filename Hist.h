@@ -8,7 +8,7 @@
 #include <iostream>
 
 namespace xsec {
-  // compile time expression for determining size of Eigen Array holding 
+  // compile time expression for determining size of Eigen Array holding
   // bin edges
   constexpr int EdgesSize(int Cols) { return Cols == Eigen::Dynamic ? Eigen::Dynamic : Cols + 1; }
 
@@ -16,11 +16,11 @@ namespace xsec {
   // Wraps Eigen arrays
   // Users can create conversion functions to/from this object
   // template parameters are forwarded to the underlaying Eigen arrays
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols=-1>
   class Hist {
   public:
-    
+
     typedef Scalar scalar_type;
     typedef Eigen::Array<Scalar, 1, Cols> array_type;
     typedef Eigen::Array<Scalar, 1, EdgesSize(Cols)> edges_type;
@@ -35,14 +35,14 @@ namespace xsec {
 	 Scalar exposure)
       : fContents(contents), fEdges(edges), fExposure(exposure)
     {}
-    
+
 
     // convenience constructor.
     // works for dynamic and fixed-size histograms
     Hist(const int & nbins,
 	 const Scalar & min,
 	 const Scalar & max);
-    
+
     void Normalize(std::string how);
     Scalar Integrate() const;
     Hist operator-(const Hist& rhs) const;
@@ -66,7 +66,7 @@ namespace xsec {
     Hist operator-=(const Scalar& rhs);
     Hist operator+=(const Scalar& rhs);
     Hist operator/=(const Scalar& rhs);
-    Hist operator*=(const Scalar& rhs);    
+    Hist operator*=(const Scalar& rhs);
 
     Hist ScaleByExposure(Scalar new_expo) const;
     Hist TrueDivide(const Hist& rhs) const;
@@ -83,13 +83,13 @@ namespace xsec {
 
     unsigned int size() const { return fContents.size(); }
     Eigen::Array<Scalar, 1, Cols> BinWidths() const;
-    
+
     Scalar & operator[](int index) { return fContents(index); }
     Scalar operator[](int index) const { return fContents(index); }
 
     void SaveTo(TDirectory * dir, std::string subdir) const;
     static std::unique_ptr<Hist> LoadFrom(TDirectory * dir, std::string subdir);
-    
+
   private:
     /// \brief Call memeber function
     /// Eigen::Array<Scalar, 1, Cols>::f on
@@ -104,7 +104,7 @@ namespace xsec {
   };
 
   typedef Hist<double, Eigen::Dynamic> HistXd;
-  typedef Hist<float , Eigen::Dynamic> HistXf;  
+  typedef Hist<float , Eigen::Dynamic> HistXf;
 
   // ROOT interface
   // we're still dependent enough on ROOT for this to be here
@@ -135,9 +135,9 @@ namespace xsec {
     }
 
     template<typename Scalar, int Cols>
-    Hist<Scalar, Cols> 
+    Hist<Scalar, Cols>
     FromTH1(const TH1 * h, Scalar expo)
-    {      
+    {
       Scalar edges   [h->GetNbinsX()+1];
       Scalar contents[h->GetNbinsX()  ];
       for(auto i = 0; i < h->GetNbinsX(); i++) {
@@ -155,7 +155,7 @@ namespace xsec {
   }
   /////////////////////////////////////////////////////////
   template<typename Scalar, int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   TrueDivide(const Hist & rhs) const
   {
@@ -166,7 +166,7 @@ namespace xsec {
 
   /////////////////////////////////////////////////////////
   template<typename Scalar, int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   ScaleByExposure(Scalar new_expo) const
   {
@@ -185,7 +185,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, int Cols> 
+  template<typename Scalar, int Cols>
   Hist<Scalar, Cols>::
   Hist(const int & nbins,
        const Scalar & min,
@@ -252,7 +252,7 @@ namespace xsec {
       std::cerr << "Object TH1 was not found in " << dir->GetPath() << std::endl;
       exit(1);
     }
-      
+
     return std::make_unique<Hist<Scalar, Cols> > (root::FromTH1<Scalar, Cols>(h, exposure->GetBinContent(1)));
   }
 
@@ -263,8 +263,8 @@ namespace xsec {
   Hist<Scalar, Cols>::
   operator==(const Hist<Scalar, Cols> & rhs) const
   {
-    return 
-      (this->fContents - rhs.fContents).isZero(0) && 
+    return
+      (this->fContents - rhs.fContents).isZero(0) &&
       (this->fEdges - rhs.fEdges).isZero(0),
       (this->fExposure == rhs.fExposure);
   }
@@ -286,9 +286,9 @@ namespace xsec {
   /////////////////////////////////////////////////////////
   template<class Scalar,
 	   int Cols>
-  Eigen::Array<Scalar, 1, Cols> 
+  Eigen::Array<Scalar, 1, Cols>
   Hist<Scalar, Cols>::
-  BinWidths() const 
+  BinWidths() const
   {
     return fEdges.tail(fContents.size()) - fEdges.head(fContents.size());
   }
@@ -307,7 +307,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -317,7 +317,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -327,7 +327,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -337,7 +337,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -348,7 +348,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -360,7 +360,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -371,7 +371,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -383,7 +383,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -394,7 +394,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -406,7 +406,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -417,7 +417,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -429,7 +429,7 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
@@ -440,9 +440,9 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator-(const Scalar & rhs) const
   {
@@ -452,9 +452,9 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator-=(const Scalar & rhs)
   {
@@ -463,9 +463,9 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator+(const Scalar & rhs) const
   {
@@ -475,9 +475,9 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator+=(const Scalar & rhs)
   {
@@ -486,9 +486,9 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator*(const Scalar & rhs) const
   {
@@ -498,9 +498,9 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator/(const Scalar & rhs) const
   {
@@ -510,9 +510,9 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator/=(const Scalar & rhs)
   {
@@ -522,9 +522,9 @@ namespace xsec {
 
 
   /////////////////////////////////////////////////////////
-  template<typename Scalar, 
+  template<typename Scalar,
 	   int Cols>
-  Hist<Scalar, Cols> 
+  Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   operator*=(const Scalar & rhs)
   {
