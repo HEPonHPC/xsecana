@@ -30,7 +30,7 @@ bool run_tests(bool verbose)
       tol = 1e-14;
     }
   else {
-    tol = 1e-12;
+    tol = 1e-6;
   }
 
   bool pass = true;
@@ -84,10 +84,10 @@ int main(int argc, char ** argv)
   bool pass = true;
 
   pass &= run_tests<double, 10>(verbose);
-//  pass &= run_tests<double, Eigen::Dynamic>(verbose);
-//  pass &= run_tests<float, 10>(verbose);
-//  pass &= run_tests<float, Eigen::Dynamic>(verbose);
-//
+  pass &= run_tests<double, Eigen::Dynamic>(verbose);
+  pass &= run_tests<float, 10>(verbose);
+  pass &= run_tests<float, Eigen::Dynamic>(verbose);
+
   pass &= !type::IsHist<double>();
   pass &=  type::IsHist<Hist<double, 1> >();
   
