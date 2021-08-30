@@ -28,7 +28,7 @@ int main(int argc, char ** argv)
 
   SimpleQuadSum<SimpleCrossSection, histtype> prop;
 
-  Hist<double, 10> ones(Eigen::Array<double, 1, 10>::Ones(),
+  Hist<double, 10> hone(Eigen::Array<double, 1, 10>::Ones(),
 			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
   auto hnominal = test::utils::get_simple_nominal_hist<double, 10>();
   auto hup = test::utils::get_simple_up_hist<double, 10>();
@@ -44,6 +44,37 @@ int main(int argc, char ** argv)
   SimpleCrossSection nominal_xsec = test::utils::make_simple_xsec(hnominal);
   SimpleCrossSection up   = test::utils::make_simple_xsec(hup);
   SimpleCrossSection down = test::utils::make_simple_xsec(hdown);
+
+
+
+  // simple test of the math
+  Systematic<SimpleCrossSection> one("1", test::utils::make_simple_xsec(hone));
+  Systematic<SimpleCrossSection> four("4",
+				      test::utils::make_simple_xsec(hone * 4));
+  Systematic<SimpleCrossSection> three("3",
+				       test::utils::make_simple_xsec(hone * 3));
+  SimpleCrossSection two  = test::utils::make_simple_xsec(hone * 2);
+
+
+  auto one_half = prop.FractionalUncertaintyXSec(data,
+						 two,
+						 three,
+						 test::utils::ntargets);
+  TEST_ARRAY("one_half", one_half.Contents(), (hone / 2).Contents(), 1e-14);
+
+
+  std::map<std::string, Systematic<SimpleCrossSection> > syst_map = {
+    {"1", one},
+    {"3", three},
+    {"4", four},
+  };
+  auto sqrt_six_halves = prop.TotalFractionalUncertaintyXSec(data,
+							     two,
+							     syst_map,
+							     test::utils::ntargets).first;
+  TEST_ARRAY("sqrt_six_halves", sqrt_six_halves.Contents(), (hone * 6 / 4).sqrt().Contents(), 1e-14);
+
+
 
   /*
      multiverse example
@@ -124,9 +155,6 @@ int main(int argc, char ** argv)
 							   nominal_xsec,
 							   syst_1sided,
 							   test::utils::ntargets);
-  std::cout << "frac_uncert_1sided.Exposure()" << frac_uncert_1sided.Exposure() << std::endl;
-  std::cout << "hup.Exposure()" << hup.Exposure() << std::endl;
-  std::cout << "hnominal.Exposure()" << hnominal.Exposure() << std::endl;
   TEST_ARRAY("fractional uncert",
 	     frac_uncert_1sided.Contents(),
 	     ((hup - hnominal) / hnominal).Contents(),
@@ -154,9 +182,11 @@ int main(int argc, char ** argv)
 							    nominal_xsec,
 							    systs,
 							    test::utils::ntargets);
+  auto target_total_abs_uncert = (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).sqrt();
+
   TEST_ARRAY("total absolute uncert",
 	     total_abs_uncert.first.Contents(),
-	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt(),
+	     target_total_abs_uncert.Contents(),
 	     1e-14);
 
   // TotalAbsoluteUncertaintyUnfoldedXSec
@@ -164,9 +194,10 @@ int main(int argc, char ** argv)
 									     nominal_xsec,
 									     systs,
 									     test::utils::ntargets);
+  auto target_total_abs_uncert_unfolded = (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).sqrt() * 2;
   TEST_ARRAY("total absolute uncert unfolded",
 	     total_abs_uncert_unfolded.first.Contents(),
-	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() * 2,
+	     target_total_abs_uncert_unfolded.Contents(),
 	     1e-14);
 
   // TotalFractionalUncertaintyXSec
@@ -177,6 +208,7 @@ int main(int argc, char ** argv)
   TEST_ARRAY("total frac uncert",
 	     total_frac_uncert.first.Contents(),
 	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
+	     //(abs_uncert_1sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
 	     1e-14);
 
   // TotalFractionalUncertaintyUnfoldedXSec

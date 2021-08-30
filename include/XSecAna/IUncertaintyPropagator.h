@@ -13,25 +13,25 @@ namespace xsec {
 	   class HistType = HistXd>
   class IUncertaintyPropagator {
   public:
-    virtual std::pair<HistType, HistType> 
+    virtual std::pair<HistType, HistType>
     TotalFractionalUncertaintyUnfoldedXSec(const HistType & data,
 					   CrossSectionType & nominal_xsec,
 					   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
 					   double ntargets) = 0;
 
-    virtual std::pair<HistType, HistType> 
+    virtual std::pair<HistType, HistType>
     TotalFractionalUncertaintyXSec(const HistType & data,
 				   CrossSectionType & nominal_xsec,
 				   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
 				   double ntargets) = 0;
 
-    virtual std::pair<HistType, HistType> 
+    virtual std::pair<HistType, HistType>
     TotalAbsoluteUncertaintyUnfoldedXSec(const HistType & data,
 					 CrossSectionType & nominal_xsec,
 					 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
 					 double ntargets) = 0;
 
-    virtual std::pair<HistType, HistType> 
+    virtual std::pair<HistType, HistType>
     TotalAbsoluteUncertaintyXSec(const HistType & data,
 				 CrossSectionType & nominal_xsec,
 				 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
@@ -61,7 +61,7 @@ namespace xsec {
 			    double ntargets) = 0;
 
   };
-  
+
   // inline some common functions
   template<typename Scalar,
 	   int Cols>
@@ -73,7 +73,9 @@ namespace xsec {
     Eigen::Matrix<Scalar, 2, Cols> stack;
     stack << h1.Contents(),h2.Contents();
 
-    return Hist<Scalar,Cols>(stack.colwise().maxCoeff(), h1.Edges());
+    return Hist<Scalar,Cols>(stack.colwise().maxCoeff(),
+			     h1.Edges(),
+			     h1.Exposure());
   }
 
   template<typename Scalar,
@@ -81,12 +83,14 @@ namespace xsec {
   inline Hist<Scalar, Cols>
   QuadSum(std::vector<Hist<Scalar, Cols> > deltas)
   {
+    auto exposure = deltas[0].Exposure();
     // put deltas into an Eigen::Matrix for efficiency column-wise operations
     Eigen::Matrix<Scalar, Eigen::Dynamic, Cols> mat(deltas.size(), Cols);
     for(auto irow = 0u; irow < deltas.size(); irow++) {
-      mat.row(irow) = deltas[irow].Contents();
+      mat.row(irow) = deltas[irow].Contents() * exposure / deltas[irow].Exposure();
     }
     return Hist<Scalar, Cols>(mat.colwise().squaredNorm(),
-			      deltas[0].Edges());
+			      deltas[0].Edges(),
+			      std::pow(deltas[0].Exposure(), 2));
   }
 }
