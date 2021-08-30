@@ -91,13 +91,6 @@ namespace xsec {
     static std::unique_ptr<Hist> LoadFrom(TDirectory * dir, std::string subdir);
 
   private:
-    /// \brief Call memeber function
-    /// Eigen::Array<Scalar, 1, Cols>::f on
-    /// the contents array.
-    /// return a new Hist with same binning but modified contents
-    template<class F, class... Args>
-    Hist Invoke(F f, Args... args) const;
-
     Eigen::Array<Scalar, 1, Cols     > fContents;
     Eigen::Array<Scalar, 1, EdgesSize(Cols)> fEdges;
     Scalar fExposure=1;
@@ -294,26 +287,15 @@ namespace xsec {
   }
 
   /////////////////////////////////////////////////////////
-  template<class Scalar,
-	   int Cols>
-  template<class F, class... Args>
-  Hist<Scalar, Cols>
-  Hist<Scalar, Cols>::
-  Invoke(F f, Args... args) const
-  {
-    Hist<Scalar, Cols> ret = *this; // copy binning
-    ret.fContents = std::invoke(f, ret.fContents, args...);
-    return ret;
-  }
-
-  /////////////////////////////////////////////////////////
   template<typename Scalar,
 	   int Cols>
   Hist<Scalar, Cols>
   Hist<Scalar, Cols>::
   abs() const
   {
-    return this->Invoke(&Eigen::Array<Scalar, 1, Cols>::abs);
+    return Hist<Scalar, Cols>(this->fContents.abs(),
+			      this->fEdges,
+			      this->fExposure);
   }
 
   /////////////////////////////////////////////////////////
@@ -323,7 +305,9 @@ namespace xsec {
   Hist<Scalar, Cols>::
   abs2() const
   {
-    return this->Invoke(&Eigen::Array<Scalar, 1, Cols>::abs2);
+    return Hist<Scalar, Cols>(this->fContents.abs2(),
+			      this->fEdges,
+			      this->fExposure);
   }
 
   /////////////////////////////////////////////////////////
@@ -333,7 +317,9 @@ namespace xsec {
   Hist<Scalar, Cols>::
   sqrt() const
   {
-    return this->Invoke(&Eigen::Array<Scalar, 1, Cols>::sqrt);
+    return Hist<Scalar, Cols>(this->fContents.sqrt(),
+			      this->fEdges,
+			      std::sqrt(this->fExposure));
   }
 
   /////////////////////////////////////////////////////////
@@ -343,8 +329,9 @@ namespace xsec {
   Hist<Scalar, Cols>::
   pow(Scalar exp) const
   {
-    return Hist<Scalar, Cols>(fContents.pow(exp),
-			      fEdges);
+    return Hist<Scalar, Cols>(this->fContents.pow(exp),
+			      this->fEdges,
+			      std::pow(this->fExposure, exp));
   }
 
   /////////////////////////////////////////////////////////
