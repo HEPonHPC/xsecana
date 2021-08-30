@@ -32,5 +32,5 @@ int main(int argc, char ** argv)
 
   TEST_HIST("loadfrom", loaded.Signal(data), expected_signal.Contents(), expected_signal.Edges(), 0);
 
-  return pass;
+  return !pass;
 }

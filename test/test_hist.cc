@@ -91,5 +91,5 @@ int main(int argc, char ** argv)
   pass &= !type::IsHist<double>();
   pass &=  type::IsHist<Hist<double, 1> >();
   
-  return pass;
+  return !pass;
 }

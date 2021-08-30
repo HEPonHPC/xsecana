@@ -51,5 +51,5 @@ int main(int argc, char ** argv)
   TEST_HIST("loaded_flux", loaded_flux.ToHist(), flux_hist.Contents(), flux_hist.Edges(), 0);
   TEST_HIST("loaded_integrated_flux", loaded_integrated_flux.ToHist(), flux_hist.Contents(), flux_hist.Edges(), 0);
   
-  return pass;
+  return !pass;
 }

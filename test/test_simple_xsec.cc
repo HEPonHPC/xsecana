@@ -119,5 +119,5 @@ int main(int argc, char ** argv)
 	     ones.Contents(),
 	     0);
 
-  return pass;
+  return !pass;
 }

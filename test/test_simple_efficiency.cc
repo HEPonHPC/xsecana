@@ -46,5 +46,5 @@ int main(int argc, char ** argv)
   TEST_HIST("saveto/loadfrom denominator", loaded->GetDenominator(), den.Contents(), den.Edges(), 0);
   TEST_HIST("saveto/loadfrom ratio", loaded->ToHist(), eff.ToHist().Contents(), eff.ToHist().Edges(), 0);
 
-  return pass;
+  return !pass;
 }

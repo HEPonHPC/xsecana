@@ -120,5 +120,5 @@ int main(int argc, char ** argv)
 	     loaded_analysis.CrossSection(test::utils::ntargets).Contents(),
 	     0);
 
-  return pass;
+  return !pass;
 }

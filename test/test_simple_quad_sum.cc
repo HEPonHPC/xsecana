@@ -191,5 +191,5 @@ int main(int argc, char ** argv)
 
 
 
-  return pass;
+  return !pass;
 }

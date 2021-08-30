@@ -25,5 +25,5 @@ int main(int argc, char ** argv)
   CrossSectionAnalysis<SimpleCrossSection,
 		       SimpleQuadSum<SimpleCrossSection> > analysis;
 
-  return 1;
+  return 0;
 }

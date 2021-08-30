@@ -210,5 +210,5 @@ int main(int argc, char ** argv)
     pass &= true;
   }
 
-  return pass;
+  return !pass;
 }

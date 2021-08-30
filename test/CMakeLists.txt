@@ -22,5 +22,5 @@ foreach(TEST ${TESTS})
 	     target_link_libraries("${TEST}" PRIVATE
 	     				   ${ROOT_LIBRARIES}
 	     )
+	     add_test(NAME "${TEST}" COMMAND "${TEST}")
 endforeach(TEST)
-
