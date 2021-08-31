@@ -22,28 +22,28 @@ namespace xsec {
   {
   public:
     std::pair<HistType, HistType> 
-    TotalFractionalUncertaintyXSec(const HistType & data,
-				   CrossSectionType & nominal_xsec,
-				   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-				   double ntargets) override;
+    TotalFractionalUncertainty(const HistType & data,
+			       CrossSectionType & nominal_xsec,
+			       std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
+			       double ntargets) override;
 
     std::pair<HistType, HistType> 
-    TotalAbsoluteUncertaintyXSec(const HistType & data,
-				 CrossSectionType & nominal_xsec,
-				 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-				 double ntargets) override;
+    TotalAbsoluteUncertainty(const HistType & data,
+			     CrossSectionType & nominal_xsec,
+			     std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
+			     double ntargets) override;
 
     HistType
-    FractionalUncertaintyXSec(const HistType & data,
-			      CrossSectionType & nominal_xsec,
-			      Systematic<CrossSectionType> & shifted_xsec,
-			      double ntargets) override;
+    FractionalUncertainty(const HistType & data,
+			  CrossSectionType & nominal_xsec,
+			  Systematic<CrossSectionType> & shifted_xsec,
+			  double ntargets) override;
 
     HistType
-    AbsoluteUncertaintyXSec(const HistType & data,
-			    CrossSectionType & nominal_xsec,
-			    Systematic<CrossSectionType> & shifted_xsec,
-			    double ntargets) override;
+    AbsoluteUncertainty(const HistType & data,
+			CrossSectionType & nominal_xsec,
+			Systematic<CrossSectionType> & shifted_xsec,
+			double ntargets) override;
 
   };
 
@@ -70,10 +70,10 @@ namespace xsec {
 	   class HistType>
   HistType
   SimpleQuadSum<CrossSectionType, HistType>::
-  AbsoluteUncertaintyXSec(const HistType & data,
-			  CrossSectionType & nominal_xsec,
-			  Systematic<CrossSectionType> & shifted_xsec,
-			  double ntargets)
+  AbsoluteUncertainty(const HistType & data,
+		      CrossSectionType & nominal_xsec,
+		      Systematic<CrossSectionType> & shifted_xsec,
+		      double ntargets)
   {
     // calculate cross sections
     auto hnominal_xsec = nominal_xsec.CrossSection(data, ntargets);   
@@ -95,12 +95,12 @@ namespace xsec {
 	   class HistType>
   HistType
   SimpleQuadSum<CrossSectionType, HistType>::
-  FractionalUncertaintyXSec(const HistType & data,
-			    CrossSectionType & nominal_xsec,
-			    Systematic<CrossSectionType> & shifted_xsec,
-			    double ntargets)
+  FractionalUncertainty(const HistType & data,
+			CrossSectionType & nominal_xsec,
+			Systematic<CrossSectionType> & shifted_xsec,
+			double ntargets)
   {
-    HistType abs = AbsoluteUncertaintyXSec(data, nominal_xsec, shifted_xsec, ntargets);
+    HistType abs = AbsoluteUncertainty(data, nominal_xsec, shifted_xsec, ntargets);
     return abs / nominal_xsec.CrossSection(data, ntargets);
   }
 
@@ -109,13 +109,13 @@ namespace xsec {
 	   class HistType>
   std::pair<HistType, HistType> 
   SimpleQuadSum<CrossSectionType, HistType>::
-  TotalFractionalUncertaintyXSec(const HistType & data,
-				 CrossSectionType & nominal_xsec,
-				 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-				 double ntargets)
+  TotalFractionalUncertainty(const HistType & data,
+			     CrossSectionType & nominal_xsec,
+			     std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
+			     double ntargets)
   {
     auto hnominal = nominal_xsec.CrossSection(data, ntargets);
-    auto abs = TotalAbsoluteUncertaintyXSec(data, nominal_xsec, shifted_xsec, ntargets);
+    auto abs = TotalAbsoluteUncertainty(data, nominal_xsec, shifted_xsec, ntargets);
     return {abs.first / hnominal, abs.second / hnominal};
   }
 
@@ -124,14 +124,14 @@ namespace xsec {
 	   class HistType>
   std::pair<HistType, HistType> 
   SimpleQuadSum<CrossSectionType, HistType>::
-  TotalAbsoluteUncertaintyXSec(const HistType & data,
-			       CrossSectionType & nominal_xsec,
-			       std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-			       double ntargets)
+  TotalAbsoluteUncertainty(const HistType & data,
+			   CrossSectionType & nominal_xsec,
+			   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
+			   double ntargets)
   {
     std::vector<HistType> shifts;
     for(auto syst_it = shifted_xsec.begin(); syst_it != shifted_xsec.end(); syst_it++) {
-      shifts.push_back(AbsoluteUncertaintyXSec(data, nominal_xsec, syst_it->second, ntargets));
+      shifts.push_back(AbsoluteUncertainty(data, nominal_xsec, syst_it->second, ntargets));
     }
     auto result = QuadSum(shifts).sqrt();
     return {result, result};

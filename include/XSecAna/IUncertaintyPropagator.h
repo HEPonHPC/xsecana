@@ -14,28 +14,28 @@ namespace xsec {
   class IUncertaintyPropagator {
   public:
     virtual std::pair<HistType, HistType>
-    TotalFractionalUncertaintyXSec(const HistType & data,
-				   CrossSectionType & nominal_xsec,
-				   std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-				   double ntargets) = 0;
+    TotalFractionalUncertainty(const HistType & data,
+			       CrossSectionType & nominal_xsec,
+			       std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
+			       double ntargets) = 0;
 
     virtual std::pair<HistType, HistType>
-    TotalAbsoluteUncertaintyXSec(const HistType & data,
-				 CrossSectionType & nominal_xsec,
-				 std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-				 double ntargets) = 0;
+    TotalAbsoluteUncertainty(const HistType & data,
+			     CrossSectionType & nominal_xsec,
+			     std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
+			     double ntargets) = 0;
 
     virtual HistType
-    FractionalUncertaintyXSec(const HistType & data,
-			      CrossSectionType & nominal_xsec,
-			      Systematic<CrossSectionType> & shifted_xsec,
-			      double ntargets) = 0;
+    FractionalUncertainty(const HistType & data,
+			  CrossSectionType & nominal_xsec,
+			  Systematic<CrossSectionType> & shifted_xsec,
+			  double ntargets) = 0;
 
     virtual HistType
-    AbsoluteUncertaintyXSec(const HistType & data,
-			    CrossSectionType & nominal_xsec,
-			    Systematic<CrossSectionType> & shifted_xsec,
-			    double ntargets) = 0;
+    AbsoluteUncertainty(const HistType & data,
+			CrossSectionType & nominal_xsec,
+			Systematic<CrossSectionType> & shifted_xsec,
+			double ntargets) = 0;
 
   };
 

@@ -56,10 +56,10 @@ int main(int argc, char ** argv)
   SimpleCrossSection two  = test::utils::make_simple_xsec(hone * 2);
 
 
-  auto one_half = prop.FractionalUncertaintyXSec(data,
-						 two,
-						 three,
-						 test::utils::ntargets);
+  auto one_half = prop.FractionalUncertainty(data,
+					     two,
+					     three,
+					     test::utils::ntargets);
   TEST_ARRAY("one_half", one_half.Contents(), (hone / 2).Contents(), 1e-14);
 
 
@@ -68,16 +68,16 @@ int main(int argc, char ** argv)
     {"3", three},
     {"4", four},
   };
-  auto sqrt_six_halves = prop.TotalFractionalUncertaintyXSec(data,
-							     two,
-							     syst_map,
-							     test::utils::ntargets).first;
+  auto sqrt_six_halves = prop.TotalFractionalUncertainty(data,
+							 two,
+							 syst_map,
+							 test::utils::ntargets).first;
   TEST_ARRAY("sqrt_six_halves", sqrt_six_halves.Contents(), (hone * 6 / 4).sqrt().Contents(), 1e-14);
 
 
 
   /*
-     multiverse example
+    multiverse example
   */
   int nuniverses = 50;
 
@@ -87,10 +87,10 @@ int main(int argc, char ** argv)
   Systematic<SimpleCrossSection> syst_mv("mv_xsec", xsec_universes);
   Systematic<Hist<double, 10> > syst_mv_hist("mv_hist", hist_universes);
 
-  auto abs_uncert_mv = prop.AbsoluteUncertaintyXSec(data,
-						    nominal_xsec,
-						    syst_mv,
-						    test::utils::ntargets);
+  auto abs_uncert_mv = prop.AbsoluteUncertainty(data,
+						nominal_xsec,
+						syst_mv,
+						test::utils::ntargets);
 
   // index of universe representing minus 1 sigma shift
   int m1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses-1) + 1;
@@ -107,11 +107,11 @@ int main(int argc, char ** argv)
   Systematic<SimpleCrossSection> syst_1sided("1sided", up);
   Systematic<SimpleCrossSection> syst_2sided("2sided", up, down);
 
-  // AbsoluteUncertaintyXSec
-  auto abs_uncert_1sided = prop.AbsoluteUncertaintyXSec(data,
-							nominal_xsec,
-							syst_1sided,
-							test::utils::ntargets);
+  // AbsoluteUncertainty
+  auto abs_uncert_1sided = prop.AbsoluteUncertainty(data,
+						    nominal_xsec,
+						    syst_1sided,
+						    test::utils::ntargets);
 
   TEST_ARRAY("abs_uncert 1 sided",
 	     abs_uncert_1sided.Contents(),
@@ -121,46 +121,46 @@ int main(int argc, char ** argv)
   std::map<std::string, Systematic<SimpleCrossSection> > rmap = {
     {"1sided", syst_1sided},
   };
-  auto symmetrize = prop.TotalAbsoluteUncertaintyXSec(data,
-						      nominal_xsec,
-						      rmap,
-						      test::utils::ntargets);
+  auto symmetrize = prop.TotalAbsoluteUncertainty(data,
+						  nominal_xsec,
+						  rmap,
+						  test::utils::ntargets);
   TEST_ARRAY("symmeterize",
 	     symmetrize.first.Contents(),
 	     symmetrize.second.Contents(),
 	     0);
 
-  auto abs_uncert_2sided = prop.AbsoluteUncertaintyXSec(data,
-							nominal_xsec,
-							syst_2sided,
-							test::utils::ntargets);
+  auto abs_uncert_2sided = prop.AbsoluteUncertainty(data,
+						    nominal_xsec,
+						    syst_2sided,
+						    test::utils::ntargets);
   TEST_ARRAY("abs_uncert 2 sided",
 	     abs_uncert_2sided.Contents(),
 	     hmax_shift.Contents(),
 	     1e-14);
 
-  // FractionalUncertaintyXSec
-  auto frac_uncert_1sided = prop.FractionalUncertaintyXSec(data,
-							   nominal_xsec,
-							   syst_1sided,
-							   test::utils::ntargets);
+  // FractionalUncertainty
+  auto frac_uncert_1sided = prop.FractionalUncertainty(data,
+						       nominal_xsec,
+						       syst_1sided,
+						       test::utils::ntargets);
   TEST_ARRAY("fractional uncert",
 	     frac_uncert_1sided.Contents(),
 	     ((hup - hnominal) / hnominal).Contents(),
 	     1e-14);
 
 
-  // TotalAbsoluteUncertaintyXSec
+  // TotalAbsoluteUncertainty
   std::map<std::string, Systematic<SimpleCrossSection> > systs = {
     {"1sided", syst_1sided},
     {"2sided", syst_2sided},
     {"mv", syst_mv},
   };
 
-  auto total_abs_uncert = prop.TotalAbsoluteUncertaintyXSec(data,
-							    nominal_xsec,
-							    systs,
-							    test::utils::ntargets);
+  auto total_abs_uncert = prop.TotalAbsoluteUncertainty(data,
+							nominal_xsec,
+							systs,
+							test::utils::ntargets);
   auto target_total_abs_uncert = (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).sqrt();
 
   TEST_ARRAY("total absolute uncert",
@@ -168,11 +168,11 @@ int main(int argc, char ** argv)
 	     target_total_abs_uncert.Contents(),
 	     1e-14);
 
-  // TotalFractionalUncertaintyXSec
-  auto total_frac_uncert = prop.TotalFractionalUncertaintyXSec(data,
-							       nominal_xsec,
-							       systs,
-							       test::utils::ntargets);
+  // TotalFractionalUncertainty
+  auto total_frac_uncert = prop.TotalFractionalUncertainty(data,
+							   nominal_xsec,
+							   systs,
+							   test::utils::ntargets);
   TEST_ARRAY("total frac uncert",
 	     total_frac_uncert.first.Contents(),
 	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),

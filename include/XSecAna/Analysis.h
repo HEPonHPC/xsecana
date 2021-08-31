@@ -10,7 +10,7 @@
 #include "TDirectory.h"
 
 namespace xsec {
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType = HistXd>
   class Analysis {
@@ -18,16 +18,16 @@ namespace xsec {
   public:
 
     Analysis() {}
-    Analysis(CrossSectionType nominal_xsec,
-	     std::map<std::string, Systematic<CrossSectionType> > shifted_xsec,
+    Analysis(MeasurementType nominal_measurement,
+	     std::map<std::string, Systematic<MeasurementType> > shifted_measurement,
 	     HistType data)
-      : fNominalXSec(nominal_xsec),
-	fShiftedXSec(shifted_xsec),
+      : fNominalMeasure(nominal_measurement),
+	fShiftedMeasure(shifted_measurement),
 	fData(data)
     {}
 
-    Analysis(std::string name, Systematic<CrossSectionType> shifted_xsec)
-      : fShiftedXSec({name, shifted_xsec})
+    Analysis(std::string name, Systematic<MeasurementType> shifted_measurement)
+      : fShiftedMeasure({name, shifted_measurement})
     {}
 
     Analysis(HistType data)
@@ -46,10 +46,10 @@ namespace xsec {
     std::pair<HistType, HistType> TotalFractionalUncertainty        (double ntargets);
 
     /// \brief Return an folded cross section result for the input systematic
-    const Systematic<HistType> & CrossSection(std::string syst_name, double ntargets);
+    const Systematic<HistType> & Result(std::string syst_name, double ntargets);
 
     /// \brief Return the nominal folded cross section result
-    const HistType & CrossSection(double ntargets);
+    const HistType & Result(double ntargets);
 
     //    ~Analysis();
 
@@ -60,129 +60,129 @@ namespace xsec {
 
   protected:
     // nominal is special
-    CrossSectionType fNominalXSec;
+    MeasurementType fNominalMeasure;
 
-    std::map<std::string, Systematic<CrossSectionType> > fShiftedXSec;
+    std::map<std::string, Systematic<MeasurementType> > fShiftedMeasure;
 
     const HistType fData;
 
     // cache the nominal results
-    HistType * fNominalXSecResult = 0;
+    HistType * fNominalResult = 0;
 
     // cache the shifted results
-    std::map<std::string, Systematic<HistType> > fShiftedXSecResult;
+    std::map<std::string, Systematic<HistType> > fShiftedResult;
 
     //
     UncertaintyPropagator fUncertaintyPropagator;
   };
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
   HistType
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
   AbsoluteUncertainty(std::string syst_name, double ntargets)
   {
-    return fUncertaintyPropagator.AbsoluteUncertaintyXSec(fData,
-							  fNominalXSec,
-							  fShiftedXSec.at(syst_name),
-							  ntargets);
+    return fUncertaintyPropagator.AbsoluteUncertainty(fData,
+						      fNominalMeasure,
+						      fShiftedMeasure.at(syst_name),
+						      ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
   HistType
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
   FractionalUncertainty(std::string syst_name, double ntargets)
   {
-    return fUncertaintyPropagator.FractionalUncertaintyXSec(fData,
-							    fNominalXSec,
-							    fShiftedXSec.at(syst_name),
-							    ntargets);
+    return fUncertaintyPropagator.FractionalUncertainty(fData,
+							fNominalMeasure,
+							fShiftedMeasure.at(syst_name),
+							ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
   std::pair<HistType,HistType>
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
   TotalAbsoluteUncertainty(double ntargets)
   {
-    return fUncertaintyPropagator.TotalAbsoluteUncertaintyXSec(fData,
-							       fNominalXSec,
-							       fShiftedXSec,
-							       ntargets);
+    return fUncertaintyPropagator.TotalAbsoluteUncertainty(fData,
+							   fNominalMeasure,
+							   fShiftedMeasure,
+							   ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
   std::pair<HistType,HistType>
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
   TotalFractionalUncertainty(double ntargets)
   {
-    return fUncertaintyPropagator.TotalFractionalUncertaintyXSec(fData,
-								 fNominalXSec,
-								 fShiftedXSec,
-								 ntargets);
+    return fUncertaintyPropagator.TotalFractionalUncertainty(fData,
+							     fNominalMeasure,
+							     fShiftedMeasure,
+							     ntargets);
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
   const Systematic<HistType> &
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  CrossSection(std::string syst_name,
+  Result(std::string syst_name,
 	       double ntargets)
   {
-    if(fShiftedXSecResult.find(syst_name) == fShiftedXSecResult.end()) {
-      fShiftedXSecResult[syst_name] =
-	fShiftedXSec.at(syst_name).Invoke(&CrossSectionType::template CrossSection<HistType>,
-					  fData,
-					  ntargets);
+    if(fShiftedResult.find(syst_name) == fShiftedResult.end()) {
+      fShiftedResult[syst_name] =
+	fShiftedMeasure.at(syst_name).Invoke(&MeasurementType::template CrossSection<HistType>,
+					     fData,
+					     ntargets);
 
     }
-    return fShiftedXSecResult.at(syst_name);
+    return fShiftedResult.at(syst_name);
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
   const HistType &
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  CrossSection(double ntargets)
+  Result(double ntargets)
   {
-    if(!fNominalXSecResult)  {
-      fNominalXSecResult = new HistType(fNominalXSec.CrossSection(fData, ntargets));
+    if(!fNominalResult)  {
+      fNominalResult = new HistType(fNominalMeasure.CrossSection(fData, ntargets));
     }
-    return *fNominalXSecResult;
+    return *fNominalResult;
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
   void
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
   SaveTo(TDirectory * dir, std::string subdir) const
@@ -193,11 +193,11 @@ namespace xsec {
     dir->cd();
     TObjString("Analysis").Write("type");
 
-    fNominalXSec.SaveTo(dir, "fNominalXSec");
+    fNominalMeasure.SaveTo(dir, "fNominalMeasure");
     fData.SaveTo(dir, "fData");
 
-    auto syst_dir = dir->mkdir("fShiftedXSec");
-    for(auto shifted : fShiftedXSec) {
+    auto syst_dir = dir->mkdir("fShiftedMeasure");
+    for(auto shifted : fShiftedMeasure) {
       shifted.second.SaveTo(syst_dir, shifted.first);
     }
 
@@ -205,13 +205,13 @@ namespace xsec {
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
-  std::unique_ptr<Analysis<CrossSectionType,
+  std::unique_ptr<Analysis<MeasurementType,
 			   UncertaintyPropagator,
 			   HistType> >
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
   LoadFrom(TDirectory * dir, std::string subdir)
@@ -225,36 +225,36 @@ namespace xsec {
 
     auto data = *HistType::LoadFrom(dir, "fData");
 
-    auto nominal_xsec = *CrossSectionType::LoadFrom(dir, "fNominalXSec");
+    auto nominal_measurement = *MeasurementType::LoadFrom(dir, "fNominalMeasure");
 
 
-    std::map<std::string, Systematic<CrossSectionType> > shifted_xsec;
-    auto syst_dir = dir->GetDirectory("fShiftedXSec");
+    std::map<std::string, Systematic<MeasurementType> > shifted_measurement;
+    auto syst_dir = dir->GetDirectory("fShiftedMeasure");
     for(auto syst_name : *syst_dir->GetListOfKeys()) {
-      shifted_xsec[syst_name->GetName()] = *Systematic<CrossSectionType>::LoadFrom(syst_dir,
-										   syst_name->GetName()).release();
+      shifted_measurement[syst_name->GetName()] = *Systematic<MeasurementType>::LoadFrom(syst_dir,
+											 syst_name->GetName()).release();
     }
 
     tmp->cd();
-    return std::make_unique<Analysis<CrossSectionType,
+    return std::make_unique<Analysis<MeasurementType,
 				     UncertaintyPropagator,
 				     HistType> >
-      (nominal_xsec,
-       shifted_xsec,
+      (nominal_measurement,
+       shifted_measurement,
        data);
 
   }
 
   ///////////////////////////////////////////////////////////////////////
-  template<class CrossSectionType,
+  template<class MeasurementType,
 	   class UncertaintyPropagator,
 	   class HistType>
-  Analysis<CrossSectionType,
+  Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
   ~Analysis()
   {
-    if(fNominalXSecResult) delete fNominalXSecResult;
+    if(fNominalResult) delete fNominalResult;
   }
 
 }
