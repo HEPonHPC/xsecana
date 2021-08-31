@@ -13,12 +13,12 @@ namespace xsec {
   template<class CrossSectionType,
 	   class UncertaintyPropagator,
 	   class HistType = HistXd>
-  class CrossSectionAnalysis {
+  class Analysis {
 
   public:
 
-    CrossSectionAnalysis() {}
-    CrossSectionAnalysis(CrossSectionType nominal_xsec,
+    Analysis() {}
+    Analysis(CrossSectionType nominal_xsec,
 			 std::map<std::string, Systematic<CrossSectionType> > shifted_xsec,
 			 HistType data)
       : fNominalXSec(nominal_xsec),
@@ -26,11 +26,11 @@ namespace xsec {
 	fData(data)
     {}
 
-    CrossSectionAnalysis(std::string name, Systematic<CrossSectionType> shifted_xsec)
+    Analysis(std::string name, Systematic<CrossSectionType> shifted_xsec)
       : fShiftedXSec({name, shifted_xsec})
     {}
 
-    CrossSectionAnalysis(HistType data)
+    Analysis(HistType data)
       : fData(data)
     {}
 
@@ -61,12 +61,12 @@ namespace xsec {
     /// \brief Return the nominal folded cross section result
     const HistType & CrossSection(double ntargets);
 
-    //    ~CrossSectionAnalysis();
+    //    ~Analysis();
 
     void SaveTo(TDirectory * dir, std::string subdir) const;
-    static std::unique_ptr<CrossSectionAnalysis> LoadFrom(TDirectory * dir, std::string name);
+    static std::unique_ptr<Analysis> LoadFrom(TDirectory * dir, std::string name);
 
-    ~CrossSectionAnalysis();
+    ~Analysis();
 
   protected:
     // nominal is special
@@ -93,7 +93,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   HistType
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   AbsoluteUncertaintyUnfoldedXSec(std::string syst_name, double ntargets)
@@ -110,7 +110,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   HistType
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   AbsoluteUncertaintyXSec(std::string syst_name, double ntargets)
@@ -126,7 +126,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   HistType
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   FractionalUncertaintyUnfoldedXSec(std::string syst_name, double ntargets)
@@ -142,7 +142,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   HistType
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   FractionalUncertaintyXSec(std::string syst_name, double ntargets)
@@ -158,7 +158,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   std::pair<HistType,HistType>
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   TotalAbsoluteUncertaintyUnfoldedXSec(double ntargets)
@@ -174,7 +174,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   std::pair<HistType,HistType>
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   TotalAbsoluteUncertaintyXSec(double ntargets)
@@ -190,7 +190,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   std::pair<HistType,HistType>
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   TotalFractionalUncertaintyUnfoldedXSec(double ntargets)
@@ -206,7 +206,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   std::pair<HistType,HistType>
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   TotalFractionalUncertaintyXSec(double ntargets)
@@ -222,7 +222,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   const Systematic<HistType> &
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   UnfoldedCrossSection(std::string syst_name,
@@ -243,7 +243,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   const Systematic<HistType> &
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   CrossSection(std::string syst_name,
@@ -264,7 +264,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   const HistType &
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   CrossSection(double ntargets)
@@ -279,7 +279,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   const HistType &
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   UnfoldedCrossSection(double ntargets)
@@ -295,7 +295,7 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   void
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   SaveTo(TDirectory * dir, std::string subdir) const
@@ -304,7 +304,7 @@ namespace xsec {
 
     dir = dir->mkdir(subdir.c_str()); // switch to subdir
     dir->cd();
-    TObjString("CrossSectionAnalysis").Write("type");
+    TObjString("Analysis").Write("type");
 
     fNominalXSec.SaveTo(dir, "fNominalXSec");
     fData.SaveTo(dir, "fData");
@@ -321,10 +321,10 @@ namespace xsec {
   template<class CrossSectionType,
 	   class UncertaintyPropagator,
 	   class HistType>
-  std::unique_ptr<CrossSectionAnalysis<CrossSectionType,
+  std::unique_ptr<Analysis<CrossSectionType,
 				       UncertaintyPropagator,
 				       HistType> >
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
   LoadFrom(TDirectory * dir, std::string subdir)
@@ -333,7 +333,7 @@ namespace xsec {
     dir = dir->GetDirectory(subdir.c_str());
 
     TObjString * ptag = (TObjString*) dir->Get("type");
-    assert(ptag->GetString() == "CrossSectionAnalysis" && "Type does not match CrossSectionAnalysis");
+    assert(ptag->GetString() == "Analysis" && "Type does not match Analysis");
     delete ptag;
 
     auto data = *HistType::LoadFrom(dir, "fData");
@@ -349,7 +349,7 @@ namespace xsec {
     }
 
     tmp->cd();
-    return std::make_unique<CrossSectionAnalysis<CrossSectionType,
+    return std::make_unique<Analysis<CrossSectionType,
 						 UncertaintyPropagator,
 						 HistType> >
       (nominal_xsec,
@@ -362,10 +362,10 @@ namespace xsec {
   template<class CrossSectionType,
 	   class UncertaintyPropagator,
 	   class HistType>
-  CrossSectionAnalysis<CrossSectionType,
+  Analysis<CrossSectionType,
 		       UncertaintyPropagator,
 		       HistType>::
-  ~CrossSectionAnalysis()
+  ~Analysis()
   {
     if(fUnfoldedNominalXSecResult) delete fUnfoldedNominalXSecResult;
     if(fNominalXSecResult) delete fNominalXSecResult;
