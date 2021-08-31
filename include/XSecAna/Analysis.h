@@ -19,8 +19,8 @@ namespace xsec {
 
     Analysis() {}
     Analysis(CrossSectionType nominal_xsec,
-			 std::map<std::string, Systematic<CrossSectionType> > shifted_xsec,
-			 HistType data)
+	     std::map<std::string, Systematic<CrossSectionType> > shifted_xsec,
+	     HistType data)
       : fNominalXSec(nominal_xsec),
 	fShiftedXSec(shifted_xsec),
 	fData(data)
@@ -36,18 +36,18 @@ namespace xsec {
 
 
     /// \brief Forward to UncertaintyPropagator
-    HistType AbsoluteUncertaintyXSec(std::string syst_name, double ntargets);
-    HistType AbsoluteUncertaintyUnfoldedXSec(std::string syst_name, double ntargets);
+    HistType AbsoluteUncertainty(std::string syst_name, double ntargets);
+    HistType AbsoluteUncertaintyUnfolded(std::string syst_name, double ntargets);
 
     /// \brief Forward to UncertaintyPropagator
-    HistType FractionalUncertaintyXSec(std::string syst_name, double ntargets);
-    HistType FractionalUncertaintyUnfoldedXSec(std::string syst_name, double ntargets);
+    HistType FractionalUncertainty(std::string syst_name, double ntargets);
+    HistType FractionalUncertaintyUnfolded(std::string syst_name, double ntargets);
 
     /// \brief Forward to UncertaintyPropagator
-    std::pair<HistType, HistType> TotalAbsoluteUncertaintyXSec          (double ntargets);
-    std::pair<HistType, HistType> TotalAbsoluteUncertaintyUnfoldedXSec  (double ntargets);
-    std::pair<HistType, HistType> TotalFractionalUncertaintyXSec        (double ntargets);
-    std::pair<HistType, HistType> TotalFractionalUncertaintyUnfoldedXSec(double ntargets);
+    std::pair<HistType, HistType> TotalAbsoluteUncertainty          (double ntargets);
+    std::pair<HistType, HistType> TotalAbsoluteUncertaintyUnfolded  (double ntargets);
+    std::pair<HistType, HistType> TotalFractionalUncertainty        (double ntargets);
+    std::pair<HistType, HistType> TotalFractionalUncertaintyUnfolded(double ntargets);
 
     /// \brief Return an unfolded cross section result for the input systematic
     const Systematic<HistType> & UnfoldedCrossSection(std::string syst_name, double ntargets);
@@ -94,14 +94,14 @@ namespace xsec {
 	   class HistType>
   HistType
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  AbsoluteUncertaintyUnfoldedXSec(std::string syst_name, double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  AbsoluteUncertaintyUnfolded(std::string syst_name, double ntargets)
   {
-    return fUncertaintyPropagator.AbsoluteUncertaintyUnfolded(fData,
-							      fNominalXSec,
-							      fShiftedXSec.at(syst_name),
-							      ntargets);
+    return fUncertaintyPropagator.AbsoluteUncertaintyUnfoldedXSec(fData,
+								  fNominalXSec,
+								  fShiftedXSec.at(syst_name),
+								  ntargets);
   }
 
 
@@ -111,9 +111,9 @@ namespace xsec {
 	   class HistType>
   HistType
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  AbsoluteUncertaintyXSec(std::string syst_name, double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  AbsoluteUncertainty(std::string syst_name, double ntargets)
   {
     return fUncertaintyPropagator.AbsoluteUncertaintyXSec(fData,
 							  fNominalXSec,
@@ -127,9 +127,9 @@ namespace xsec {
 	   class HistType>
   HistType
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  FractionalUncertaintyUnfoldedXSec(std::string syst_name, double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  FractionalUncertaintyUnfolded(std::string syst_name, double ntargets)
   {
     return fUncertaintyPropagator.FractionalUncertaintyUnfoldedXSec(fData,
 								    fNominalXSec,
@@ -143,9 +143,9 @@ namespace xsec {
 	   class HistType>
   HistType
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  FractionalUncertaintyXSec(std::string syst_name, double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  FractionalUncertainty(std::string syst_name, double ntargets)
   {
     return fUncertaintyPropagator.FractionalUncertaintyXSec(fData,
 							    fNominalXSec,
@@ -159,9 +159,9 @@ namespace xsec {
 	   class HistType>
   std::pair<HistType,HistType>
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  TotalAbsoluteUncertaintyUnfoldedXSec(double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  TotalAbsoluteUncertaintyUnfolded(double ntargets)
   {
     return fUncertaintyPropagator.TotalAbsoluteUncertaintyUnfoldedXSec(fData,
 								       fNominalXSec,
@@ -175,9 +175,9 @@ namespace xsec {
 	   class HistType>
   std::pair<HistType,HistType>
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  TotalAbsoluteUncertaintyXSec(double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  TotalAbsoluteUncertainty(double ntargets)
   {
     return fUncertaintyPropagator.TotalAbsoluteUncertaintyXSec(fData,
 							       fNominalXSec,
@@ -191,9 +191,9 @@ namespace xsec {
 	   class HistType>
   std::pair<HistType,HistType>
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  TotalFractionalUncertaintyUnfoldedXSec(double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  TotalFractionalUncertaintyUnfolded(double ntargets)
   {
     return fUncertaintyPropagator.TotalFractionalUncertaintyUnfoldedXSec(fData,
 									 fNominalXSec,
@@ -207,9 +207,9 @@ namespace xsec {
 	   class HistType>
   std::pair<HistType,HistType>
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
-  TotalFractionalUncertaintyXSec(double ntargets)
+	   UncertaintyPropagator,
+	   HistType>::
+  TotalFractionalUncertainty(double ntargets)
   {
     return fUncertaintyPropagator.TotalFractionalUncertaintyXSec(fData,
 								 fNominalXSec,
@@ -223,8 +223,8 @@ namespace xsec {
 	   class HistType>
   const Systematic<HistType> &
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
+	   UncertaintyPropagator,
+	   HistType>::
   UnfoldedCrossSection(std::string syst_name,
 		       double ntargets)
   {
@@ -244,8 +244,8 @@ namespace xsec {
 	   class HistType>
   const Systematic<HistType> &
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
+	   UncertaintyPropagator,
+	   HistType>::
   CrossSection(std::string syst_name,
 	       double ntargets)
   {
@@ -265,8 +265,8 @@ namespace xsec {
 	   class HistType>
   const HistType &
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
+	   UncertaintyPropagator,
+	   HistType>::
   CrossSection(double ntargets)
   {
     if(!fNominalXSecResult)  {
@@ -280,8 +280,8 @@ namespace xsec {
 	   class HistType>
   const HistType &
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
+	   UncertaintyPropagator,
+	   HistType>::
   UnfoldedCrossSection(double ntargets)
   {
     if(!fUnfoldedNominalXSecResult)  {
@@ -296,8 +296,8 @@ namespace xsec {
 	   class HistType>
   void
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
+	   UncertaintyPropagator,
+	   HistType>::
   SaveTo(TDirectory * dir, std::string subdir) const
   {
     TDirectory * tmp = gDirectory;
@@ -322,11 +322,11 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   std::unique_ptr<Analysis<CrossSectionType,
-				       UncertaintyPropagator,
-				       HistType> >
+			   UncertaintyPropagator,
+			   HistType> >
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
+	   UncertaintyPropagator,
+	   HistType>::
   LoadFrom(TDirectory * dir, std::string subdir)
   {
     TDirectory * tmp = gDirectory;
@@ -350,8 +350,8 @@ namespace xsec {
 
     tmp->cd();
     return std::make_unique<Analysis<CrossSectionType,
-						 UncertaintyPropagator,
-						 HistType> >
+				     UncertaintyPropagator,
+				     HistType> >
       (nominal_xsec,
        shifted_xsec,
        data);
@@ -363,8 +363,8 @@ namespace xsec {
 	   class UncertaintyPropagator,
 	   class HistType>
   Analysis<CrossSectionType,
-		       UncertaintyPropagator,
-		       HistType>::
+	   UncertaintyPropagator,
+	   HistType>::
   ~Analysis()
   {
     if(fUnfoldedNominalXSecResult) delete fUnfoldedNominalXSecResult;

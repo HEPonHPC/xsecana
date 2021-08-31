@@ -8,7 +8,7 @@
 #include "XSecAna/IUnfold.h"
 #include "XSecAna/ICrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
-#include "XSecAna/CrossSectionAnalysis.h"
+#include "XSecAna/Analysis.h"
 #include "test_utils.h"
 
 #include <Eigen/Dense>
@@ -18,7 +18,7 @@ using namespace xsec;
 
 std::string test_file_name = test::utils::test_dir() + "test_simple_analysis.root";
 
-typedef CrossSectionAnalysis<test::utils::SimpleCrossSection,
+typedef Analysis<test::utils::SimpleCrossSection,
 			     SimpleQuadSum<test::utils::SimpleCrossSection,
 					   Hist<double, 10> > ,
 			     Hist<double, 10> > SimpleCrossSectionAnalysis;
@@ -73,22 +73,22 @@ int main(int argc, char ** argv)
 
   TEST_ARRAY("total abs uncert",
 	     prop.TotalAbsoluteUncertaintyXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalAbsoluteUncertaintyXSec(test::utils::ntargets).first.Contents(),
+	     analysis.TotalAbsoluteUncertainty(test::utils::ntargets).first.Contents(),
 	     0);
 
   TEST_ARRAY("total abs uncert unfolded",
 	     prop.TotalAbsoluteUncertaintyUnfoldedXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalAbsoluteUncertaintyUnfoldedXSec(test::utils::ntargets).first.Contents(),
+	     analysis.TotalAbsoluteUncertaintyUnfolded(test::utils::ntargets).first.Contents(),
 	     0);
 
   TEST_ARRAY("total frac uncert",
 	     prop.TotalFractionalUncertaintyXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalFractionalUncertaintyXSec(test::utils::ntargets).first.Contents(),
+	     analysis.TotalFractionalUncertainty(test::utils::ntargets).first.Contents(),
 	     0);
 
   TEST_ARRAY("total frac uncert unfolded",
 	     prop.TotalFractionalUncertaintyUnfoldedXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalFractionalUncertaintyUnfoldedXSec(test::utils::ntargets).first.Contents(),
+	     analysis.TotalFractionalUncertaintyUnfolded(test::utils::ntargets).first.Contents(),
 	     0);
 	     
 

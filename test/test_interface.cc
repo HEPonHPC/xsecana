@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "XSecAna/CrossSectionAnalysis.h"
+#include "XSecAna/Analysis.h"
 #include "XSecAna/ICrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
 #include "XSecAna/Systematic.h"
@@ -22,8 +22,8 @@ int main(int argc, char ** argv)
 
   HistXd hist;
   SimpleFlux<HistXd> flux;
-  CrossSectionAnalysis<SimpleCrossSection,
-		       SimpleQuadSum<SimpleCrossSection> > analysis;
+  Analysis<SimpleCrossSection,
+	   SimpleQuadSum<SimpleCrossSection> > analysis;
 
   return 0;
 }
