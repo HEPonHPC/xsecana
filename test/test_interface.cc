@@ -17,7 +17,7 @@ int main(int argc, char ** argv)
 {
   typedef ICrossSection<HistXd,
 			SimpleSignalEstimator<HistXd>,
-			test::utils::DummyUnfold<double, -1>,
+			IdentityUnfold<double, -1>,
 			SimpleEfficiency<HistXd>,
 			SimpleFlux<HistXd> > SimpleCrossSection;
 

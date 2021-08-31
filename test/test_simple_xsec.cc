@@ -16,7 +16,7 @@ using namespace xsec;
 typedef Hist<double, 10> histtype;
 typedef ICrossSection<histtype,
 		      SimpleSignalEstimator<histtype>,
-		      test::utils::DummyUnfold<double, 10>,
+		      IdentityUnfold<double, 10>,
 		      SimpleEfficiency<histtype>,
 		      SimpleFlux<histtype> > SimpleCrossSection;
 
@@ -48,7 +48,7 @@ int main(int argc, char ** argv)
   auto efficiency = new SimpleEfficiency<histtype>(eff_num, eff_den); // = 1/4 (no exposure scaling)
   auto flux = new SimpleFlux(flux_hist);                              // = 5/2 (after scaling by data exposure)
   auto signal_estimator = new SimpleSignalEstimator(bkgd);            // = 3 (after scaling by data exposure)
-  auto unfold = new test::utils::DummyUnfold<double, 10>(bkgd.Contents().size(), 2);  // = 2
+  auto unfold = new IdentityUnfold<double, 10>(bkgd.Contents().size()); // = 1
 
   SimpleCrossSection xsec(efficiency,
 			  signal_estimator,
@@ -73,12 +73,12 @@ int main(int argc, char ** argv)
 
   TEST_ARRAY("xsec",
 	     xsec.Result(data).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones() * 2 * 24. / 5.),
+	     (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
 	     0);
 
   TEST_ARRAY("xsec_differential",
 	     xsec_differential.Result(data).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones() / 2. * 2 * 24. / 5.),
+	     (Eigen::Array<double, 1, 10>::Ones() / 2. * 24. / 5.),
 	     0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_xsec.root";
@@ -94,7 +94,7 @@ int main(int argc, char ** argv)
 
   TEST_ARRAY("loaded xsec",
 	     loaded_xsec.Result(data).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones() * 2 * 24. / 5.),
+	     (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
 	     0);
 
   TEST_ARRAY("exposure",

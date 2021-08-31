@@ -16,7 +16,7 @@ using namespace xsec;
 typedef Hist<double, 10> histtype;
 typedef ICrossSection<histtype,
 		      SimpleSignalEstimator<histtype>,
-		      test::utils::DummyUnfold<double, 10>,
+		      IdentityUnfold<double, 10>,
 		      SimpleEfficiency<histtype>,
 		      SimpleFlux<histtype> > SimpleCrossSection;
 

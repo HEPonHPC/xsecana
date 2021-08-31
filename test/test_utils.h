@@ -94,72 +94,10 @@ namespace xsec {
       };
 
       /////////////////////////////////////////////////////////
-      template<class Scalar,
-	       int Cols>
-      class DummyUnfold : IUnfold<Hist<Scalar, Cols> > {
-      public:
-	DummyUnfold(int nbins, double scale = 1)
-	{
-	  fMat = Eigen::Matrix<Scalar, Cols, Cols>::Identity(nbins, nbins) * scale;
-	}
-
-	Hist<Scalar, Cols> Truth(const Hist<Scalar, Cols> & reco) const
-	{
-	  return Hist<Scalar, Cols>(fMat * reco.Contents().matrix().transpose(),
-				    reco.Edges(),
-				    reco.Exposure());
-	}
-
-	void SaveTo(TDirectory * dir, const std::string& subdir) const override
-	{
-	  TDirectory * tmp = gDirectory;
-	  dir = dir->mkdir(subdir.c_str());
-	  dir->cd();
-
-	  auto bins = Eigen::Array<Scalar, 1, Eigen::Dynamic>::LinSpaced(std::pow(fMat.cols(),2)+1,
-									 0,
-									 std::pow(fMat.cols(),2)+1);
-	  Hist<Scalar, Eigen::Dynamic>(Eigen::Map<const Eigen::Array<Scalar, 1, Eigen::Dynamic> >(fMat.data(),
-												  1,
-												  std::pow(fMat.cols(),2)),
-				       bins).SaveTo(dir, "fMat");
-
-	  tmp->cd();
-	}
-
-	static std::unique_ptr<DummyUnfold<Scalar, Cols> > LoadFrom(TDirectory * dir,
-								    const std::string& subdir)
-	{
-	  TDirectory * tmp = gDirectory;
-	  dir = dir->GetDirectory(subdir.c_str());
-	  dir->cd();
-
-	  auto mat = *Hist<Scalar, Eigen::Dynamic>::LoadFrom(dir, "fMat");
-
-	  tmp->cd();
-
-	  return std::make_unique<DummyUnfold<Scalar, Cols > >(Eigen::Map<
-							       const Eigen::Matrix<Scalar, Cols, Cols>
-							       >
-							       (mat.Contents().data(),
-								std::sqrt(mat.Contents().size()),
-								std::sqrt(mat.Contents().size())));
-
-	}
-
-	DummyUnfold(const Eigen::Matrix<Scalar, Cols, Cols> & mat)
-	  : fMat(mat)
-	{}
-
-      private:
-	Eigen::Matrix<Scalar, Cols, Cols> fMat;
-      };
-
-      /////////////////////////////////////////////////////////
       typedef Hist<double, 10> histtype;
       typedef ICrossSection<histtype,
 			    SimpleSignalEstimator<histtype>,
-			    test::utils::DummyUnfold<double, 10>,
+			    IdentityUnfold<double, 10>,
 			    SimpleEfficiency<histtype>,
 			    SimpleFlux<histtype> > SimpleCrossSection;
 
@@ -253,11 +191,11 @@ namespace xsec {
 						      ones.Edges(),
 						      get_simple_data<Scalar, Cols>().Exposure()));
 	auto signal_estimator = new SimpleSignalEstimator(get_simple_background<Scalar, Cols>());
-	auto unfold = new test::utils::DummyUnfold<Scalar, Cols>(ones.Contents().size(), 1);
+	auto unfold = new IdentityUnfold<Scalar, Cols>(ones.Contents().size());
 	auto ret = SimpleCrossSection(efficiency,
-				  signal_estimator,
-				  flux,
-				  unfold);
+				      signal_estimator,
+				      flux,
+				      unfold);
 	ret.SetNTargets(ntargets);
 	return ret;
       }
