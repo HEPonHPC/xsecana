@@ -36,20 +36,20 @@ namespace xsec {
 
 
     /// \brief Forward to UncertaintyPropagator
-    HistType AbsoluteUncertainty(std::string syst_name, double ntargets);
+    HistType AbsoluteUncertainty(std::string syst_name);
 
     /// \brief Forward to UncertaintyPropagator
-    HistType FractionalUncertainty(std::string syst_name, double ntargets);
+    HistType FractionalUncertainty(std::string syst_name);
 
     /// \brief Forward to UncertaintyPropagator
-    std::pair<HistType, HistType> TotalAbsoluteUncertainty          (double ntargets);
-    std::pair<HistType, HistType> TotalFractionalUncertainty        (double ntargets);
+    std::pair<HistType, HistType> TotalAbsoluteUncertainty  ();
+    std::pair<HistType, HistType> TotalFractionalUncertainty();
 
     /// \brief Return an folded cross section result for the input systematic
-    const Systematic<HistType> & Result(std::string syst_name, double ntargets);
+    const Systematic<HistType> & Result(std::string syst_name);
 
     /// \brief Return the nominal folded cross section result
-    const HistType & Result(double ntargets);
+    const HistType & Result();
 
     //    ~Analysis();
 
@@ -84,12 +84,11 @@ namespace xsec {
   Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  AbsoluteUncertainty(std::string syst_name, double ntargets)
+  AbsoluteUncertainty(std::string syst_name)
   {
     return fUncertaintyPropagator.AbsoluteUncertainty(fData,
 						      fNominalMeasure,
-						      fShiftedMeasure.at(syst_name),
-						      ntargets);
+						      fShiftedMeasure.at(syst_name));
   }
 
   ///////////////////////////////////////////////////////////////////////
@@ -100,12 +99,11 @@ namespace xsec {
   Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  FractionalUncertainty(std::string syst_name, double ntargets)
+  FractionalUncertainty(std::string syst_name)
   {
     return fUncertaintyPropagator.FractionalUncertainty(fData,
 							fNominalMeasure,
-							fShiftedMeasure.at(syst_name),
-							ntargets);
+							fShiftedMeasure.at(syst_name));
   }
 
   ///////////////////////////////////////////////////////////////////////
@@ -116,12 +114,11 @@ namespace xsec {
   Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  TotalAbsoluteUncertainty(double ntargets)
+  TotalAbsoluteUncertainty()
   {
     return fUncertaintyPropagator.TotalAbsoluteUncertainty(fData,
 							   fNominalMeasure,
-							   fShiftedMeasure,
-							   ntargets);
+							   fShiftedMeasure);
   }
 
   ///////////////////////////////////////////////////////////////////////
@@ -132,12 +129,11 @@ namespace xsec {
   Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  TotalFractionalUncertainty(double ntargets)
+  TotalFractionalUncertainty()
   {
     return fUncertaintyPropagator.TotalFractionalUncertainty(fData,
 							     fNominalMeasure,
-							     fShiftedMeasure,
-							     ntargets);
+							     fShiftedMeasure);
   }
 
   ///////////////////////////////////////////////////////////////////////
@@ -148,14 +144,12 @@ namespace xsec {
   Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  Result(std::string syst_name,
-	       double ntargets)
+  Result(std::string syst_name)
   {
     if(fShiftedResult.find(syst_name) == fShiftedResult.end()) {
       fShiftedResult[syst_name] =
-	fShiftedMeasure.at(syst_name).Invoke(&MeasurementType::template CrossSection<HistType>,
-					     fData,
-					     ntargets);
+	fShiftedMeasure.at(syst_name).Invoke(&MeasurementType::Result,
+					     fData);
 
     }
     return fShiftedResult.at(syst_name);
@@ -169,10 +163,10 @@ namespace xsec {
   Analysis<MeasurementType,
 	   UncertaintyPropagator,
 	   HistType>::
-  Result(double ntargets)
+  Result()
   {
     if(!fNominalResult)  {
-      fNominalResult = new HistType(fNominalMeasure.CrossSection(fData, ntargets));
+      fNominalResult = new HistType(fNominalMeasure.Result(fData));
     }
     return *fNominalResult;
   }

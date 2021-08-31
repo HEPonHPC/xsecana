@@ -63,17 +63,17 @@ int main(int argc, char ** argv)
 				      data);
   TEST_ARRAY("nominal closure", 
 	     hnominal.Contents(),
-	     analysis.Result(test::utils::ntargets).Contents(),
+	     analysis.Result().Contents(),
 	     1e-14);
 
   TEST_ARRAY("total abs uncert",
-	     prop.TotalAbsoluteUncertainty(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalAbsoluteUncertainty(test::utils::ntargets).first.Contents(),
+	     prop.TotalAbsoluteUncertainty(data, nominal_xsec, systs).first.Contents(),
+	     analysis.TotalAbsoluteUncertainty().first.Contents(),
 	     0);
 
   TEST_ARRAY("total frac uncert",
-	     prop.TotalFractionalUncertainty(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalFractionalUncertainty(test::utils::ntargets).first.Contents(),
+	     prop.TotalFractionalUncertainty(data, nominal_xsec, systs).first.Contents(),
+	     analysis.TotalFractionalUncertainty().first.Contents(),
 	     0);
 	     
 
@@ -82,12 +82,12 @@ int main(int argc, char ** argv)
   analysis.SaveTo(output, "analysis");
   
   auto results_dir = output->mkdir("results");
-  analysis.Result(test::utils::ntargets).SaveTo(results_dir,  "nominal");
-  analysis.Result("mv", test::utils::ntargets).SaveTo(results_dir, "mv");
-  analysis.Result("1sided", test::utils::ntargets).SaveTo(results_dir, "1sided");
-  analysis.Result("2sided", test::utils::ntargets).SaveTo(results_dir, "2sided");
+  analysis.Result().SaveTo(results_dir,  "nominal");
+  analysis.Result("mv").SaveTo(results_dir, "mv");
+  analysis.Result("1sided").SaveTo(results_dir, "1sided");
+  analysis.Result("2sided").SaveTo(results_dir, "2sided");
   
-  auto abs_errors = prop.TotalAbsoluteUncertainty(data, nominal_xsec, systs, test::utils::ntargets);
+  auto abs_errors = prop.TotalAbsoluteUncertainty(data, nominal_xsec, systs);
   (abs_errors.first + hnominal).SaveTo(results_dir, "total_up");
   (hnominal - abs_errors.second).SaveTo(results_dir, "total_down");
   
@@ -100,8 +100,8 @@ int main(int argc, char ** argv)
   delete input;
 
   TEST_ARRAY("save/load",
-	     analysis.Result(test::utils::ntargets).Contents(), 
-	     loaded_analysis.Result(test::utils::ntargets).Contents(),
+	     analysis.Result().Contents(), 
+	     loaded_analysis.Result().Contents(),
 	     0);
 
   return !pass;

@@ -14,7 +14,8 @@
 using namespace xsec;
 
 typedef Hist<double, 10> histtype;
-typedef ICrossSection<SimpleSignalEstimator<histtype>,
+typedef ICrossSection<histtype,
+		      SimpleSignalEstimator<histtype>,
 		      test::utils::DummyUnfold<double, 10>,
 		      SimpleEfficiency<histtype>,
 		      SimpleFlux<histtype> > SimpleCrossSection;
@@ -53,7 +54,12 @@ int main(int argc, char ** argv)
 			  signal_estimator,
 			  flux,
 			  unfold); // = 1 / 1e4
+  
+  // test fail before targets is set
 
+  // now set targets
+  xsec.SetNTargets(test::utils::ntargets);
+  
   auto xsec_differential = xsec.ToDifferential();
 
   TEST_ARRAY("signal",
@@ -66,17 +72,13 @@ int main(int argc, char ** argv)
 	     0);
 
   TEST_ARRAY("xsec",
-	     xsec.CrossSection(data, (double) (24. / 5. ) * 1e4).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones()),
-	     0);
-  TEST_ARRAY("xsec unfolded",
-	     xsec.UnfoldedCrossSection(data, (double) (24. / 5. ) * 1e4).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones()*2),
+	     xsec.Result(data).Contents(),
+	     (Eigen::Array<double, 1, 10>::Ones() * 2 * 24. / 5.),
 	     0);
 
   TEST_ARRAY("xsec_differential",
-	     xsec_differential.CrossSection(data, (double) (24. / 5. ) * 1e4).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones() / 2.),
+	     xsec_differential.Result(data).Contents(),
+	     (Eigen::Array<double, 1, 10>::Ones() / 2. * 2 * 24. / 5.),
 	     0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_xsec.root";
@@ -91,31 +93,23 @@ int main(int argc, char ** argv)
   delete input;
 
   TEST_ARRAY("loaded xsec",
-	     loaded_xsec.CrossSection(data, (double) (24. / 5. ) * 1e4).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones()),
+	     loaded_xsec.Result(data).Contents(),
+	     (Eigen::Array<double, 1, 10>::Ones() * 2 * 24. / 5.),
 	     0);
 
-  TEST_ARRAY("loaded xsec unfolded",
-	     loaded_xsec.UnfoldedCrossSection(data, (double) (24. / 5. ) * 1e4).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones()*2),
+  TEST_ARRAY("exposure",
+	     (Eigen::Array<double, 1, 1>::Ones() * xsec.Result(data).Exposure()),
+	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
 	     0);
 
-  TEST_ARRAY("exposure folded",
-	     (Eigen::Array<double, 1, 1>::Ones() * xsec.CrossSection(data, (double) (24. / 5. ) * 1e4).Exposure()),
-	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
-	     0);
-  TEST_ARRAY("exposure unfolded",
-	     (Eigen::Array<double, 1, 1>::Ones() * xsec.UnfoldedCrossSection(data, (double) (24. / 5. ) * 1e4).Exposure()),
-	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
-	     0);
   TEST_ARRAY("exposure differential",
-	     (Eigen::Array<double, 1, 1>::Ones() * xsec_differential.CrossSection(data, (double) (24. / 5. ) * 1e4).Exposure()),
+	     (Eigen::Array<double, 1, 1>::Ones() * xsec_differential.Result(data).Exposure()),
 	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
 	     0);
 
 
   TEST_ARRAY("test_utils::make_simple_xsec",
-	     (test::utils::make_simple_xsec(ones).CrossSection(test::utils::get_simple_data<double, 10>(), test::utils::ntargets).Contents()),
+	     (test::utils::make_simple_xsec(ones).Result(test::utils::get_simple_data<double, 10>()).Contents()),
 	     ones.Contents(),
 	     0);
 

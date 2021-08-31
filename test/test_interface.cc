@@ -15,7 +15,8 @@ using namespace xsec;
 
 int main(int argc, char ** argv)
 {
-  typedef ICrossSection<SimpleSignalEstimator<HistXd>,
+  typedef ICrossSection<HistXd,
+			SimpleSignalEstimator<HistXd>,
 			test::utils::DummyUnfold<double, -1>,
 			SimpleEfficiency<HistXd>,
 			SimpleFlux<HistXd> > SimpleCrossSection;
