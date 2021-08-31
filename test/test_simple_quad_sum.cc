@@ -14,7 +14,8 @@
 using namespace xsec;
 
 typedef Hist<double, 10> histtype;
-typedef ICrossSection<SimpleSignalEstimator<histtype>,
+typedef ICrossSection<histtype,
+		      SimpleSignalEstimator<histtype>,
 		      test::utils::DummyUnfold<double, 10>,
 		      SimpleEfficiency<histtype>,
 		      SimpleFlux<histtype> > SimpleCrossSection;
@@ -58,8 +59,7 @@ int main(int argc, char ** argv)
 
   auto one_half = prop.FractionalUncertainty(data,
 					     two,
-					     three,
-					     test::utils::ntargets);
+					     three);
   TEST_ARRAY("one_half", one_half.Contents(), (hone / 2).Contents(), 1e-14);
 
 
@@ -70,8 +70,7 @@ int main(int argc, char ** argv)
   };
   auto sqrt_six_halves = prop.TotalFractionalUncertainty(data,
 							 two,
-							 syst_map,
-							 test::utils::ntargets).first;
+							 syst_map).first;
   TEST_ARRAY("sqrt_six_halves", sqrt_six_halves.Contents(), (hone * 6 / 4).sqrt().Contents(), 1e-14);
 
 
@@ -89,8 +88,7 @@ int main(int argc, char ** argv)
 
   auto abs_uncert_mv = prop.AbsoluteUncertainty(data,
 						nominal_xsec,
-						syst_mv,
-						test::utils::ntargets);
+						syst_mv);
 
   // index of universe representing minus 1 sigma shift
   int m1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses-1) + 1;
@@ -110,8 +108,7 @@ int main(int argc, char ** argv)
   // AbsoluteUncertainty
   auto abs_uncert_1sided = prop.AbsoluteUncertainty(data,
 						    nominal_xsec,
-						    syst_1sided,
-						    test::utils::ntargets);
+						    syst_1sided);
 
   TEST_ARRAY("abs_uncert 1 sided",
 	     abs_uncert_1sided.Contents(),
@@ -123,8 +120,7 @@ int main(int argc, char ** argv)
   };
   auto symmetrize = prop.TotalAbsoluteUncertainty(data,
 						  nominal_xsec,
-						  rmap,
-						  test::utils::ntargets);
+						  rmap);
   TEST_ARRAY("symmeterize",
 	     symmetrize.first.Contents(),
 	     symmetrize.second.Contents(),
@@ -132,8 +128,7 @@ int main(int argc, char ** argv)
 
   auto abs_uncert_2sided = prop.AbsoluteUncertainty(data,
 						    nominal_xsec,
-						    syst_2sided,
-						    test::utils::ntargets);
+						    syst_2sided);
   TEST_ARRAY("abs_uncert 2 sided",
 	     abs_uncert_2sided.Contents(),
 	     hmax_shift.Contents(),
@@ -142,8 +137,7 @@ int main(int argc, char ** argv)
   // FractionalUncertainty
   auto frac_uncert_1sided = prop.FractionalUncertainty(data,
 						       nominal_xsec,
-						       syst_1sided,
-						       test::utils::ntargets);
+						       syst_1sided);
   TEST_ARRAY("fractional uncert",
 	     frac_uncert_1sided.Contents(),
 	     ((hup - hnominal) / hnominal).Contents(),
@@ -159,8 +153,7 @@ int main(int argc, char ** argv)
 
   auto total_abs_uncert = prop.TotalAbsoluteUncertainty(data,
 							nominal_xsec,
-							systs,
-							test::utils::ntargets);
+							systs);
   auto target_total_abs_uncert = (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).sqrt();
 
   TEST_ARRAY("total absolute uncert",
@@ -171,8 +164,7 @@ int main(int argc, char ** argv)
   // TotalFractionalUncertainty
   auto total_frac_uncert = prop.TotalFractionalUncertainty(data,
 							   nominal_xsec,
-							   systs,
-							   test::utils::ntargets);
+							   systs);
   TEST_ARRAY("total frac uncert",
 	     total_frac_uncert.first.Contents(),
 	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),

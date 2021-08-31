@@ -16,26 +16,22 @@ namespace xsec {
     virtual std::pair<HistType, HistType>
     TotalFractionalUncertainty(const HistType & data,
 			       CrossSectionType & nominal_xsec,
-			       std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-			       double ntargets) = 0;
+			       std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec) = 0;
 
     virtual std::pair<HistType, HistType>
     TotalAbsoluteUncertainty(const HistType & data,
 			     CrossSectionType & nominal_xsec,
-			     std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec,
-			     double ntargets) = 0;
+			     std::map<std::string, Systematic<CrossSectionType> > & shifted_xsec) = 0;
 
     virtual HistType
     FractionalUncertainty(const HistType & data,
 			  CrossSectionType & nominal_xsec,
-			  Systematic<CrossSectionType> & shifted_xsec,
-			  double ntargets) = 0;
+			  Systematic<CrossSectionType> & shifted_xsec) = 0;
 
     virtual HistType
     AbsoluteUncertainty(const HistType & data,
 			CrossSectionType & nominal_xsec,
-			Systematic<CrossSectionType> & shifted_xsec,
-			double ntargets) = 0;
+			Systematic<CrossSectionType> & shifted_xsec) = 0;
 
   };
 
