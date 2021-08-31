@@ -66,29 +66,14 @@ int main(int argc, char ** argv)
 	     analysis.CrossSection(test::utils::ntargets).Contents(),
 	     1e-14);
 
-  TEST_ARRAY("nominal unfolded closure", 
-	     hnominal.Contents() * 2,
-	     analysis.UnfoldedCrossSection(test::utils::ntargets).Contents(),
-	     1e-14);
-
   TEST_ARRAY("total abs uncert",
 	     prop.TotalAbsoluteUncertaintyXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
 	     analysis.TotalAbsoluteUncertainty(test::utils::ntargets).first.Contents(),
 	     0);
 
-  TEST_ARRAY("total abs uncert unfolded",
-	     prop.TotalAbsoluteUncertaintyUnfoldedXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalAbsoluteUncertaintyUnfolded(test::utils::ntargets).first.Contents(),
-	     0);
-
   TEST_ARRAY("total frac uncert",
 	     prop.TotalFractionalUncertaintyXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
 	     analysis.TotalFractionalUncertainty(test::utils::ntargets).first.Contents(),
-	     0);
-
-  TEST_ARRAY("total frac uncert unfolded",
-	     prop.TotalFractionalUncertaintyUnfoldedXSec(data, nominal_xsec, systs, test::utils::ntargets).first.Contents(),
-	     analysis.TotalFractionalUncertaintyUnfolded(test::utils::ntargets).first.Contents(),
 	     0);
 	     
 
@@ -105,7 +90,6 @@ int main(int argc, char ** argv)
   auto abs_errors = prop.TotalAbsoluteUncertaintyXSec(data, nominal_xsec, systs, test::utils::ntargets);
   (abs_errors.first + hnominal).SaveTo(results_dir, "total_up");
   (hnominal - abs_errors.second).SaveTo(results_dir, "total_down");
-
   
   output->Close();
   delete output;

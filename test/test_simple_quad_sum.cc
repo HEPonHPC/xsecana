@@ -139,17 +139,6 @@ int main(int argc, char ** argv)
 	     hmax_shift.Contents(),
 	     1e-14);
 
-  // AbsoluteUncertaintyUnfoldedXSec
-  auto abs_uncert_1sided_unfolded = prop.AbsoluteUncertaintyUnfoldedXSec(data,
-									 nominal_xsec,
-									 syst_1sided,
-									 test::utils::ntargets);
-
-  TEST_ARRAY("abs_uncert 1 sided unfolded",
-	     abs_uncert_1sided_unfolded.Contents(),
-	     (hup - hnominal).Contents() * 2,
-	     1e-14);
-
   // FractionalUncertaintyXSec
   auto frac_uncert_1sided = prop.FractionalUncertaintyXSec(data,
 							   nominal_xsec,
@@ -157,16 +146,6 @@ int main(int argc, char ** argv)
 							   test::utils::ntargets);
   TEST_ARRAY("fractional uncert",
 	     frac_uncert_1sided.Contents(),
-	     ((hup - hnominal) / hnominal).Contents(),
-	     1e-14);
-
-  // FractionalUncertaintyUnfoldedXSec
-  auto frac_uncert_1sided_unfolded = prop.FractionalUncertaintyUnfoldedXSec(data,
-									    nominal_xsec,
-									    syst_1sided,
-									    test::utils::ntargets);
-  TEST_ARRAY("fractional uncert unfolded",
-	     frac_uncert_1sided_unfolded.Contents(),
 	     ((hup - hnominal) / hnominal).Contents(),
 	     1e-14);
 
@@ -189,17 +168,6 @@ int main(int argc, char ** argv)
 	     target_total_abs_uncert.Contents(),
 	     1e-14);
 
-  // TotalAbsoluteUncertaintyUnfoldedXSec
-  auto total_abs_uncert_unfolded = prop.TotalAbsoluteUncertaintyUnfoldedXSec(data,
-									     nominal_xsec,
-									     systs,
-									     test::utils::ntargets);
-  auto target_total_abs_uncert_unfolded = (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).sqrt() * 2;
-  TEST_ARRAY("total absolute uncert unfolded",
-	     total_abs_uncert_unfolded.first.Contents(),
-	     target_total_abs_uncert_unfolded.Contents(),
-	     1e-14);
-
   // TotalFractionalUncertaintyXSec
   auto total_frac_uncert = prop.TotalFractionalUncertaintyXSec(data,
 							       nominal_xsec,
@@ -210,18 +178,6 @@ int main(int argc, char ** argv)
 	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
 	     //(abs_uncert_1sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
 	     1e-14);
-
-  // TotalFractionalUncertaintyUnfoldedXSec
-  auto total_frac_uncert_unfolded = prop.TotalFractionalUncertaintyUnfoldedXSec(data,
-										nominal_xsec,
-										systs,
-										test::utils::ntargets);
-  TEST_ARRAY("total frac uncert unfolded",
-	     total_frac_uncert_unfolded.first.Contents(),
-	     (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
-	     1e-14);
-
-
 
   return !pass;
 }
