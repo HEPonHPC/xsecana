@@ -110,7 +110,7 @@ namespace xsec {
 				    reco.Exposure());
 	}
 
-	void SaveTo(TDirectory * dir, std::string subdir)
+	void SaveTo(TDirectory * dir, const std::string& subdir) const override
 	{
 	  TDirectory * tmp = gDirectory;
 	  dir = dir->mkdir(subdir.c_str());
@@ -119,16 +119,16 @@ namespace xsec {
 	  auto bins = Eigen::Array<Scalar, 1, Eigen::Dynamic>::LinSpaced(std::pow(fMat.cols(),2)+1,
 									 0,
 									 std::pow(fMat.cols(),2)+1);
-	  Hist<Scalar, Eigen::Dynamic>(Eigen::Map<Eigen::Array<Scalar, 1, Eigen::Dynamic> >(fMat.data(),
-											    1,
-											    std::pow(fMat.cols(),2)),
+	  Hist<Scalar, Eigen::Dynamic>(Eigen::Map<const Eigen::Array<Scalar, 1, Eigen::Dynamic> >(fMat.data(),
+												  1,
+												  std::pow(fMat.cols(),2)),
 				       bins).SaveTo(dir, "fMat");
 
 	  tmp->cd();
 	}
 
 	static std::unique_ptr<DummyUnfold<Scalar, Cols> > LoadFrom(TDirectory * dir,
-								    std::string subdir)
+								    const std::string& subdir)
 	{
 	  TDirectory * tmp = gDirectory;
 	  dir = dir->GetDirectory(subdir.c_str());
