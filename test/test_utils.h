@@ -157,7 +157,8 @@ namespace xsec {
 
       /////////////////////////////////////////////////////////
       typedef Hist<double, 10> histtype;
-      typedef ICrossSection<SimpleSignalEstimator<histtype>,
+      typedef ICrossSection<histtype,
+			    SimpleSignalEstimator<histtype>,
 			    test::utils::DummyUnfold<double, 10>,
 			    SimpleEfficiency<histtype>,
 			    SimpleFlux<histtype> > SimpleCrossSection;
@@ -235,6 +236,7 @@ namespace xsec {
 				  nominal.Edges());
       }
 
+      const static double ntargets = 1e4;
       /////////////////////////////////////////////////////////
       // make a cross section object that evaluates out to
       //  - the input array when folded
@@ -251,14 +253,16 @@ namespace xsec {
 						      ones.Edges(),
 						      get_simple_data<Scalar, Cols>().Exposure()));
 	auto signal_estimator = new SimpleSignalEstimator(get_simple_background<Scalar, Cols>());
-	auto unfold = new test::utils::DummyUnfold<Scalar, Cols>(ones.Contents().size(), 2);  // = 2
-	return SimpleCrossSection(efficiency,
+	auto unfold = new test::utils::DummyUnfold<Scalar, Cols>(ones.Contents().size(), 1);
+	auto ret = SimpleCrossSection(efficiency,
 				  signal_estimator,
 				  flux,
 				  unfold);
+	ret.SetNTargets(ntargets);
+	return ret;
       }
 
-      const static double ntargets = 1e4;
+
 
       /////////////////////////////////////////////////////////
       template<class HistType>
