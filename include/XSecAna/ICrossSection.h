@@ -35,7 +35,7 @@ namespace xsec {
     void SaveTo(TDirectory * dir, const std::string & subdir) const override;
     static std::unique_ptr<ICrossSection> LoadFrom(TDirectory * dir, std::string subdir);
 
-    HistType Result(const HistType & data);
+    HistType Result(const HistType & data) override;
 
     ICrossSection<HistType,
 		  SignalEstimatorType,
