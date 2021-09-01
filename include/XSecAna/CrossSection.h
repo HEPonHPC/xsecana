@@ -14,15 +14,15 @@ namespace xsec {
 	   class EfficiencyType,
 	   class FluxType,
 	   bool IsDifferential = false>
-  class ICrossSection : public IMeasurement<HistType> {
+  class CrossSection : public IMeasurement<HistType> {
   public:
-    ICrossSection() {}
+    CrossSection() {}
 
-    ICrossSection(EfficiencyType * efficiency,
-		  SignalEstimatorType * signal_estimator,
-		  FluxType * flux,
-		  UnfoldType * unfold,
-		  typename HistType::scalar_type ntargets = 0)
+    CrossSection(EfficiencyType * efficiency,
+                 SignalEstimatorType * signal_estimator,
+                 FluxType * flux,
+                 UnfoldType * unfold,
+                 typename HistType::scalar_type ntargets = 0)
       : fEfficiency(efficiency),
 	fSignalEstimator(signal_estimator),
 	fFlux(flux),
@@ -33,11 +33,11 @@ namespace xsec {
     void SetNTargets(double ntargets) { fNTargets = ntargets; }
 
     void SaveTo(TDirectory * dir, const std::string & subdir) const override;
-    static std::unique_ptr<ICrossSection> LoadFrom(TDirectory * dir, std::string subdir);
+    static std::unique_ptr<CrossSection> LoadFrom(TDirectory * dir, std::string subdir);
 
     HistType Result(const HistType & data) override;
 
-    ICrossSection<HistType,
+    CrossSection<HistType,
 		  SignalEstimatorType,
 		  UnfoldType,
 		  EfficiencyType,
@@ -61,13 +61,13 @@ namespace xsec {
 	   class EfficiencyType,
 	   class FluxType,
 	   bool IsDifferential>
-  ICrossSection<HistType,
+  CrossSection<HistType,
 		SignalEstimatorType,
 		UnfoldType,
 		EfficiencyType,
 		FluxType,
 		true>
-  ICrossSection<HistType,
+  CrossSection<HistType,
 		SignalEstimatorType,
 		UnfoldType,
 		EfficiencyType,
@@ -79,7 +79,7 @@ namespace xsec {
 	return *this;
       }
     else {
-      return ICrossSection<HistType,
+      return CrossSection<HistType,
 			   SignalEstimatorType,
 			   UnfoldType,
 			   EfficiencyType,
@@ -119,7 +119,7 @@ namespace xsec {
 	   class FluxType,
 	   bool IsDifferential>
   HistType
-  ICrossSection<HistType,
+  CrossSection<HistType,
 		SignalEstimatorType,
 		UnfoldType,
 		EfficiencyType,
@@ -150,7 +150,7 @@ namespace xsec {
 	   class FluxType,
 	   bool IsDifferential>
   void
-  ICrossSection<HistType,
+  CrossSection<HistType,
 		SignalEstimatorType,
 		UnfoldType,
 		EfficiencyType,
@@ -161,7 +161,7 @@ namespace xsec {
     TDirectory * tmp = gDirectory;
     dir = dir->mkdir(subdir.c_str());
     dir->cd();
-    TObjString("ICrossSection").Write("type");
+    TObjString("CrossSection").Write("type");
 
     if(fEfficiency     ) fEfficiency     ->SaveTo(dir, "fEfficiency"     );
     if(fFlux           ) fFlux           ->SaveTo(dir, "fFlux"           );
@@ -180,13 +180,13 @@ namespace xsec {
 	   class EfficiencyType,
 	   class FluxType,
 	   bool IsDifferential>
-  std::unique_ptr<ICrossSection<HistType,
+  std::unique_ptr<CrossSection<HistType,
 				SignalEstimatorType,
 				UnfoldType,
 				EfficiencyType,
 				FluxType,
 				IsDifferential> >
-  ICrossSection<HistType,
+  CrossSection<HistType,
 		SignalEstimatorType,
 		UnfoldType,
 		EfficiencyType,
@@ -208,7 +208,7 @@ namespace xsec {
 
     auto ntargets = ((TParameter<typename HistType::scalar_type>* )dir->Get("fNTargets"))->GetVal();
 
-    return std::make_unique<ICrossSection<HistType,
+    return std::make_unique<CrossSection<HistType,
 					  SignalEstimatorType,
 					  UnfoldType,
 					  EfficiencyType,

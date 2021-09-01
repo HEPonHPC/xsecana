@@ -6,7 +6,7 @@
 #include "XSecAna/SimpleSignalEstimator.h"
 #include "XSecAna/SimpleEfficiency.h"
 #include "XSecAna/SimpleFlux.h"
-#include "XSecAna/ICrossSection.h"
+#include "XSecAna/CrossSection.h"
 
 
 //----------------------------------------------------------------------
@@ -95,7 +95,7 @@ namespace xsec {
 
       /////////////////////////////////////////////////////////
       typedef Hist<double, 10> histtype;
-      typedef ICrossSection<histtype,
+      typedef CrossSection<histtype,
 			    SimpleSignalEstimator<histtype>,
 			    IdentityUnfold<double, 10>,
 			    SimpleEfficiency<histtype>,

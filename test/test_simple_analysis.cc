@@ -6,7 +6,7 @@
 #include "XSecAna/SimpleEfficiency.h"
 #include "XSecAna/SimpleFlux.h"
 #include "XSecAna/IUnfold.h"
-#include "XSecAna/ICrossSection.h"
+#include "XSecAna/CrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
 #include "XSecAna/Analysis.h"
 #include "test_utils.h"
