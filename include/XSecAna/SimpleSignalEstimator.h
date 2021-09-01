@@ -4,8 +4,8 @@
 #include "XSecAna/ISignalEstimator.h"
 
 namespace xsec {
-    template< class HistType = HistXd >
-    class SimpleSignalEstimator : ISignalEstimator< HistType > {
+    template<class HistType = HistXd>
+    class SimpleSignalEstimator : ISignalEstimator<HistType> {
     public:
         SimpleSignalEstimator() = default;
 
@@ -20,7 +20,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr< SimpleSignalEstimator< HistType > >
+        static std::unique_ptr<SimpleSignalEstimator<HistType> >
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     private:
@@ -32,26 +32,26 @@ namespace xsec {
     };
 
     //////////////////////////////////////////////////////////
-    template< class HistType >
+    template<class HistType>
     const HistType &
-    SimpleSignalEstimator< HistType >::
+    SimpleSignalEstimator<HistType>::
     Background(const HistType & data) {
         return fBackground;
     }
 
     //////////////////////////////////////////////////////////
-    template< class HistType >
+    template<class HistType>
     const HistType &
-    SimpleSignalEstimator< HistType >::
+    SimpleSignalEstimator<HistType>::
     Signal(const HistType & data) {
         if (!fSignal) fSignal = new HistType(data - fBackground);
         return *fSignal;
     }
 
     //////////////////////////////////////////////////////////
-    template< class HistType >
+    template<class HistType>
     void
-    SimpleSignalEstimator< HistType >::
+    SimpleSignalEstimator<HistType>::
     SaveTo(TDirectory * dir, const std::string & subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -64,9 +64,9 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    template< class HistType >
-    std::unique_ptr< SimpleSignalEstimator< HistType > >
-    SimpleSignalEstimator< HistType >::
+    template<class HistType>
+    std::unique_ptr<SimpleSignalEstimator<HistType> >
+    SimpleSignalEstimator<HistType>::
     LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
@@ -76,7 +76,7 @@ namespace xsec {
         delete ptag;
 
         HistType background = *HistType::LoadFrom(dir, "fBackground");
-        return std::make_unique< SimpleSignalEstimator< HistType > >(background);
+        return std::make_unique<SimpleSignalEstimator<HistType> >(background);
     }
 
 

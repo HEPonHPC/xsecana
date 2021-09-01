@@ -7,7 +7,7 @@
 namespace xsec {
 
     ///\brief Define an interface for saving, loading, and calculating an efficiency
-    template< class HistType = HistXd >
+    template<class HistType = HistXd>
     class IEfficiency {
 
     public:
@@ -17,7 +17,7 @@ namespace xsec {
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
         /// \brief children must override
-        static std::unique_ptr< IEfficiency > * LoadFrom(TDirectory * dir, const std::string & name) {
+        static std::unique_ptr<IEfficiency> * LoadFrom(TDirectory * dir, const std::string & name) {
             assert(false && "IEfficiency::LoadFrom not implemented");
         }
 

@@ -3,7 +3,7 @@
 #include "Hist.h"
 
 namespace xsec {
-    template< class HistType = HistXd >
+    template<class HistType = HistXd>
     class IFlux {
     public:
         virtual const HistType & ToHist() = 0;
@@ -15,7 +15,7 @@ namespace xsec {
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
         /// \brief Children must override this function
-        static std::unique_ptr< IFlux > LoadFrom(TDirectory * dir, const std::string & name) {
+        static std::unique_ptr<IFlux> LoadFrom(TDirectory * dir, const std::string & name) {
             assert(false && "IFlux::LoadFrom not implemented");
         }
 

@@ -7,8 +7,8 @@
 
 namespace xsec {
 
-    template< class HistType = HistXd >
-    class SimpleEfficiency : public IEfficiency< HistType > {
+    template<class HistType = HistXd>
+    class SimpleEfficiency : public IEfficiency<HistType> {
     public:
         SimpleEfficiency(HistType num,
                          HistType den)
@@ -18,7 +18,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-        static std::unique_ptr< SimpleEfficiency > LoadFrom(TDirectory * dir, const std::string& subdir);
+        static std::unique_ptr<SimpleEfficiency> LoadFrom(TDirectory * dir, const std::string & subdir);
 
         const HistType & GetNumerator() const { return fNumerator; }
 
@@ -33,9 +33,9 @@ namespace xsec {
     };
 
     //////////////////////////////////////////////////////////
-    template< class HistType >
+    template<class HistType>
     const HistType &
-    SimpleEfficiency< HistType >::
+    SimpleEfficiency<HistType>::
     ToHist() {
         if (!fRatio) {
             fRatio = new HistType(fNumerator);
@@ -45,9 +45,9 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    template< class HistType >
+    template<class HistType>
     void
-    SimpleEfficiency< HistType >::
+    SimpleEfficiency<HistType>::
     SaveTo(TDirectory * dir, std::string subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -61,10 +61,10 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    template< class HistType >
-    std::unique_ptr< SimpleEfficiency< HistType > >
-    SimpleEfficiency< HistType >::
-    LoadFrom(TDirectory * dir, const std::string& subdir) {
+    template<class HistType>
+    std::unique_ptr<SimpleEfficiency<HistType> >
+    SimpleEfficiency<HistType>::
+    LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
         // make sure we're loading the right type
@@ -74,7 +74,7 @@ namespace xsec {
 
         HistType numerator = *HistType::LoadFrom(dir, "fNumerator").release();
         HistType denominator = *HistType::LoadFrom(dir, "fDenominator").release();
-        return std::make_unique< SimpleEfficiency< HistType > >(numerator,
-                                                                denominator);
+        return std::make_unique<SimpleEfficiency<HistType> >(numerator,
+                                                             denominator);
     }
 }

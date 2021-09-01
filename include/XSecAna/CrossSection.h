@@ -8,13 +8,13 @@
 #include "XSecAna/IMeasurement.h"
 
 namespace xsec {
-    template< class HistType,
-            class SignalEstimatorType,
-            class UnfoldType,
-            class EfficiencyType,
-            class FluxType,
-            bool IsDifferential = false >
-    class CrossSection : public IMeasurement< HistType > {
+    template<class HistType,
+             class SignalEstimatorType,
+             class UnfoldType,
+             class EfficiencyType,
+             class FluxType,
+            bool IsDifferential = false>
+    class CrossSection : public IMeasurement<HistType> {
     public:
         CrossSection() = default;
 
@@ -33,16 +33,16 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr< CrossSection > LoadFrom(TDirectory * dir, const std::string& subdir);
+        static std::unique_ptr<CrossSection> LoadFrom(TDirectory * dir, const std::string & subdir);
 
         HistType Result(const HistType & data) override;
 
-        CrossSection< HistType,
-                SignalEstimatorType,
-                UnfoldType,
-                EfficiencyType,
-                FluxType,
-                true >
+        CrossSection<HistType,
+                     SignalEstimatorType,
+                     UnfoldType,
+                     EfficiencyType,
+                     FluxType,
+                     true>
         ToDifferential();
 
     private:
@@ -55,43 +55,43 @@ namespace xsec {
     };
 
     ////////////////////////////////////////////////
-    template< class HistType,
-            class SignalEstimatorType,
-            class UnfoldType,
-            class EfficiencyType,
-            class FluxType,
-            bool IsDifferential >
-    CrossSection< HistType,
-            SignalEstimatorType,
-            UnfoldType,
-            EfficiencyType,
-            FluxType,
-            true >
-    CrossSection< HistType,
-            SignalEstimatorType,
-            UnfoldType,
-            EfficiencyType,
-            FluxType,
-            IsDifferential >::
+    template<class HistType,
+             class SignalEstimatorType,
+             class UnfoldType,
+             class EfficiencyType,
+             class FluxType,
+            bool IsDifferential>
+    CrossSection<HistType,
+                 SignalEstimatorType,
+                 UnfoldType,
+                 EfficiencyType,
+                 FluxType,
+                 true>
+    CrossSection<HistType,
+                 SignalEstimatorType,
+                 UnfoldType,
+                 EfficiencyType,
+                 FluxType,
+                 IsDifferential>::
     ToDifferential() {
         if constexpr(IsDifferential) {
             return *this;
         } else {
-            return CrossSection< HistType,
-                    SignalEstimatorType,
-                    UnfoldType,
-                    EfficiencyType,
-                    FluxType,
-                    true >(fEfficiency,
-                           fSignalEstimator,
-                           fFlux,
-                           fUnfold,
-                           fNTargets);
+            return CrossSection<HistType,
+                                SignalEstimatorType,
+                                UnfoldType,
+                                EfficiencyType,
+                                FluxType,
+                                true>(fEfficiency,
+                                      fSignalEstimator,
+                                      fFlux,
+                                      fUnfold,
+                                      fNTargets);
         }
     }
 
     ////////////////////////////////////////////////
-    template< class HistType >
+    template<class HistType>
     HistType CalculateCrossSection(const HistType & unfolded_selected_signal,
                                    const HistType & efficiency,
                                    const HistType & flux,
@@ -109,19 +109,19 @@ namespace xsec {
     }
 
     ////////////////////////////////////////////////
-    template< class HistType,
-            class SignalEstimatorType,
-            class UnfoldType,
-            class EfficiencyType,
-            class FluxType,
-            bool IsDifferential >
+    template<class HistType,
+             class SignalEstimatorType,
+             class UnfoldType,
+             class EfficiencyType,
+             class FluxType,
+            bool IsDifferential>
     HistType
-    CrossSection< HistType,
-            SignalEstimatorType,
-            UnfoldType,
-            EfficiencyType,
-            FluxType,
-            IsDifferential >::
+    CrossSection<HistType,
+                 SignalEstimatorType,
+                 UnfoldType,
+                 EfficiencyType,
+                 FluxType,
+                 IsDifferential>::
     Result(const HistType & data) {
         // calculate estimated signal and scale by the exposure of the data
         auto signal = fSignalEstimator->Signal(data);
@@ -139,19 +139,19 @@ namespace xsec {
     }
 
     ////////////////////////////////////////////////
-    template< class HistType,
-            class SignalEstimatorType,
-            class UnfoldType,
-            class EfficiencyType,
-            class FluxType,
-            bool IsDifferential >
+    template<class HistType,
+             class SignalEstimatorType,
+             class UnfoldType,
+             class EfficiencyType,
+             class FluxType,
+            bool IsDifferential>
     void
-    CrossSection< HistType,
-            SignalEstimatorType,
-            UnfoldType,
-            EfficiencyType,
-            FluxType,
-            IsDifferential >::
+    CrossSection<HistType,
+                 SignalEstimatorType,
+                 UnfoldType,
+                 EfficiencyType,
+                 FluxType,
+                 IsDifferential>::
     SaveTo(TDirectory * dir, const std::string & subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -163,31 +163,31 @@ namespace xsec {
         if (fSignalEstimator) fSignalEstimator->SaveTo(dir, "fSignalEstimator");
         if (fUnfold) fUnfold->SaveTo(dir, "fUnfold");
 
-        TParameter< typename HistType::scalar_type >("fNTargets", fNTargets).Write("fNTargets");
+        TParameter<typename HistType::scalar_type>("fNTargets", fNTargets).Write("fNTargets");
 
         tmp->cd();
     }
 
     ////////////////////////////////////////////////
-    template< class HistType,
-            class SignalEstimatorType,
-            class UnfoldType,
-            class EfficiencyType,
-            class FluxType,
-            bool IsDifferential >
-    std::unique_ptr< CrossSection< HistType,
-            SignalEstimatorType,
-            UnfoldType,
-            EfficiencyType,
-            FluxType,
-            IsDifferential > >
-    CrossSection< HistType,
-            SignalEstimatorType,
-            UnfoldType,
-            EfficiencyType,
-            FluxType,
-            IsDifferential >::
-    LoadFrom(TDirectory * dir, const std::string& subdir) {
+    template<class HistType,
+             class SignalEstimatorType,
+             class UnfoldType,
+             class EfficiencyType,
+             class FluxType,
+            bool IsDifferential>
+    std::unique_ptr<CrossSection<HistType,
+                                 SignalEstimatorType,
+                                 UnfoldType,
+                                 EfficiencyType,
+                                 FluxType,
+                                 IsDifferential> >
+    CrossSection<HistType,
+                 SignalEstimatorType,
+                 UnfoldType,
+                 EfficiencyType,
+                 FluxType,
+                 IsDifferential>::
+    LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
         EfficiencyType * eff = 0;
@@ -201,14 +201,14 @@ namespace xsec {
             sig = SignalEstimatorType::LoadFrom(dir, "fSignalEstimator").release();
         if (dir->GetDirectory("fUnfold")) unfold = UnfoldType::LoadFrom(dir, "fUnfold").release();
 
-        auto ntargets = ((TParameter< typename HistType::scalar_type > *) dir->Get("fNTargets"))->GetVal();
+        auto ntargets = ((TParameter<typename HistType::scalar_type> *) dir->Get("fNTargets"))->GetVal();
 
-        return std::make_unique< CrossSection< HistType,
-                SignalEstimatorType,
-                UnfoldType,
-                EfficiencyType,
-                FluxType,
-                IsDifferential > >
+        return std::make_unique<CrossSection<HistType,
+                                             SignalEstimatorType,
+                                             UnfoldType,
+                                             EfficiencyType,
+                                             FluxType,
+                                             IsDifferential> >
                 (eff, sig, flux, unfold, ntargets);
     }
 }

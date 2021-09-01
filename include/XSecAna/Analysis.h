@@ -10,9 +10,9 @@
 #include "TDirectory.h"
 
 namespace xsec {
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType = HistXd >
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType = HistXd>
     class Analysis {
 
     public:
@@ -20,13 +20,13 @@ namespace xsec {
         Analysis() = default;
 
         Analysis(MeasurementType nominal_measurement,
-                 std::map< std::string, Systematic< MeasurementType > > shifted_measurement,
+                 std::map<std::string, Systematic<MeasurementType> > shifted_measurement,
                  HistType data)
                 : fNominalMeasure(nominal_measurement),
                   fShiftedMeasure(shifted_measurement),
                   fData(data) {}
 
-        Analysis(std::string name, Systematic< MeasurementType > shifted_measurement)
+        Analysis(std::string name, Systematic<MeasurementType> shifted_measurement)
                 : fShiftedMeasure({name, shifted_measurement}) {}
 
         explicit Analysis(HistType data)
@@ -40,21 +40,21 @@ namespace xsec {
         HistType FractionalUncertainty(std::string syst_name);
 
         /// \brief Forward to UncertaintyPropagator
-        std::pair< HistType, HistType > TotalAbsoluteUncertainty();
+        std::pair<HistType, HistType> TotalAbsoluteUncertainty();
 
-        std::pair< HistType, HistType > TotalFractionalUncertainty();
+        std::pair<HistType, HistType> TotalFractionalUncertainty();
 
         /// \brief Return an folded cross section result for the input systematic
-        const Systematic< HistType > & Result(std::string syst_name);
+        const Systematic<HistType> & Result(std::string syst_name);
 
         /// \brief Return the nominal folded cross section result
         const HistType & Result();
 
         //    ~Analysis();
 
-        void SaveTo(TDirectory * dir, const std::string& subdir) const;
+        void SaveTo(TDirectory * dir, const std::string & subdir) const;
 
-        static std::unique_ptr< Analysis > LoadFrom(TDirectory * dir, const std::string& subdir);
+        static std::unique_ptr<Analysis> LoadFrom(TDirectory * dir, const std::string & subdir);
 
         ~Analysis();
 
@@ -62,7 +62,7 @@ namespace xsec {
         // nominal is special
         MeasurementType fNominalMeasure;
 
-        std::map< std::string, Systematic< MeasurementType > > fShiftedMeasure;
+        std::map<std::string, Systematic<MeasurementType> > fShiftedMeasure;
 
         const HistType fData;
 
@@ -70,20 +70,20 @@ namespace xsec {
         HistType * fNominalResult = 0;
 
         // cache the shifted results
-        std::map< std::string, Systematic< HistType > > fShiftedResult;
+        std::map<std::string, Systematic<HistType> > fShiftedResult;
 
         //
         UncertaintyPropagator fUncertaintyPropagator;
     };
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
     HistType
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
     AbsoluteUncertainty(std::string syst_name) {
         return fUncertaintyPropagator.AbsoluteUncertainty(fData,
                                                           fNominalMeasure,
@@ -91,13 +91,13 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
     HistType
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
     FractionalUncertainty(std::string syst_name) {
         return fUncertaintyPropagator.FractionalUncertainty(fData,
                                                             fNominalMeasure,
@@ -105,13 +105,13 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
-    std::pair< HistType, HistType >
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
+    std::pair<HistType, HistType>
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
     TotalAbsoluteUncertainty() {
         return fUncertaintyPropagator.TotalAbsoluteUncertainty(fData,
                                                                fNominalMeasure,
@@ -119,13 +119,13 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
-    std::pair< HistType, HistType >
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
+    std::pair<HistType, HistType>
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
     TotalFractionalUncertainty() {
         return fUncertaintyPropagator.TotalFractionalUncertainty(fData,
                                                                  fNominalMeasure,
@@ -133,13 +133,13 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
-    const Systematic< HistType > &
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
+    const Systematic<HistType> &
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
     Result(std::string syst_name) {
         if (fShiftedResult.find(syst_name) == fShiftedResult.end()) {
             fShiftedResult[syst_name] =
@@ -151,13 +151,13 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
     const HistType &
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
     Result() {
         if (!fNominalResult) {
             fNominalResult = new HistType(fNominalMeasure.Result(fData));
@@ -166,14 +166,14 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
     void
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
-    SaveTo(TDirectory * dir, const std::string& subdir) const {
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
+    SaveTo(TDirectory * dir, const std::string & subdir) const {
         TDirectory * tmp = gDirectory;
 
         dir = dir->mkdir(subdir.c_str()); // switch to subdir
@@ -192,16 +192,16 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
-    std::unique_ptr< Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType > >
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
-    LoadFrom(TDirectory * dir, const std::string& subdir) {
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
+    std::unique_ptr<Analysis<MeasurementType,
+                             UncertaintyPropagator,
+                             HistType> >
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
+    LoadFrom(TDirectory * dir, const std::string & subdir) {
         TDirectory * tmp = gDirectory;
         dir = dir->GetDirectory(subdir.c_str());
 
@@ -214,17 +214,17 @@ namespace xsec {
         auto nominal_measurement = *MeasurementType::LoadFrom(dir, "fNominalMeasure");
 
 
-        std::map< std::string, Systematic< MeasurementType > > shifted_measurement;
+        std::map<std::string, Systematic<MeasurementType> > shifted_measurement;
         auto syst_dir = dir->GetDirectory("fShiftedMeasure");
         for (auto syst_name: *syst_dir->GetListOfKeys()) {
-            shifted_measurement[syst_name->GetName()] = *Systematic< MeasurementType >::LoadFrom(syst_dir,
-                                                                                                 syst_name->GetName()).release();
+            shifted_measurement[syst_name->GetName()] = *Systematic<MeasurementType>::LoadFrom(syst_dir,
+                                                                                               syst_name->GetName()).release();
         }
 
         tmp->cd();
-        return std::make_unique< Analysis< MeasurementType,
-                UncertaintyPropagator,
-                HistType > >
+        return std::make_unique<Analysis<MeasurementType,
+                                         UncertaintyPropagator,
+                                         HistType> >
                 (nominal_measurement,
                  shifted_measurement,
                  data);
@@ -232,12 +232,12 @@ namespace xsec {
     }
 
     ///////////////////////////////////////////////////////////////////////
-    template< class MeasurementType,
-            class UncertaintyPropagator,
-            class HistType >
-    Analysis< MeasurementType,
-            UncertaintyPropagator,
-            HistType >::
+    template<class MeasurementType,
+             class UncertaintyPropagator,
+             class HistType>
+    Analysis<MeasurementType,
+             UncertaintyPropagator,
+             HistType>::
     ~Analysis() {
         delete fNominalResult;
     }
