@@ -16,7 +16,7 @@ namespace xsec {
             bool IsDifferential = false >
     class CrossSection : public IMeasurement< HistType > {
     public:
-        CrossSection() {}
+        CrossSection() = default;
 
         CrossSection(EfficiencyType * efficiency,
                      SignalEstimatorType * signal_estimator,
@@ -33,7 +33,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr< CrossSection > LoadFrom(TDirectory * dir, std::string subdir);
+        static std::unique_ptr< CrossSection > LoadFrom(TDirectory * dir, const std::string& subdir);
 
         HistType Result(const HistType & data) override;
 
@@ -187,7 +187,7 @@ namespace xsec {
             EfficiencyType,
             FluxType,
             IsDifferential >::
-    LoadFrom(TDirectory * dir, std::string subdir) {
+    LoadFrom(TDirectory * dir, const std::string& subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
         EfficiencyType * eff = 0;

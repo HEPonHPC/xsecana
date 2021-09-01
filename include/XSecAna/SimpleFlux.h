@@ -12,13 +12,13 @@ namespace xsec {
             bool Integrated = false >
     class SimpleFlux : IFlux< HistType > {
     public:
-        SimpleFlux() {}
+        SimpleFlux() = default;
 
-        SimpleFlux(const HistType & flux)
+        explicit SimpleFlux(const HistType & flux)
                 :
                 fFlux(flux) {}
 
-        virtual const HistType & ToHist() override { return fFlux; }
+        const HistType & ToHist() override { return fFlux; }
 
         HistType operator/(const HistType & rhs) override;
 
@@ -26,7 +26,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-        static std::unique_ptr< SimpleFlux< HistType, Integrated > > LoadFrom(TDirectory * dir, std::string subdir);
+        static std::unique_ptr< SimpleFlux< HistType, Integrated > > LoadFrom(TDirectory * dir, const std::string& subdir);
 
     protected:
         // hold the raw histogram
@@ -107,11 +107,11 @@ namespace xsec {
     std::unique_ptr< SimpleFlux< HistType, Integrated > >
     SimpleFlux< HistType,
             Integrated >::
-    LoadFrom(TDirectory * dir, std::string subdir) {
+    LoadFrom(TDirectory * dir, const std::string& subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
         // make sure we're loading the right type
-        TObjString * ptag = (TObjString *) dir->Get("type");
+        auto ptag = (TObjString *) dir->Get("type");
         assert(ptag->GetString() == "SimpleFlux" && "Type does not match SimpleFlux");
         delete ptag;
 

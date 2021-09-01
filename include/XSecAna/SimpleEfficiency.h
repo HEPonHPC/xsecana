@@ -18,7 +18,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-        static std::unique_ptr< SimpleEfficiency > LoadFrom(TDirectory * dir, std::string name);
+        static std::unique_ptr< SimpleEfficiency > LoadFrom(TDirectory * dir, const std::string& subdir);
 
         const HistType & GetNumerator() const { return fNumerator; }
 
@@ -64,11 +64,11 @@ namespace xsec {
     template< class HistType >
     std::unique_ptr< SimpleEfficiency< HistType > >
     SimpleEfficiency< HistType >::
-    LoadFrom(TDirectory * dir, std::string subdir) {
+    LoadFrom(TDirectory * dir, const std::string& subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
         // make sure we're loading the right type
-        TObjString * ptag = (TObjString *) dir->Get("type");
+        auto ptag = (TObjString *) dir->Get("type");
         assert(ptag->GetString() == "SimpleEfficiency" && "Type does not match SimpleEfficiency");
         delete ptag;
 

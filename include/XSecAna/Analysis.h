@@ -17,7 +17,7 @@ namespace xsec {
 
     public:
 
-        Analysis() {}
+        Analysis() = default;
 
         Analysis(MeasurementType nominal_measurement,
                  std::map< std::string, Systematic< MeasurementType > > shifted_measurement,
@@ -29,7 +29,7 @@ namespace xsec {
         Analysis(std::string name, Systematic< MeasurementType > shifted_measurement)
                 : fShiftedMeasure({name, shifted_measurement}) {}
 
-        Analysis(HistType data)
+        explicit Analysis(HistType data)
                 : fData(data) {}
 
 
@@ -52,9 +52,9 @@ namespace xsec {
 
         //    ~Analysis();
 
-        void SaveTo(TDirectory * dir, std::string subdir) const;
+        void SaveTo(TDirectory * dir, const std::string& subdir) const;
 
-        static std::unique_ptr< Analysis > LoadFrom(TDirectory * dir, std::string name);
+        static std::unique_ptr< Analysis > LoadFrom(TDirectory * dir, const std::string& subdir);
 
         ~Analysis();
 
@@ -173,7 +173,7 @@ namespace xsec {
     Analysis< MeasurementType,
             UncertaintyPropagator,
             HistType >::
-    SaveTo(TDirectory * dir, std::string subdir) const {
+    SaveTo(TDirectory * dir, const std::string& subdir) const {
         TDirectory * tmp = gDirectory;
 
         dir = dir->mkdir(subdir.c_str()); // switch to subdir
@@ -201,11 +201,11 @@ namespace xsec {
     Analysis< MeasurementType,
             UncertaintyPropagator,
             HistType >::
-    LoadFrom(TDirectory * dir, std::string subdir) {
+    LoadFrom(TDirectory * dir, const std::string& subdir) {
         TDirectory * tmp = gDirectory;
         dir = dir->GetDirectory(subdir.c_str());
 
-        TObjString * ptag = (TObjString *) dir->Get("type");
+        auto ptag = (TObjString *) dir->Get("type");
         assert(ptag->GetString() == "Analysis" && "Type does not match Analysis");
         delete ptag;
 
@@ -239,7 +239,7 @@ namespace xsec {
             UncertaintyPropagator,
             HistType >::
     ~Analysis() {
-        if (fNominalResult) delete fNominalResult;
+        delete fNominalResult;
     }
 
 }

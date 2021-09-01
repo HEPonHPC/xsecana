@@ -7,6 +7,7 @@
 
 #include <exception>
 #include <cstdio>
+#include <utility>
 
 namespace xsec {
     enum SystType_t {
@@ -37,7 +38,7 @@ namespace xsec {
                              fTried.c_str());
             }
 
-            const char * what() const throw() {
+            [[nodiscard]] const char * what() const throw() override {
                 return &fMsg[0];
             }
 
@@ -50,33 +51,33 @@ namespace xsec {
     template< class T >
     class Systematic {
     public:
-        Systematic() {}
+        Systematic() = default;
 
         Systematic(std::string name,
                    const T & shift)
                 : fContainer({shift}),
                   fType(kOneSided),
-                  fName(name) { fContainer.shrink_to_fit(); }
+                  fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
         Systematic(std::string name,
                    const T & up,
                    const T & down)
                 : fContainer({up, down}),
                   fType(kTwoSided),
-                  fName(name) { fContainer.shrink_to_fit(); }
+                  fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
         Systematic(std::string name,
                    const std::vector< T > & universes)
                 : fContainer(universes),
                   fType(kMultiverse),
-                  fName(name) { fContainer.shrink_to_fit(); }
+                  fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
         Systematic(const std::vector< T > & container,
                    SystType_t type,
                    std::string name)
                 : fContainer(container),
                   fType(type),
-                  fName(name) { fContainer.shrink_to_fit(); }
+                  fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
         template< class F, class... Args >
         Systematic< std::invoke_result_t< F, T, Args... > > Invoke(F && f, Args && ... args);
@@ -84,9 +85,9 @@ namespace xsec {
         template< class F, class... Args >
         Systematic< std::invoke_result_t< F, T, Args... > > Invoke(F && f, Args && ... args) const;
 
-        void SaveTo(TDirectory * dir, std::string subdir) const;
+        void SaveTo(TDirectory * dir, const std::string& subdir) const;
 
-        static std::unique_ptr< Systematic< T > > LoadFrom(TDirectory * dir, std::string subdir);
+        static std::unique_ptr< Systematic< T > > LoadFrom(TDirectory * dir, const std::string& subdir);
 
         const std::vector< T > & GetShifts() const { return fContainer; }
 
@@ -94,9 +95,9 @@ namespace xsec {
 
         const T & Down() const;
 
-        SystType_t GetType() const { return fType; }
+        [[nodiscard]] SystType_t GetType() const { return fType; }
 
-        std::string GetName() const { return fName; }
+        [[nodiscard]] std::string GetName() const { return fName; }
 
         ///\brief calculates nsigma shift from nominal
         /// --If T is not an instantiation of Hist
@@ -160,7 +161,6 @@ namespace xsec {
              std::vector< Scalar > & universes,
              const Scalar & nominal) const {
         int pivotbin = 0;
-        double pivotbincenter = 0;
         std::sort(universes.begin(), universes.end());
         for (auto i = 0u; i < universes.size() - 1; i++) {
             if (nominal >= universes[i] && nominal < universes[i + 1]) {
@@ -168,14 +168,13 @@ namespace xsec {
                 break;
             }
         }
-        pivotbincenter = pivotbin + 0.5;
         double count_fraction = std::erf(nsigma / std::sqrt(2));
 
         int nsideevents = 0;
         int lastbinindex = (int) universes.size() - 1;
         if (nsigma >= 0) nsideevents = lastbinindex - pivotbin;
         else nsideevents = pivotbin;
-        int boundIdx = pivotbincenter + count_fraction * (double) nsideevents;
+        int boundIdx = pivotbin + 0.5 + count_fraction * (double) nsideevents;
 
         int index = 0;
         if (nsigma >= 0) index = std::min(boundIdx, (int) universes.size() - 1);
@@ -233,7 +232,7 @@ namespace xsec {
     /////////////////////////////////////////////////////////////////////////
     template< class T >
     void
-    Systematic< T >::SaveTo(TDirectory * dir, std::string subdir) const {
+    Systematic< T >::SaveTo(TDirectory * dir, const std::string& subdir) const {
         TDirectory * tmp = gDirectory;
         dir->mkdir(subdir.c_str());
         dir = dir->GetDirectory(subdir.c_str());
@@ -255,13 +254,13 @@ namespace xsec {
     /////////////////////////////////////////////////////////////////////////
     template< class T >
     std::unique_ptr< Systematic< T > >
-    Systematic< T >::LoadFrom(TDirectory * dir, std::string subdir) {
+    Systematic< T >::LoadFrom(TDirectory * dir, const std::string& subdir) {
         TDirectory * tmp = gDirectory;
         dir = dir->GetDirectory(subdir.c_str());
         dir->cd();
 
         // make sure we're loading the right type
-        TObjString * ptag = (TObjString *) dir->Get("type");
+        auto ptag = (TObjString *) dir->Get("type");
         assert(ptag->GetString() == "Systematic" && "Type does not match Systematic");
         delete ptag;
 

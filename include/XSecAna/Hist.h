@@ -27,7 +27,7 @@ namespace xsec {
         typedef Eigen::Array< Scalar, 1, Cols > array_type;
         typedef Eigen::Array< Scalar, 1, EdgesSize(Cols) > edges_type;
 
-        Hist() = default;
+        Hist() {}
 
         Hist(const Eigen::Array< Scalar, 1, Cols > & contents,
              const Eigen::Array< Scalar, 1, EdgesSize(Cols) > & edges)
@@ -45,7 +45,7 @@ namespace xsec {
              const Scalar & min,
              const Scalar & max);
 
-        void Normalize(std::string how);
+        void Normalize(const std::string& how);
 
         Scalar Integrate() const;
 
@@ -112,9 +112,9 @@ namespace xsec {
 
         Scalar operator[](int index) const { return fContents(index); }
 
-        void SaveTo(TDirectory * dir, std::string subdir) const;
+        void SaveTo(TDirectory * dir, const std::string& subdir) const;
 
-        static std::unique_ptr< Hist > LoadFrom(TDirectory * dir, std::string subdir);
+        static std::unique_ptr< Hist > LoadFrom(TDirectory * dir, const std::string& subdir);
 
     private:
         Eigen::Array< Scalar, 1, Cols > fContents;
@@ -213,7 +213,7 @@ namespace xsec {
             int Cols >
     void
     Hist< Scalar, Cols >::
-    SaveTo(TDirectory * dir, std::string subdir) const {
+    SaveTo(TDirectory * dir, const std::string& subdir) const {
         TDirectory * tmp = gDirectory;
         dir->mkdir(subdir.c_str());
         dir = dir->GetDirectory(subdir.c_str());
@@ -239,7 +239,7 @@ namespace xsec {
             int Cols >
     std::unique_ptr< Hist< Scalar, Cols > >
     Hist< Scalar, Cols >::
-    LoadFrom(TDirectory * dir, std::string subdir) {
+    LoadFrom(TDirectory * dir, const std::string& subdir) {
         dir = dir->GetDirectory(subdir.c_str());
         dir->cd();
 
@@ -281,7 +281,7 @@ namespace xsec {
             int Cols >
     void
     Hist< Scalar, Cols >::
-    Normalize(std::string how) {
+    Normalize(const std::string& how) {
         if (how == "width") {
             fContents = fContents / BinWidths();
         } else if (how == "area") {
