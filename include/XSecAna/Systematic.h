@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TDirectory.h"
+#include "TObjString.h"
 
 #include "XSecAna/Type.h"
 

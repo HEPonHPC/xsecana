@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "XSecAna/CrossSectionAnalysis.h"
-#include "XSecAna/ICrossSection.h"
+#include "XSecAna/Analysis.h"
+#include "XSecAna/CrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
 #include "XSecAna/Systematic.h"
 #include "XSecAna/Hist.h"
@@ -15,15 +15,16 @@ using namespace xsec;
 
 int main(int argc, char ** argv)
 {
-  typedef ICrossSection<SimpleSignalEstimator<HistXd>,
-			test::utils::DummyUnfold<double, -1>,
+  typedef CrossSection<HistXd,
+			SimpleSignalEstimator<HistXd>,
+			IdentityUnfold<double, -1>,
 			SimpleEfficiency<HistXd>,
 			SimpleFlux<HistXd> > SimpleCrossSection;
 
   HistXd hist;
   SimpleFlux<HistXd> flux;
-  CrossSectionAnalysis<SimpleCrossSection,
-		       SimpleQuadSum<SimpleCrossSection> > analysis;
+  Analysis<SimpleCrossSection,
+	   SimpleQuadSum<SimpleCrossSection> > analysis;
 
   return 0;
 }

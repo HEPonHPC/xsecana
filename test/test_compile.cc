@@ -1,7 +1,7 @@
 #include <iostream>
 
-#include "XSecAna/CrossSectionAnalysis.h"
-#include "XSecAna/ICrossSection.h"
+#include "XSecAna/Analysis.h"
+#include "XSecAna/CrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
 #include "XSecAna/Systematic.h"
 #include "XSecAna/Hist.h"

@@ -17,7 +17,7 @@ namespace xsec {
     const HistType & Background(const HistType & data) override;
     const HistType & Signal(const HistType & data) override;
 
-    void SaveTo(TDirectory * dir, const std::string & name) const;
+    void SaveTo(TDirectory * dir, const std::string & name) const override;
     static std::unique_ptr<SimpleSignalEstimator<HistType> > LoadFrom(TDirectory * dir, const std::string & subdir);
     
   private:

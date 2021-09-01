@@ -2,6 +2,7 @@
 #include <memory>
 #include <Eigen/Dense>
 #include "TDirectory.h"
+#include "TObjString.h"
 #include "TH1D.h"
 #include "TH1F.h"
 
