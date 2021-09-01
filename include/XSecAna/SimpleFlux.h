@@ -8,118 +8,114 @@
 
 namespace xsec {
 
-  template<class HistType, 
-	   bool Integrated = false>
-  class SimpleFlux : IFlux<HistType> {
-  public:
-    SimpleFlux() {}
+    template< class HistType,
+            bool Integrated = false >
+    class SimpleFlux : IFlux< HistType > {
+    public:
+        SimpleFlux() {}
 
-    SimpleFlux(const HistType & flux)
-      :
-      fFlux(flux)
-    {}
+        SimpleFlux(const HistType & flux)
+                :
+                fFlux(flux) {}
 
-    virtual const HistType & ToHist() override { return fFlux; }
+        virtual const HistType & ToHist() override { return fFlux; }
 
-    HistType operator/(const HistType & rhs) override;
-    HistType operator*(const HistType & rhs) override;
+        HistType operator/(const HistType & rhs) override;
 
-    void SaveTo(TDirectory * dir, std::string subdir) const override;
-    static std::unique_ptr<SimpleFlux<HistType, Integrated> > LoadFrom(TDirectory * dir, std::string subdir);
-    
-  protected:
-    // hold the raw histogram
-    HistType fFlux;
-    
-    // cache result of (possibly) integrated flux
-    // if not integrated, this will just point to fFlux
-    HistType * fResult = 0;
+        HistType operator*(const HistType & rhs) override;
 
-    HistType * Result(const HistType & rhs);
-    
-  };
+        void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-  // template alias deduction was introduced in c++20
-  // otherwise, HistType will not be deduced.
-  template<class HistType>
-  using SimpleIntegratedFlux = SimpleFlux<HistType, true>;
-  
-  //////////////////////////////////////////////////////////
-  template<class HistType,
-	   bool Integrated>
-  HistType *
-  SimpleFlux<HistType,
-	     Integrated>::
-  Result(const HistType & rhs)
-  {
-    if(!fResult) {
-      if constexpr(Integrated) {
-	  fResult = new HistType(std::decay_t<decltype(rhs.Contents())>::Ones(rhs.Contents().size()) * fFlux.Integrate(),
-				 rhs.Edges());
-	}
-      else {
-	fResult = &fFlux;
-      }
+        static std::unique_ptr< SimpleFlux< HistType, Integrated > > LoadFrom(TDirectory * dir, std::string subdir);
+
+    protected:
+        // hold the raw histogram
+        HistType fFlux;
+
+        // cache result of (possibly) integrated flux
+        // if not integrated, this will just point to fFlux
+        HistType * fResult = 0;
+
+        HistType * Result(const HistType & rhs);
+
+    };
+
+    // template alias deduction was introduced in c++20
+    // otherwise, HistType will not be deduced.
+    template< class HistType >
+    using SimpleIntegratedFlux = SimpleFlux< HistType, true >;
+
+    //////////////////////////////////////////////////////////
+    template< class HistType,
+            bool Integrated >
+    HistType *
+    SimpleFlux< HistType,
+            Integrated >::
+    Result(const HistType & rhs) {
+        if (!fResult) {
+            if constexpr(Integrated) {
+                fResult = new HistType(
+                        std::decay_t< decltype(rhs.Contents()) >::Ones(rhs.Contents().size()) * fFlux.Integrate(),
+                        rhs.Edges());
+            } else {
+                fResult = &fFlux;
+            }
+        }
+        return fResult;
     }
-    return fResult;
-  }
 
-  //////////////////////////////////////////////////////////
-  template<class HistType,
-	   bool Integrated>
-  HistType 
-  SimpleFlux<HistType,
-	     Integrated>::
-  operator*(const HistType & rhs)
-  {
-    return *Result(rhs) * rhs;
-  }
+    //////////////////////////////////////////////////////////
+    template< class HistType,
+            bool Integrated >
+    HistType
+    SimpleFlux< HistType,
+            Integrated >::
+    operator*(const HistType & rhs) {
+        return *Result(rhs) * rhs;
+    }
 
-  //////////////////////////////////////////////////////////
-  template<class HistType,
-	   bool Integrated>
-  HistType 
-  SimpleFlux<HistType,
-	     Integrated>::
-  operator/(const HistType & rhs)
-  {
-    return *Result(rhs) / rhs;
-  }
+    //////////////////////////////////////////////////////////
+    template< class HistType,
+            bool Integrated >
+    HistType
+    SimpleFlux< HistType,
+            Integrated >::
+    operator/(const HistType & rhs) {
+        return *Result(rhs) / rhs;
+    }
 
-  //////////////////////////////////////////////////////////
-  template<class HistType,
-	   bool Integrated>
-  void
-  SimpleFlux<HistType,
-	     Integrated>::
-  SaveTo(TDirectory * dir, std::string subdir) const
-  {
-    TDirectory * tmp = gDirectory;
-    dir = dir->mkdir(subdir.c_str());
-    dir->cd();
+    //////////////////////////////////////////////////////////
+    template< class HistType,
+            bool Integrated >
+    void
+    SimpleFlux< HistType,
+            Integrated >::
+    SaveTo(TDirectory * dir, std::string subdir) const {
+        TDirectory * tmp = gDirectory;
+        dir = dir->mkdir(subdir.c_str());
+        dir->cd();
 
-    TObjString("SimpleFlux").Write("type");
-    fFlux.SaveTo(dir, "fFlux");
+        TObjString("SimpleFlux").Write("type");
+        fFlux.SaveTo(dir, "fFlux");
 
-    tmp->cd();
-  }
+        tmp->cd();
+    }
 
-  //////////////////////////////////////////////////////////
-  template<class HistType,
-	   bool Integrated>
-  std::unique_ptr<SimpleFlux<HistType, Integrated> >
-  SimpleFlux<HistType,
-	     Integrated>::
-  LoadFrom(TDirectory * dir, std::string subdir)
-  {
-    dir = dir->GetDirectory(subdir.c_str());
+    //////////////////////////////////////////////////////////
+    template< class HistType,
+            bool Integrated >
+    std::unique_ptr< SimpleFlux< HistType, Integrated > >
+    SimpleFlux< HistType,
+            Integrated >::
+    LoadFrom(TDirectory * dir, std::string subdir) {
+        dir = dir->GetDirectory(subdir.c_str());
 
-    // make sure we're loading the right type
-    TObjString * ptag = (TObjString*) dir->Get("type");
-    assert(ptag->GetString() == "SimpleFlux" && "Type does not match SimpleFlux");
-    delete ptag;
-    
-    HistType flux = *HistType::LoadFrom(dir, "fFlux");
-    return std::make_unique<SimpleFlux<HistType, Integrated> >(flux);
-  }
+        // make sure we're loading the right type
+        TObjString * ptag = (TObjString *) dir->Get("type");
+        assert(ptag->GetString() == "SimpleFlux" && "Type does not match SimpleFlux");
+        delete ptag;
+
+        HistType flux = *HistType::LoadFrom(dir, "fFlux");
+        return std::make_unique< SimpleFlux< HistType, Integrated > >(flux);
+    }
 }
