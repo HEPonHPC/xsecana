@@ -57,6 +57,7 @@ namespace xsec {
                    const T & shift)
                 : fContainer({shift}),
                   fType(kOneSided),
+
                   fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
         Systematic(std::string name,

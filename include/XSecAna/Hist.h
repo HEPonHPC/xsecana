@@ -45,74 +45,74 @@ namespace xsec {
              const Scalar & min,
              const Scalar & max);
 
-        void Normalize(const std::string & how);
+        virtual void Normalize(const std::string & how);
 
-        Scalar Integrate() const;
+        virtual Scalar Integrate() const;
 
-        Hist operator-(const Hist & rhs) const;
+        virtual Hist operator-(const Hist & rhs) const;
 
-        Hist operator+(const Hist & rhs) const;
+        virtual Hist operator+(const Hist & rhs) const;
 
-        Hist operator/(const Hist & rhs) const;
+        virtual Hist operator/(const Hist & rhs) const;
 
-        Hist operator*(const Hist & rhs) const;
+        virtual Hist operator*(const Hist & rhs) const;
 
-        bool operator==(const Hist & rhs) const;
+        virtual bool operator==(const Hist & rhs) const;
 
-        bool operator!=(const Hist & rhs) const { return !(*this == rhs); }
+        virtual bool operator!=(const Hist & rhs) const { return !(*this == rhs); }
 
-        Hist operator-=(const Hist & rhs);
+        virtual Hist operator-=(const Hist & rhs);
 
-        Hist operator+=(const Hist & rhs);
+        virtual Hist operator+=(const Hist & rhs);
 
-        Hist operator/=(const Hist & rhs);
+        virtual Hist operator/=(const Hist & rhs);
 
-        Hist operator*=(const Hist & rhs);
+        virtual Hist operator*=(const Hist & rhs);
 
-        Hist operator-(const Scalar & rhs) const;
+        virtual Hist operator-(const Scalar & rhs) const;
 
-        Hist operator+(const Scalar & rhs) const;
+        virtual Hist operator+(const Scalar & rhs) const;
 
-        Hist operator/(const Scalar & rhs) const;
+        virtual Hist operator/(const Scalar & rhs) const;
 
-        Hist operator*(const Scalar & rhs) const;
+        virtual Hist operator*(const Scalar & rhs) const;
 
-        Hist operator-=(const Scalar & rhs);
+        virtual Hist operator-=(const Scalar & rhs);
 
-        Hist operator+=(const Scalar & rhs);
+        virtual Hist operator+=(const Scalar & rhs);
 
-        Hist operator/=(const Scalar & rhs);
+        virtual Hist operator/=(const Scalar & rhs);
 
-        Hist operator*=(const Scalar & rhs);
+        virtual Hist operator*=(const Scalar & rhs);
 
-        Hist ScaleByExposure(Scalar new_expo) const;
+        virtual Hist ScaleByExposure(Scalar new_expo) const;
 
-        Hist TrueDivide(const Hist & rhs) const;
+        virtual Hist TrueDivide(const Hist & rhs) const;
 
         // some convenience functions
-        Hist abs() const;
+        virtual Hist abs() const;
 
-        Hist abs2() const;
+        virtual Hist abs2() const;
 
-        Hist sqrt() const;
+        virtual Hist sqrt() const;
 
-        Hist pow(Scalar exp) const;
+        virtual Hist pow(Scalar exp) const;
 
-        const Eigen::Array<Scalar, 1, Cols> & Contents() const { return fContents; }
+        virtual const Eigen::Array<Scalar, 1, Cols> & Contents() const { return fContents; }
 
-        const Eigen::Array<Scalar, 1, EdgesSize(Cols)> & Edges() const { return fEdges; }
+        virtual const Eigen::Array<Scalar, 1, EdgesSize(Cols)> & Edges() const { return fEdges; }
 
-        Scalar Exposure() const { return fExposure; }
+        virtual Scalar Exposure() const { return fExposure; }
 
-        [[nodiscard]] unsigned int size() const { return fContents.size(); }
+        [[nodiscard]] virtual unsigned int size() const { return fContents.size(); }
 
-        Eigen::Array<Scalar, 1, Cols> BinWidths() const;
+        virtual Eigen::Array<Scalar, 1, Cols> BinWidths() const;
 
-        Scalar & operator[](int index) { return fContents(index); }
+        virtual Scalar & operator[](int index) { return fContents(index); }
 
-        Scalar operator[](int index) const { return fContents(index); }
+        virtual Scalar operator[](int index) const { return fContents(index); }
 
-        void SaveTo(TDirectory * dir, const std::string & subdir) const;
+        virtual void SaveTo(TDirectory * dir, const std::string & subdir) const;
 
         static std::unique_ptr<Hist> LoadFrom(TDirectory * dir, const std::string & subdir);
 
@@ -204,7 +204,7 @@ namespace xsec {
     Hist(const int & nbins,
          const Scalar & min,
          const Scalar & max) {
-        fContents = Eigen::Array<Scalar, 1, Cols>::Zeros(nbins);
+        fContents = Eigen::Array<Scalar, 1, Cols>::Zero(nbins);
         fEdges = Eigen::Array<Scalar, 1, EdgesSize(Cols)>::LinSpaced(nbins + 1, min, max);
     }
 
