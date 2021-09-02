@@ -15,8 +15,7 @@ namespace xsec {
         SimpleFlux() = default;
 
         explicit SimpleFlux(const HistType & flux)
-                :
-                fFlux(flux) {}
+                : fFlux(flux) {}
 
         const HistType & ToHist() override { return fFlux; }
 
