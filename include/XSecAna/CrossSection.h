@@ -35,7 +35,7 @@ namespace xsec {
 
         static std::unique_ptr<CrossSection> LoadFrom(TDirectory * dir, const std::string & subdir);
 
-        HistType Result(const HistType & data) override;
+        HistType Eval(const HistType & data) override;
 
         CrossSection<HistType,
                      SignalEstimatorType,
@@ -122,7 +122,7 @@ namespace xsec {
                  EfficiencyType,
                  FluxType,
                  IsDifferential>::
-    Result(const HistType & data) {
+    Eval(const HistType & data) {
         // calculate estimated signal and scale by the exposure of the data
         auto signal = fSignalEstimator->Signal(data);
         signal = signal.ScaleByExposure(data.Exposure());
