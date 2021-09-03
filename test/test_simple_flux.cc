@@ -15,7 +15,7 @@ int main(int argc, char ** argv)
   bool test;
 
   Hist<double, 10> flux_hist(Eigen::Array<double, 1, 10>::Ones(),
-			     Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+                             Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
 
   SimpleFlux flux(flux_hist);
   SimpleIntegratedFlux<Hist<double, 10> > integrated_flux(flux_hist);

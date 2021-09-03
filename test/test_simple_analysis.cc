@@ -19,9 +19,9 @@ using namespace xsec;
 std::string test_file_name = test::utils::test_dir() + "test_simple_analysis.root";
 
 typedef Analysis<test::utils::SimpleCrossSection,
-			     SimpleQuadSum<test::utils::SimpleCrossSection,
-					   Hist<double, 10> > ,
-			     Hist<double, 10> > SimpleCrossSectionAnalysis;
+                 SimpleQuadSum<test::utils::SimpleCrossSection,
+                               Hist<double, 10> > ,
+                 Hist<double, 10> > SimpleCrossSectionAnalysis;
 
 int main(int argc, char ** argv)
 {
@@ -31,7 +31,7 @@ int main(int argc, char ** argv)
   bool test;
   
   Hist<double, 10> ones(Eigen::Array<double, 1, 10>::Ones(),
-			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
 
   auto data = test::utils::get_simple_data<double, 10>();
 

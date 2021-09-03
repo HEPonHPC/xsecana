@@ -16,9 +16,9 @@ int main(int argc, char ** argv)
   bool test;
   
   Hist<double, 10> num(Eigen::Array<double, 1, 10>::Ones(),
-		       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+                       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
   Hist<double, 10> den(Eigen::Array<double, 1, 10>::Ones() / 2,
-		       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+                       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
 
   auto expected = Eigen::Array<double, 1, 10>::Ones() * 2;
 

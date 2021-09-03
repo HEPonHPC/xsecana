@@ -28,12 +28,12 @@ int main(int argc, char ** argv)
   bool test;
 
   Hist<double, 10> ones(Eigen::Array<double, 1, 10>::Ones(),
-			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 20));
+                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 20));
   Hist<double, 10> bkgd = ones * 2;
 
   Hist<double, 10> data(Eigen::Array<double, 1, 10>::Ones() * 4,
-			Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 20),
-			test::utils::data_exposure);
+                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 20),
+                        test::utils::data_exposure);
 
   Hist<double, 10> flux_hist = ones * 5;
 
