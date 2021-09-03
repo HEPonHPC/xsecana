@@ -15,30 +15,35 @@ namespace xsec {
     /// SimpleQuadSum performs the quadrature sum of systematic shifts
     /// In the case of an asymmetric 2-sided shift,
     /// the shift is symmeterized by taking the largest shift
-    template<class MeasurementType,
-             class HistType = HistXd>
-    class SimpleQuadSum : IUncertaintyPropagator<MeasurementType,
-                                                 HistType> {
+    template<class HistType,
+             class T,
+             class ... Args>
+    class SimpleQuadSum : IUncertaintyPropagator<HistType, T, Args...> {
     public:
-        std::pair<HistType, HistType>
-        TotalFractionalUncertainty(const HistType & data,
-                                   MeasurementType & nominal_measurement,
-                                   std::map<std::string, Systematic<MeasurementType> > & shifted_measurement) override;
+
+        SimpleQuadSum() = default;
 
         std::pair<HistType, HistType>
-        TotalAbsoluteUncertainty(const HistType & data,
-                                 MeasurementType & nominal_measurement,
-                                 std::map<std::string, Systematic<MeasurementType> > & shifted_measurement) override;
+        TotalFractionalUncertainty(T & nominal_obj,
+                                   std::map<std::string,
+                                            xsec::Systematic<T> > & shifted_objs,
+                                   Args & ... args) override;
+
+        std::pair<HistType, HistType>
+        TotalAbsoluteUncertainty(T & nominal_obj,
+                                 std::map<std::string,
+                                          xsec::Systematic<T> > & shifted_objs,
+                                 Args & ...  args) override;
 
         HistType
-        FractionalUncertainty(const HistType & data,
-                              MeasurementType & nominal_measurement,
-                              Systematic<MeasurementType> & shifted_measurement) override;
+        FractionalUncertainty(T & nominal_obj,
+                              xsec::Systematic<T> & shifted_obj,
+                              Args & ...  args) override;
 
         HistType
-        AbsoluteUncertainty(const HistType & data,
-                            MeasurementType & nominal_measurement,
-                            Systematic<MeasurementType> & shifted_measurement) override;
+        AbsoluteUncertainty(T & nominal_obj,
+                            xsec::Systematic<T> & shifted_obj,
+                            Args & ...  args) override;
 
     };
 
@@ -59,64 +64,77 @@ namespace xsec {
     }
 
     /////////////////////////////////////////////////////////////////////////
-    template<class MeasurementType,
-             class HistType>
+    template<class HistType,
+             class T,
+             class ... Args>
     HistType
-    SimpleQuadSum<MeasurementType, HistType>::
-    AbsoluteUncertainty(const HistType & data,
-                        MeasurementType & nominal_measurement,
-                        Systematic<MeasurementType> & shifted_measurement) {
+    SimpleQuadSum<HistType, T, Args...>::
+    AbsoluteUncertainty(T & nominal_obj,
+                        xsec::Systematic<T> & shifted_obj,
+                        Args & ...  args) {
         // calculate cross sections
-        auto hnominal_measurement = nominal_measurement.Result(data);
-        Systematic<HistType> shifts = shifted_measurement.Invoke(&MeasurementType::Result, data);
+        auto hnominal = nominal_obj.Eval(std::forward<Args>(args)...);
+        Systematic<HistType> shifts = shifted_obj.Invoke(&T::Eval,
+                                                         std::forward<Args>(args)...);
 
-        // convert multiverse systematic to two sided by finding 1sigma
-        shifts = HandleMultiverseSystematic(shifts, hnominal_measurement);
+        // convert multiverse systematic to two-sided by finding 1sigma
+        shifts = HandleMultiverseSystematic(shifts, hnominal);
 
         // HistType::operator- is overloaded
         // static cast to resolve
         shifts = shifts.Invoke(static_cast<HistType(HistType::*)(const HistType &) const>(&HistType::operator-),
-                               hnominal_measurement);
+                               hnominal);
 
         return MaxShift(shifts.Up().abs(), shifts.Down().abs());
     }
 
     /////////////////////////////////////////////////////////////////////////
-    template<class MeasurementType,
-             class HistType>
+    template<class HistType,
+             class T,
+             class ... Args>
     HistType
-    SimpleQuadSum<MeasurementType, HistType>::
-    FractionalUncertainty(const HistType & data,
-                          MeasurementType & nominal_measurement,
-                          Systematic<MeasurementType> & shifted_measurement) {
-        HistType abs = AbsoluteUncertainty(data, nominal_measurement, shifted_measurement);
-        return abs / nominal_measurement.Result(data);
+    SimpleQuadSum<HistType, T, Args...>::
+    FractionalUncertainty(T & nominal_obj,
+                          xsec::Systematic<T> & shifted_obj,
+                          Args & ...  args) {
+        HistType abs = AbsoluteUncertainty(nominal_obj,
+                                           shifted_obj,
+                                           args...);
+        return abs / nominal_obj.Eval(std::forward<Args>(args)...);
     }
 
     /////////////////////////////////////////////////////////////////////////
-    template<class MeasurementType,
-             class HistType>
+    template<class HistType,
+             class T,
+             class ... Args>
     std::pair<HistType, HistType>
-    SimpleQuadSum<MeasurementType, HistType>::
-    TotalFractionalUncertainty(const HistType & data,
-                               MeasurementType & nominal_measurement,
-                               std::map<std::string, Systematic<MeasurementType> > & shifted_measurement) {
-        auto hnominal = nominal_measurement.Result(data);
-        auto abs = TotalAbsoluteUncertainty(data, nominal_measurement, shifted_measurement);
+    SimpleQuadSum<HistType, T, Args...>::
+    TotalFractionalUncertainty(T & nominal_obj,
+                               std::map<std::string,
+                                        xsec::Systematic<T>> & shifted_objs,
+                               Args & ... args) {
+        auto hnominal = nominal_obj.Eval(std::forward<Args>(args)...);
+        auto abs = TotalAbsoluteUncertainty(nominal_obj,
+                                            shifted_objs,
+                                            args...);
         return {abs.first / hnominal, abs.second / hnominal};
     }
 
     /////////////////////////////////////////////////////////////////////////
-    template<class MeasurementType,
-             class HistType>
+    template<class HistType,
+             class T,
+             class ... Args>
     std::pair<HistType, HistType>
-    SimpleQuadSum<MeasurementType, HistType>::
-    TotalAbsoluteUncertainty(const HistType & data,
-                             MeasurementType & nominal_measurement,
-                             std::map<std::string, Systematic<MeasurementType> > & shifted_measurement) {
+    SimpleQuadSum<HistType, T, Args...>::
+    TotalAbsoluteUncertainty(T & nominal_obj,
+                               std::map<std::string,
+                                        xsec::Systematic<T>> & shifted_objs,
+                               Args & ... args) {
         std::vector<HistType> shifts;
-        for (auto syst_it = shifted_measurement.begin(); syst_it != shifted_measurement.end(); syst_it++) {
-            shifts.push_back(AbsoluteUncertainty(data, nominal_measurement, syst_it->second));
+        for (auto syst_it = shifted_objs.begin(); syst_it != shifted_objs.end(); syst_it++) {
+            shifts.push_back(AbsoluteUncertainty(nominal_obj,
+                                                 syst_it->second,
+                                                 args...));
         }
         auto result = QuadSum(shifts).sqrt();
         return {result, result};

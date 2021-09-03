@@ -10,34 +10,31 @@ namespace xsec {
     ///
     /// IUncertaintyPropagator defines the interface assumed
     /// by the analysis object
-    template<class CrossSectionType,
-             class HistType = HistXd>
+    template<class HistType,
+             class T,
+             class ... Args>
     class IUncertaintyPropagator {
     public:
         virtual std::pair<HistType, HistType>
-        TotalFractionalUncertainty(const HistType & data,
-                                   CrossSectionType & nominal_xsec,
-                                   std::map<std::string, Systematic < CrossSectionType>
-
-        > & shifted_xsec) = 0;
+        TotalFractionalUncertainty(T & nominal_obj,
+                                   std::map<std::string,
+                                            xsec::Systematic<T> > & shifted_objs,
+                                   Args & ... args) = 0;
 
         virtual std::pair<HistType, HistType>
-        TotalAbsoluteUncertainty(const HistType & data,
-                                 CrossSectionType & nominal_xsec,
-                                 std::map<std::string, Systematic < CrossSectionType>
-
-        > & shifted_xsec) = 0;
-
-        virtual HistType
-        FractionalUncertainty(const HistType & data,
-                              CrossSectionType & nominal_xsec,
-                              Systematic <CrossSectionType> & shifted_xsec) = 0;
+        TotalAbsoluteUncertainty(T & nominal_obj,
+                                 std::map<std::string,
+                                          xsec::Systematic<T> > & shifted_objs,
+                                 Args & ... args) = 0;
 
         virtual HistType
-        AbsoluteUncertainty(const HistType & data,
-                            CrossSectionType & nominal_xsec,
-                            Systematic <CrossSectionType> & shifted_xsec) = 0;
-
+        FractionalUncertainty(T & nominal_obj,
+                              xsec::Systematic<T> & shifted_obj,
+                              Args & ... args) = 0;
+        virtual HistType
+        AbsoluteUncertainty(T & nominal_obj,
+                            xsec::Systematic<T> & shifted_obj,
+                            Args & ... args) = 0;
     };
 
     // inline some common functions
