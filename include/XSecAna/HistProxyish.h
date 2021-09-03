@@ -38,7 +38,7 @@ namespace xsec {
 
         /// \brief Get the resource when it is ready
         /// This needs to be implemented for each type we are wrapping
-        Hist <Scalar, Cols> GetHist();
+        Hist<Scalar, Cols> GetHist();
 
         /// \brief First retrieve the wrapped data and save to file
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
