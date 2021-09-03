@@ -16,7 +16,7 @@ namespace xsec {
 
     // Histograming object used internally by the framework
     // Wraps Eigen arrays
-    // Users can create conversion functions to/from this object
+    // TODO Users can create conversion functions to/from this object
     // template parameters are forwarded to the underlaying Eigen arrays
     template<typename Scalar,
             int Cols = -1>
