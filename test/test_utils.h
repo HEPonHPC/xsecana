@@ -167,7 +167,7 @@ namespace xsec {
             //  - the input array when folded
             //  - 2 times the input array when unfolded
             template<class Scalar, int Cols>
-            SimpleCrossSection make_simple_xsec(Hist<Scalar, Cols> val) {
+            IMeasurement<Hist<Scalar, Cols> > * make_simple_xsec(Hist<Scalar, Cols> val) {
                 Hist<Scalar, Cols> ones(Eigen::Array<Scalar, 1, Cols>::Ones(),
                                         val.Edges());
 
@@ -178,11 +178,11 @@ namespace xsec {
                                                               get_simple_data<Scalar, Cols>().Exposure()));
                 auto signal_estimator = new SimpleSignalEstimator(get_simple_background<Scalar, Cols>());
                 auto unfold = new IdentityUnfold<Scalar, Cols>(ones.Contents().size());
-                auto ret = SimpleCrossSection(efficiency,
+                auto ret = new SimpleCrossSection(efficiency,
                                               signal_estimator,
                                               flux,
                                               unfold);
-                ret.SetNTargets(ntargets);
+                ret->SetNTargets(ntargets);
                 return ret;
             }
 
@@ -202,8 +202,8 @@ namespace xsec {
 
             /////////////////////////////////////////////////////////
             template<class HistType>
-            std::vector<SimpleCrossSection> make_simple_xsec_multiverse(const HistType & hnominal, int nuniverses) {
-                std::vector<SimpleCrossSection> xsec_universes(nuniverses);
+            std::vector<IMeasurement<HistType>*> make_simple_xsec_multiverse(const HistType & hnominal, int nuniverses) {
+                std::vector<IMeasurement<HistType>*> xsec_universes(nuniverses);
                 auto hist_universes = make_simple_hist_multiverse(hnominal, nuniverses);
 
                 for (auto i = 0; i < nuniverses; i++) {

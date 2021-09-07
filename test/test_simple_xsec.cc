@@ -104,7 +104,7 @@ int main(int argc, char ** argv)
 
 
   TEST_ARRAY("test_utils::make_simple_xsec",
-	     (test::utils::make_simple_xsec(ones).Eval(test::utils::get_simple_data<double, 10>()).Contents()),
+	     (test::utils::make_simple_xsec(ones)->Eval(test::utils::get_simple_data<double, 10>()).Contents()),
 	     ones.Contents(),
 	     0);
 
