@@ -17,9 +17,11 @@ namespace xsec {
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
         /// \brief children must override
-        static std::unique_ptr<IEfficiency> * LoadFrom(TDirectory * dir, const std::string & name) {
+        static std::unique_ptr<IEfficiency> LoadFrom(TDirectory * dir, const std::string & name) {
             assert(false && "IEfficiency::LoadFrom not implemented");
         }
+
+        virtual ~IEfficiency() = default;
 
     };
 

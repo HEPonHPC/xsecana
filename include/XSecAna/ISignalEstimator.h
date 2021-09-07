@@ -20,6 +20,7 @@ namespace xsec {
             assert(false && "ISignalEstimator::LoadFrom not implemented");
         }
 
+        virtual ~ISignalEstimator() = default;
     protected:
     };
 }

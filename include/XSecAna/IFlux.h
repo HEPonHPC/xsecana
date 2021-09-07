@@ -19,6 +19,8 @@ namespace xsec {
             assert(false && "IFlux::LoadFrom not implemented");
         }
 
+        virtual ~IFlux() = default;
+
     private:
 
     };

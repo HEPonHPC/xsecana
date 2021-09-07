@@ -15,6 +15,8 @@ namespace xsec {
         static std::unique_ptr<IUnfold> LoadFrom(TDirectory * dir, const std::string & name) {
             assert(false && "IUnfold::LoadFrom not implemented");
         }
+
+        virtual ~IUnfold() = default;
     };
 
     /////////////////////////////////////////////////////////
