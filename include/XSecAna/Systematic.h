@@ -103,15 +103,17 @@ namespace xsec {
         ///\brief calculates nsigma shift from nominal
         /// --If T is not an instantiation of Hist
         ///   create a new MultiverseSystematic<Hist>
-        ///   by calling T::ToHist on each universe and the
+        ///   by calling T::Eval on each universe and the
         ///   nominal argument, and MultiverseSystematic<Hist>::NSigmaShift
         ///   is called
         /// --If T is an instantiation of Hist, BinSigma is called
         ///
         /// In either case, return type is an instantiation
-        /// of Hist, determined by return type of T::ToHist, or T itself
+        /// of Hist, determined by return type of T::Eval, or T itself
+        template<class ... Args>
         auto NSigmaShift(double nsigma,
-                         const T & nominal) const;
+                         const T & nominal,
+                         Args & ... args) const;
 
 
     private:
@@ -185,10 +187,12 @@ namespace xsec {
 
     /////////////////////////////////////////////////////////////////////////
     template<class T>
+    template<class ... Args>
     auto
     Systematic<T>::
     NSigmaShift(double nsigma,
-                const T & nominal) const {
+                const T & nominal,
+                Args & ... args) const {
         if (fType != kMultiverse) {
             throw exceptions::SystematicTypeError(__PRETTY_FUNCTION__, kMultiverse, fType);
         }
@@ -204,7 +208,12 @@ namespace xsec {
             }
             return shift;
         } else {
-            return this->Invoke(&T::ToHist).NSigmaShift(nsigma, nominal.ToHist());
+            return this->Invoke(&std::remove_pointer<T>::type::Eval,
+                                args...)
+                    .NSigmaShift(nsigma,
+                                 std::invoke(&std::remove_pointer<T>::type::Eval,
+                                             nominal,
+                                             std::forward<Args>(args)...));
         }
     }
 
