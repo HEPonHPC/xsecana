@@ -23,11 +23,6 @@ int main(int argc, char ** argv)
   auto expected = Eigen::Array<double, 1, 10>::Ones() * 2;
 
   SimpleEfficiency eff(num, den);
-  
-  const Hist<double, 10> * cache_hit1 = &eff.Eval();
-  const Hist<double, 10> * cache_hit2 = &eff.Eval();
-
-  pass &= cache_hit1 == cache_hit2;
 
   TEST_ARRAY("ratio calculation", eff.Eval().Contents(), expected, 0);
 
