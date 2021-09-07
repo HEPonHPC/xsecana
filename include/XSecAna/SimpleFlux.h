@@ -17,7 +17,8 @@ namespace xsec {
         explicit SimpleFlux(const HistType & flux)
                 : fFlux(flux) {}
 
-        const HistType & ToHist() override { return fFlux; }
+        // TODO this should return fResult instead
+        HistType Eval() override { return fFlux; }
 
         HistType operator/(const HistType & rhs) override;
 

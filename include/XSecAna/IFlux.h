@@ -6,7 +6,7 @@ namespace xsec {
     template<class HistType = HistXd>
     class IFlux {
     public:
-        virtual const HistType & ToHist() = 0;
+        virtual HistType Eval() = 0;
 
         virtual HistType operator/(const HistType & rhs) = 0;
 

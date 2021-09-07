@@ -14,7 +14,7 @@ namespace xsec {
                          HistType den)
                 : fNumerator(num), fDenominator(den) {}
 
-        const HistType & ToHist() override;
+        HistType Eval() override;
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
@@ -34,9 +34,9 @@ namespace xsec {
 
     //////////////////////////////////////////////////////////
     template<class HistType>
-    const HistType &
+    HistType
     SimpleEfficiency<HistType>::
-    ToHist() {
+    Eval() {
         if (!fRatio) {
             fRatio = new HistType(fNumerator);
             *fRatio /= fDenominator;

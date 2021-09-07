@@ -5,14 +5,19 @@
 
 namespace xsec {
     template<class HistType = HistXd>
-    class SimpleSignalEstimator : ISignalEstimator<HistType> {
+    class SimpleSignalEstimator : public ISignalEstimator<HistType> {
     public:
         SimpleSignalEstimator() = default;
 
         explicit SimpleSignalEstimator(const HistType & bkgd)
                 : fBackground(bkgd) {}
 
-        /// background could be dependent on data
+        /// \brief An implementation of Eval allows this object to
+        /// interact with the systematics framework. This one just forwards a call to Signal
+        /// TODO don't really like this
+        HistType Eval(const HistType & data) override { return Signal(data); }
+
+        /// \brief background could be dependent on data
         /// in this case it isn't
         const HistType & Background(const HistType & data) override;
 

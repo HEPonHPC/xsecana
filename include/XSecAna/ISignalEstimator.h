@@ -7,6 +7,8 @@ namespace xsec {
     template<class HistType = HistXd>
     class ISignalEstimator {
     public:
+        virtual HistType Eval(const HistType & data) = 0;
+
         virtual const HistType & Background(const HistType & data) = 0;
 
         virtual const HistType & Signal(const HistType & data) = 0;
