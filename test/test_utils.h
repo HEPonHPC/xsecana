@@ -92,11 +92,7 @@ namespace xsec {
 
             /////////////////////////////////////////////////////////
             typedef Hist<double, 10> histtype;
-            typedef CrossSection<histtype,
-                                 SimpleSignalEstimator<histtype>,
-                                 IdentityUnfold<double, 10>,
-                                 SimpleEfficiency<histtype>,
-                                 SimpleFlux<histtype> > SimpleCrossSection;
+            typedef CrossSection<histtype> SimpleCrossSection;
 
             /////////////////////////////////////////////////////////
             template<typename ArrayType>
