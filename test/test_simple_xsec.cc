@@ -67,17 +67,17 @@ int main(int argc, char ** argv)
 	     (Eigen::Array<double, 1, 10>::Ones() * 3),
 	     0);
   TEST_ARRAY("efficiency",
-	     (efficiency->ToHist().Contents()),
+	     (efficiency->Eval().Contents()),
 	     (Eigen::Array<double, 1, 10>::Ones() / 4.),
 	     0);
 
   TEST_ARRAY("xsec",
-	     xsec.Result(data).Contents(),
+             xsec.Eval(data).Contents(),
 	     (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
 	     0);
 
   TEST_ARRAY("xsec_differential",
-	     xsec_differential.Result(data).Contents(),
+             xsec_differential.Eval(data).Contents(),
 	     (Eigen::Array<double, 1, 10>::Ones() / 2. * 24. / 5.),
 	     0);
 
@@ -93,23 +93,23 @@ int main(int argc, char ** argv)
   delete input;
 
   TEST_ARRAY("loaded xsec",
-	     loaded_xsec.Result(data).Contents(),
+             loaded_xsec.Eval(data).Contents(),
 	     (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
 	     0);
 
   TEST_ARRAY("exposure",
-	     (Eigen::Array<double, 1, 1>::Ones() * xsec.Result(data).Exposure()),
+	     (Eigen::Array<double, 1, 1>::Ones() * xsec.Eval(data).Exposure()),
 	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
 	     0);
 
   TEST_ARRAY("exposure differential",
-	     (Eigen::Array<double, 1, 1>::Ones() * xsec_differential.Result(data).Exposure()),
+	     (Eigen::Array<double, 1, 1>::Ones() * xsec_differential.Eval(data).Exposure()),
 	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
 	     0);
 
 
   TEST_ARRAY("test_utils::make_simple_xsec",
-	     (test::utils::make_simple_xsec(ones).Result(test::utils::get_simple_data<double, 10>()).Contents()),
+	     (test::utils::make_simple_xsec(ones).Eval(test::utils::get_simple_data<double, 10>()).Contents()),
 	     ones.Contents(),
 	     0);
 
