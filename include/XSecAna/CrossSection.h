@@ -6,6 +6,10 @@
 #include "Hist.h"
 
 #include "XSecAna/IMeasurement.h"
+#include "XSecAna/IEfficiency.h"
+#include "XSecAna/ISignalEstimator.h"
+#include "XSecAna/IFlux.h"
+#include "XSecAna/IUnfold.h"
 
 namespace xsec {
     template<class HistType,
