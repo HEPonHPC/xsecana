@@ -3,6 +3,9 @@
 
 #include "XSecAna/Hist.h"
 #include "XSecAna/Systematic.h"
+#include "XSecAna/SimpleEfficiency.h"
+#include "XSecAna/SimpleFlux.h"
+#include "XSecAna/SimpleSignalEstimator.h"
 #include "test_utils.h"
 
 #include <Eigen/Dense>
@@ -97,7 +100,7 @@ bool run_tests_mv(bool verbose, std::string dir)
   int p1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses-1) + 1;
   TEST_ARRAY("minus 1 sigma", minus_1sigma.Contents(), universes[p1_idx].Contents(), 0);
 
-  // Test the ability of Systematic<T> to call T::ToHist
+  // Test the ability of Systematic<T> to call T::Eval
   // No need to get too fancy here. If it compiles assume it passes
   std::vector<test::utils::Ratio<Scalar, Cols> >vratio_mv;
   for(auto i = 0u; i < syst.GetShifts().size(); i++) {
@@ -105,7 +108,7 @@ bool run_tests_mv(bool verbose, std::string dir)
   }
   
   Systematic ratio_mv("ratio_mv", vratio_mv);
-  auto ratio_mv_hists = ratio_mv.Invoke(&test::utils::Ratio<Scalar, Cols>::ToHist);
+  auto ratio_mv_hists = ratio_mv.Invoke(&test::utils::Ratio<Scalar, Cols>::Eval);
 
   auto ratio_plus_1sigma = ratio_mv.NSigmaShift(1, test::utils::Ratio(nominal, nominal));
   auto ratio_minus_1sigma = ratio_mv.NSigmaShift(-1, test::utils::Ratio(nominal, nominal));
@@ -142,6 +145,7 @@ int main(int argc, char ** argv)
   if(argc > 1 && std::strcmp(argv[1], "-v") == 0)  verbose = true;
 
   bool pass = true;
+  bool test;
 
   std::remove(test_file_name.c_str());
 
@@ -209,6 +213,37 @@ int main(int argc, char ** argv)
     if(verbose) std::cout << e.what() << std::endl;
     pass &= true;
   }
+
+  // test of polymorphism of objects in the systematics container
+  typedef Hist<double, 10> histtype;
+  auto eff = new SimpleEfficiency(nominal + 1, nominal);
+  Systematic<IEfficiency<histtype> *> syst_eff("eff",
+                                               eff);
+  Systematic<histtype> eff_res = syst_eff.Invoke(&IEfficiency<histtype>::Eval);
+  TEST_ARRAY("polymorphism IEfficiency",
+             eff_res.Up().Contents(),
+             ((nominal + 1) / nominal).Contents(),
+             0);
+
+  auto signal = new SimpleSignalEstimator(nominal);
+  auto data = nominal + 1;
+  Systematic<ISignalEstimator<histtype> *> syst_signal("signal",
+                                                       signal);
+  Systematic<histtype> signal_res = syst_signal.Invoke(&ISignalEstimator<histtype>::Eval, data);
+  TEST_ARRAY("polymorphism ISignalEstimator",
+             signal_res.Up().Contents(),
+             (data - nominal).Contents(),
+             0);
+
+  std::vector<ISignalEstimator<histtype> *> signal_universes;
+  auto hist_universes = test::utils::make_simple_hist_multiverse(nominal, 30);
+  for(auto imv = 0u; imv < hist_universes.size(); imv++) {
+      signal_universes.push_back(new SimpleSignalEstimator(hist_universes[imv]));
+  }
+  Systematic<ISignalEstimator<histtype> *> signal_mv("signa", signal_universes);
+
+  signal_mv.NSigmaShift(1, signal, data);
+
 
   return !pass;
 }

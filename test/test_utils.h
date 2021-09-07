@@ -85,7 +85,7 @@ namespace xsec {
                 Hist<Scalar, Cols> numerator;
                 Hist<Scalar, Cols> denominator;
 
-                Hist<Scalar, Cols> ToHist() const {
+                Hist<Scalar, Cols> Eval() const {
                     return numerator / denominator;
                 }
             };
