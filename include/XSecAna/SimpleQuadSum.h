@@ -18,7 +18,7 @@ namespace xsec {
     template<class HistType,
              class T,
              class ... Args>
-    class SimpleQuadSum : IUncertaintyPropagator<HistType, T, Args...> {
+    class SimpleQuadSum : public IUncertaintyPropagator<HistType, T, Args...> {
     public:
 
         SimpleQuadSum() = default;
