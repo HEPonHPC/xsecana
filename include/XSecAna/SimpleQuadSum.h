@@ -73,8 +73,10 @@ namespace xsec {
                         xsec::Systematic<T> & shifted_obj,
                         Args & ...  args) {
         // calculate cross sections
-        auto hnominal = nominal_obj.Eval(std::forward<Args>(args)...);
-        Systematic<HistType> shifts = shifted_obj.Invoke(&T::Eval,
+        auto hnominal = std::invoke(&std::remove_pointer<T>::type::Eval,
+                                    nominal_obj,
+                                    std::forward<Args>(args)...);
+        Systematic<HistType> shifts = shifted_obj.Invoke(&std::remove_pointer<T>::type::Eval,
                                                          std::forward<Args>(args)...);
 
         // convert multiverse systematic to two-sided by finding 1sigma
@@ -100,7 +102,7 @@ namespace xsec {
         HistType abs = AbsoluteUncertainty(nominal_obj,
                                            shifted_obj,
                                            args...);
-        return abs / nominal_obj.Eval(std::forward<Args>(args)...);
+        return abs / std::invoke(&std::remove_pointer<T>::type::Eval, nominal_obj, std::forward<Args>(args)...);
     }
 
     /////////////////////////////////////////////////////////////////////////
@@ -113,7 +115,9 @@ namespace xsec {
                                std::map<std::string,
                                         xsec::Systematic<T>> & shifted_objs,
                                Args & ... args) {
-        auto hnominal = nominal_obj.Eval(std::forward<Args>(args)...);
+        auto hnominal = std::invoke(&std::remove_pointer<T>::type::Eval,
+                                    nominal_obj,
+                                    std::forward<Args>(args)...);
         auto abs = TotalAbsoluteUncertainty(nominal_obj,
                                             shifted_objs,
                                             args...);

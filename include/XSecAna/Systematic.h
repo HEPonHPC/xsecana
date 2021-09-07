@@ -68,12 +68,12 @@ namespace xsec {
                   fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
         Systematic(std::string name,
-                   const std::vector<T> & universes)
+                   std::vector<T> & universes)
                 : fContainer(universes),
                   fType(kMultiverse),
                   fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
-        Systematic(const std::vector<T> & container,
+        Systematic(std::vector<T> & container,
                    SystType_t type,
                    std::string name)
                 : fContainer(container),
@@ -255,7 +255,11 @@ namespace xsec {
 
         auto mv_dir = dir->mkdir("fContainer");
         for (auto i = 0u; i < fContainer.size(); i++) {
-            fContainer[i].SaveTo(mv_dir, std::to_string(i));
+            std::invoke(&std::remove_pointer<T>::type::SaveTo,
+                        fContainer[i],
+                        mv_dir,
+                        std::to_string(i));
+            //fContainer[i].SaveTo(mv_dir, std::to_string(i));
         }
 
         tmp->cd();

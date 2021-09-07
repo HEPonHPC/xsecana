@@ -14,12 +14,8 @@
 using namespace xsec;
 
 typedef Hist<double, 10> histtype;
-typedef CrossSection<histtype,
-		      SimpleSignalEstimator<histtype>,
-		      IdentityUnfold<double, 10>,
-		      SimpleEfficiency<histtype>,
-		      SimpleFlux<histtype> > SimpleCrossSection;
-typedef Systematic<SimpleCrossSection> CrossSectionSystematic;
+typedef CrossSection<histtype> SimpleCrossSection;
+typedef Systematic<IMeasurement<histtype>*> CrossSectionSystematic;
 
 int main(int argc, char ** argv)
 {
@@ -28,7 +24,7 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  SimpleQuadSum<histtype, SimpleCrossSection, histtype> prop;
+  SimpleQuadSum<histtype, IMeasurement<histtype>*, histtype> prop;
 
   Hist<double, 10> hone(Eigen::Array<double, 1, 10>::Ones(),
                         Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
@@ -43,10 +39,9 @@ int main(int argc, char ** argv)
 
   auto data = test::utils::get_simple_data<double, 10>();
 
-  SimpleCrossSection nominal_xsec = test::utils::make_simple_xsec(hnominal);
-  SimpleCrossSection up   = test::utils::make_simple_xsec(hup);
-  SimpleCrossSection down = test::utils::make_simple_xsec(hdown);
-
+  auto nominal_xsec = test::utils::make_simple_xsec(hnominal);
+  auto up   = test::utils::make_simple_xsec(hup);
+  auto down = test::utils::make_simple_xsec(hdown);
 
 
   // simple test of the math
@@ -55,7 +50,7 @@ int main(int argc, char ** argv)
                               test::utils::make_simple_xsec(hone * 4));
   CrossSectionSystematic three("3",
                                test::utils::make_simple_xsec(hone * 3));
-  SimpleCrossSection two  = test::utils::make_simple_xsec(hone * 2);
+  auto two  = test::utils::make_simple_xsec(hone * 2);
 
 
   auto one_half = prop.FractionalUncertainty(two,
@@ -64,7 +59,7 @@ int main(int argc, char ** argv)
   TEST_ARRAY("one_half", one_half.Contents(), (hone / 2).Contents(), 1e-14);
 
 
-  std::map<std::string, Systematic<SimpleCrossSection> > syst_map = {
+  std::map<std::string, Systematic<IMeasurement<histtype>*> > syst_map = {
     {"1", one},
     {"3", three},
     {"4", four},
@@ -81,10 +76,10 @@ int main(int argc, char ** argv)
   */
   int nuniverses = 50;
 
-  std::vector<SimpleCrossSection> xsec_universes = test::utils::make_simple_xsec_multiverse(hnominal, nuniverses);
+  std::vector<IMeasurement<histtype>*> xsec_universes = test::utils::make_simple_xsec_multiverse(hnominal, nuniverses);
   std::vector<Hist<double, 10> > hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
 
-  Systematic<SimpleCrossSection> syst_mv("mv_xsec", xsec_universes);
+  Systematic<IMeasurement<histtype>*> syst_mv("mv_xsec", xsec_universes);
   Systematic<Hist<double, 10> > syst_mv_hist("mv_hist", hist_universes);
 
   auto abs_uncert_mv = prop.AbsoluteUncertainty(nominal_xsec,
@@ -103,8 +98,8 @@ int main(int argc, char ** argv)
     Examples using 1 and 2 sided shifts
     Test each function of the propogator
   */
-  Systematic<SimpleCrossSection> syst_1sided("1sided", up);
-  Systematic<SimpleCrossSection> syst_2sided("2sided", up, down);
+  Systematic<IMeasurement<histtype>*> syst_1sided("1sided", up);
+  Systematic<IMeasurement<histtype>*> syst_2sided("2sided", up, down);
 
   // AbsoluteUncertainty
   auto abs_uncert_1sided = prop.AbsoluteUncertainty(nominal_xsec,
@@ -116,7 +111,7 @@ int main(int argc, char ** argv)
 	     (hup - hnominal).Contents(),
 	     1e-14);
 
-  std::map<std::string, Systematic<SimpleCrossSection> > rmap = {
+  std::map<std::string, Systematic<IMeasurement<histtype> *> > rmap = {
     {"1sided", syst_1sided},
   };
   auto symmetrize = prop.TotalAbsoluteUncertainty(nominal_xsec,
@@ -146,7 +141,7 @@ int main(int argc, char ** argv)
 
 
   // TotalAbsoluteUncertainty
-  std::map<std::string, Systematic<SimpleCrossSection> > systs = {
+  std::map<std::string, Systematic<IMeasurement<histtype>*> > systs = {
     {"1sided", syst_1sided},
     {"2sided", syst_2sided},
     {"mv", syst_mv},
