@@ -1,6 +1,5 @@
 
 set(TESTS test_compile)
-list(APPEND TESTS test_interface)
 list(APPEND TESTS test_hist)
 list(APPEND TESTS test_simple_analysis)
 list(APPEND TESTS test_simple_efficiency)
