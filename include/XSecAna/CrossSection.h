@@ -131,9 +131,9 @@ namespace xsec {
         // Pass a histogram of ones through the flux parameter of
         // CalculateCrossSection to divide by one
         return CalculateCrossSection(fUnfold->Truth(signal),
-                                     (*fFlux * fEfficiency->ToHist()),
-                                     HistType(HistType::array_type::Ones(fEfficiency->ToHist().Contents().size()),
-                                              fEfficiency->ToHist().Edges()),
+                                     (*fFlux * fEfficiency->Eval()),
+                                     HistType(HistType::array_type::Ones(fEfficiency->Eval().Contents().size()),
+                                              fEfficiency->Eval().Edges()),
                                      fNTargets,
                                      IsDifferential);
     }
