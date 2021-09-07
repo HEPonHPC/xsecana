@@ -10,7 +10,7 @@ namespace xsec {
 
     template<class HistType,
             bool Integrated = false>
-    class SimpleFlux : IFlux<HistType> {
+    class SimpleFlux : public IFlux<HistType> {
     public:
         SimpleFlux() = default;
 
