@@ -24,12 +24,12 @@ int main(int argc, char ** argv)
 
   SimpleEfficiency eff(num, den);
   
-  const Hist<double, 10> * cache_hit1 = &eff.ToHist();
-  const Hist<double, 10> * cache_hit2 = &eff.ToHist();
+  const Hist<double, 10> * cache_hit1 = &eff.Eval();
+  const Hist<double, 10> * cache_hit2 = &eff.Eval();
 
   pass &= cache_hit1 == cache_hit2;
 
-  TEST_ARRAY("ratio calculation", eff.ToHist().Contents(), expected, 0);
+  TEST_ARRAY("ratio calculation", eff.Eval().Contents(), expected, 0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_efficiency.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -44,7 +44,7 @@ int main(int argc, char ** argv)
 
   TEST_HIST("saveto/loadfrom numerator", loaded->GetNumerator(), num.Contents(), num.Edges(), 0);
   TEST_HIST("saveto/loadfrom denominator", loaded->GetDenominator(), den.Contents(), den.Edges(), 0);
-  TEST_HIST("saveto/loadfrom ratio", loaded->ToHist(), eff.ToHist().Contents(), eff.ToHist().Edges(), 0);
+  TEST_HIST("saveto/loadfrom ratio", loaded->Eval(), eff.Eval().Contents(), eff.Eval().Edges(), 0);
 
   return !pass;
 }
