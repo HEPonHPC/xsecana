@@ -1,0 +1,9 @@
+digraph "" {
+	graph [compound=True];
+	node [label="\N"];
+	I	 [label="Interfacing Layer",
+		shape=parallelogram];
+	NM	 [label="{<TF>TemplateFitSignalEstimator | SimpleFlux | SimpleEfficiency | IterativeUnfold}",
+		shape=record];
+	I -> NM:TF;
+}
