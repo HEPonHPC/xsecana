@@ -18,4 +18,4 @@ g.add_node(
 )
 
 g.layout(prog='dot')
-g.draw('systematic_uml.svg', prog='dot')
+g.draw('systematic_uml.pdf', prog='dot')

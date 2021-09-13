@@ -15,4 +15,4 @@ g.add_node('Multiverse\\n(N T)', shape='box3d')
 g.add_edge('Systematic<T>', 'Multiverse\\n(N T)')
 
 g.layout(prog='neato')
-g.draw('systematic_spider.svg', prog='neato')
+g.draw('systematic_spider.pdf', prog='neato')

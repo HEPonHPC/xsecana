@@ -17,4 +17,4 @@ g.add_node(
 )
 
 g.layout(prog='dot')
-g.draw('cross_section_ratio_uml.svg', prog='dot')
+g.draw('cross_section_ratio_uml.pdf', prog='dot')

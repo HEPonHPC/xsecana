@@ -31,5 +31,5 @@ g.add_node('FU', label='Fractional Uncertainty', shape='box')
 g.add_edge('div', 'FU')
 
 g.layout(prog='dot')
-g.draw('simple_quad_sum_flowchart.svg', prog='dot')
+g.draw('simple_quad_sum_flowchart.pdf', prog='dot')
 

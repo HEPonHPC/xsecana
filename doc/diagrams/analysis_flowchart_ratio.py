@@ -36,5 +36,5 @@ G.add_node('Result + Uncertainty', shape='box')
 G.add_edge('Uncertainty Propagation', 'Result + Uncertainty')
 
 G.layout(prog='dot')
-G.draw('analysis_flowchart_ratio.svg', prog='dot')
+G.draw('analysis_flowchart_ratio.pdf', prog='dot')
 

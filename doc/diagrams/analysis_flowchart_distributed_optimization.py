@@ -34,5 +34,5 @@ G.add_edge('Result + Uncertainty', 'Minimum?')
 G.add_edge('Minimum?', 'Interfacing Layer', constraint=False)
 
 G.layout(prog='dot')
-G.draw('analysis_flowchart_distributed_optimization.svg', prog='dot')
+G.draw('analysis_flowchart_distributed_optimization.pdf', prog='dot')
 

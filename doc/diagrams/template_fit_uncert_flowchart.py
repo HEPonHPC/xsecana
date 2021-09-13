@@ -10,4 +10,4 @@ g.add_node('Data', shape='box')
 
 
 g.layout(prog='dot')
-g.draw('template_fit_uncert_flowchart.svg', prog='dot')
+g.draw('template_fit_uncert_flowchart.pdf', prog='dot')

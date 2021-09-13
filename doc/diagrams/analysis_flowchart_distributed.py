@@ -28,5 +28,5 @@ G.add_node('Result + Uncertainty', shape='box')
 G.add_edge('Uncertainty Propagation', 'Result + Uncertainty')
 
 G.layout(prog='dot')
-G.draw('analysis_flowchart_distributed.svg', prog='dot')
+G.draw('analysis_flowchart_distributed.pdf', prog='dot')
 

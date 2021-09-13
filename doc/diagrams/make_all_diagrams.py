@@ -4,6 +4,8 @@ import analysis_flowchart_ratio
 import analysis_flowchart_distributed
 import analysis_flowchart_distributed_optimization
 import simple_quad_sum_flowchart
+import propagator_interface
+import template_fit_analysis_flowchart
 
 import systematic_spider
 

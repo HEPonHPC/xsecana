@@ -33,5 +33,5 @@ G.add_edge('Systematically-shifted Measurements', 'Uncertainty Propagation')
 G.add_edge('Uncertainty Propagation', 'Result + Uncertainty')
 
 G.layout(prog='dot')
-G.draw('analysis_flowchart_simple.svg', prog='dot')
+G.draw('analysis_flowchart_simple.pdf', prog='dot')
 

@@ -76,35 +76,5 @@ g.add_subgraph(
     style='rounded'
 )
 
-
-#g.add_node('NSE', label='TemplateFitSignalEstimator', shape='box')
-#g.add_node('NF', label='SimpleFlux', shape='box')
-#g.add_node('NE', label='SimpleEfficiency', shape='box')
-#g.add_edge('NSE', 'NF', invis=True)
-#g.add_edge('NF', 'NE', invis=True)
-#
-#g.add_node('SSE', label='TemplateFitSignalEstimator', shape='box3d')
-#g.add_node('SF', label='SimpleFlux', shape='box3d')
-#g.add_node('SE', label='SimpleEfficiency', shape='box3d')
-#
-#g.add_node('Data', shape='box')
-#
-#g.add_edge('I', 'NSE', lhead='cluster_Nominal')
-#g.add_edge('I', 'SSE', lhead='cluster_Shifted')
-#
-#g.add_subgraph(
-#    ['NSE', 'NF', 'NE'],
-#    name='cluster_Nominal',
-#    label='Nominal'
-#)
-#g.add_subgraph(
-#    ['SSE', 'SF', 'SE'],
-#    name='cluster_Shifted',
-#    label='Shifted'
-#)
-#
-#
-#
-#
 g.layout(prog='dot')
-g.draw('template_fit_analysis_flowchart.svg', prog='dot')
+g.draw('template_fit_analysis_flowchart.pdf', prog='dot')
