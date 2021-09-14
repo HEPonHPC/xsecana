@@ -79,9 +79,9 @@ namespace xsec {
                   fType(kMultiverse),
                   fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
-        Systematic(std::vector<T*> & container,
-                   SystType_t type,
-                   std::string name)
+        Systematic(std::string name,
+                   std::vector<T *> & container,
+                   SystType_t type)
                 : fContainer(container),
                   fType(type),
                   fName(std::move(name)) { fContainer.shrink_to_fit(); }
@@ -143,9 +143,9 @@ namespace xsec {
         for(auto i = 0u; i < this->fContainer.size(); i++) {
             container[i] = for_each(this->fContainer[i]);
         }
-        return Systematic<U>(container,
-                             fType,
-                             new_name);
+        return Systematic<U>(
+                new_name, container,
+                fType);
 
     }
 
