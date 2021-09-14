@@ -24,24 +24,24 @@ namespace xsec {
         SimpleQuadSum() = default;
 
         std::pair<HistType, HistType>
-        TotalFractionalUncertainty(T & nominal_obj,
+        TotalFractionalUncertainty(T * nominal_obj,
                                    std::map<std::string,
                                             xsec::Systematic<T> > & shifted_objs,
                                    Args & ... args) override;
 
         std::pair<HistType, HistType>
-        TotalAbsoluteUncertainty(T & nominal_obj,
+        TotalAbsoluteUncertainty(T * nominal_obj,
                                  std::map<std::string,
                                           xsec::Systematic<T> > & shifted_objs,
                                  Args & ...  args) override;
 
         HistType
-        FractionalUncertainty(T & nominal_obj,
+        FractionalUncertainty(T * nominal_obj,
                               xsec::Systematic<T> & shifted_obj,
                               Args & ...  args) override;
 
         HistType
-        AbsoluteUncertainty(T & nominal_obj,
+        AbsoluteUncertainty(T * nominal_obj,
                             xsec::Systematic<T> & shifted_obj,
                             Args & ...  args) override;
 
@@ -55,8 +55,8 @@ namespace xsec {
         // +/- 1 sigma
         if (syst.GetType() == SystType_t::kMultiverse) {
             return Systematic<HistType>(syst.GetName(),
-                                        syst.NSigmaShift(1, nominal),
-                                        syst.NSigmaShift(-1, nominal));
+                                        new HistType(MultiverseShift(syst, nominal, 1)),
+                                        new HistType(MultiverseShift(syst, nominal, 1)));
         } else {
             return syst;
         }
@@ -69,25 +69,37 @@ namespace xsec {
              class ... Args>
     HistType
     SimpleQuadSum<HistType, T, Args...>::
-    AbsoluteUncertainty(T & nominal_obj,
+    AbsoluteUncertainty(T * nominal_obj,
                         xsec::Systematic<T> & shifted_obj,
                         Args & ...  args) {
+
         // calculate cross sections
-        auto hnominal = std::invoke(&std::remove_pointer<T>::type::Eval,
-                                    nominal_obj,
-                                    std::forward<Args>(args)...);
-        Systematic<HistType> shifts = shifted_obj.Invoke(&std::remove_pointer<T>::type::Eval,
-                                                         std::forward<Args>(args)...);
+        HistType hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
+        std::vector<HistType*> shifts(shifted_obj.GetShifts().size());
+        for(auto i = 0u; i < shifted_obj.GetShifts().size(); i++) {
+            shifts[i] = new HistType(shifted_obj.GetShifts()[i]->Eval(std::forward<Args>(args)...));
+        }
+
+        Systematic<HistType> systematic(shifted_obj.GetName(),
+                                        shifts,
+                                        shifted_obj.GetType());
 
         // convert multiverse systematic to two-sided by finding 1sigma
-        shifts = HandleMultiverseSystematic(shifts, hnominal);
+        systematic = HandleMultiverseSystematic(systematic, hnominal);
 
-        // HistType::operator- is overloaded
-        // static cast to resolve
-        shifts = shifts.Invoke(static_cast<HistType(HistType::*)(const HistType &) const>(&HistType::operator-),
-                               hnominal);
+        ForEachFunction<HistType, HistType> subtract = [&hnominal](HistType * h) {
+            return new HistType(*h - hnominal);
+        };
 
-        return MaxShift(shifts.Up().abs(), shifts.Down().abs());
+        systematic = systematic.ForEach(subtract);
+
+        // if systematic is one-sided, symmeterize it
+        if(systematic.GetType() == kOneSided) {
+            return systematic.Up()->abs();
+        }
+        else{
+            return MaxShift(systematic.Up()->abs(), systematic.Down()->abs());
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////
@@ -96,13 +108,13 @@ namespace xsec {
              class ... Args>
     HistType
     SimpleQuadSum<HistType, T, Args...>::
-    FractionalUncertainty(T & nominal_obj,
+    FractionalUncertainty(T * nominal_obj,
                           xsec::Systematic<T> & shifted_obj,
                           Args & ...  args) {
         HistType abs = AbsoluteUncertainty(nominal_obj,
                                            shifted_obj,
                                            args...);
-        return abs / std::invoke(&std::remove_pointer<T>::type::Eval, nominal_obj, std::forward<Args>(args)...);
+        return abs / nominal_obj->Eval(std::forward<Args>(args)...);
     }
 
     /////////////////////////////////////////////////////////////////////////
@@ -111,13 +123,12 @@ namespace xsec {
              class ... Args>
     std::pair<HistType, HistType>
     SimpleQuadSum<HistType, T, Args...>::
-    TotalFractionalUncertainty(T & nominal_obj,
+    TotalFractionalUncertainty(T * nominal_obj,
                                std::map<std::string,
                                         xsec::Systematic<T>> & shifted_objs,
                                Args & ... args) {
-        auto hnominal = std::invoke(&std::remove_pointer<T>::type::Eval,
-                                    nominal_obj,
-                                    std::forward<Args>(args)...);
+        auto hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
+
         auto abs = TotalAbsoluteUncertainty(nominal_obj,
                                             shifted_objs,
                                             args...);
@@ -130,7 +141,7 @@ namespace xsec {
              class ... Args>
     std::pair<HistType, HistType>
     SimpleQuadSum<HistType, T, Args...>::
-    TotalAbsoluteUncertainty(T & nominal_obj,
+    TotalAbsoluteUncertainty(T * nominal_obj,
                                std::map<std::string,
                                         xsec::Systematic<T>> & shifted_objs,
                                Args & ... args) {
