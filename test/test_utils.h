@@ -191,7 +191,7 @@ namespace xsec {
                 auto hist_universes = make_simple_hist_multiverse(hnominal, nuniverses);
 
                 for (auto i = 0; i < nuniverses; i++) {
-                    xsec_universes[i] = make_simple_xsec(hist_universes[i]);
+                    xsec_universes[i] = make_simple_xsec(*hist_universes[i]);
                 }
                 return xsec_universes;
             }
