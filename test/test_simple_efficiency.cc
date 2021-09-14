@@ -33,13 +33,27 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded = SimpleEfficiency<Hist<double, 10> >::LoadFrom(input, "simple_efficiency");
+  auto loaded = IEfficiency<Hist<double, 10> >::LoadFrom(SimpleEfficiency<Hist<double, 10>>::LoadFrom,
+                                                         input,
+                                                         "simple_efficiency").release();
   input->Close();
   delete input;
 
-  TEST_HIST("saveto/loadfrom numerator", loaded->GetNumerator(), num.Contents(), num.Edges(), 0);
-  TEST_HIST("saveto/loadfrom denominator", loaded->GetDenominator(), den.Contents(), den.Edges(), 0);
-  TEST_HIST("saveto/loadfrom ratio", loaded->Eval(), eff.Eval().Contents(), eff.Eval().Edges(), 0);
+  TEST_HIST("saveto/loadfrom numerator",
+            ((SimpleEfficiency<Hist<double, 10> >*)loaded)->GetNumerator(),
+            num.Contents(),
+            num.Edges(),
+            0);
+  TEST_HIST("saveto/loadfrom denominator",
+            ((SimpleEfficiency<Hist<double, 10> >*)loaded)->GetDenominator(),
+            den.Contents(),
+            den.Edges(),
+            0);
+  TEST_HIST("saveto/loadfrom ratio",
+            loaded->Eval(),
+            eff.Eval().Contents(),
+            eff.Eval().Edges(),
+            0);
 
   return !pass;
 }
