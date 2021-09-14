@@ -45,18 +45,10 @@ namespace xsec {
              const Scalar & min,
              const Scalar & max);
 
-
         Hist(const Hist & rhs)
                 : fContents(rhs.Contents()),
                   fEdges(rhs.Edges()),
-                  fExposure(rhs.Exposure())
-        {}
-
-        Hist(const Hist && rhs)
-                : fContents(std::move(rhs.Contents())),
-                  fEdges(std::move(rhs.Edges())),
-                  fExposure(std::move(rhs.Exposure()))
-        {}
+                  fExposure(rhs.Exposure()) {}
 
         virtual void Normalize(const std::string & how);
 
@@ -97,6 +89,10 @@ namespace xsec {
         virtual Hist operator/=(const Scalar & rhs);
 
         virtual Hist operator*=(const Scalar & rhs);
+
+        virtual Hist operator=(const Hist & rhs);
+
+        virtual Hist operator=(Hist && rhs);
 
         virtual Hist ScaleByExposure(Scalar new_expo) const;
 
@@ -524,4 +520,29 @@ namespace xsec {
         return *this;
     }
 
+    /////////////////////////////////////////////////////////
+    template<typename Scalar,
+            int Cols>
+    Hist<Scalar, Cols>
+    Hist<Scalar, Cols>::
+    operator=(const Hist<Scalar, Cols> & rhs) {
+        if (this == &rhs) return *this;
+        fContents = rhs.fContents;
+        fEdges = rhs.fEdges;
+        fExposure = rhs.fExposure;
+        return *this;
+    }
+
+    /////////////////////////////////////////////////////////
+    template<typename Scalar,
+            int Cols>
+    Hist<Scalar, Cols>
+    Hist<Scalar, Cols>::
+    operator=(Hist<Scalar, Cols> && rhs) {
+        if(this == &rhs) return *this;
+        fContents = std::move(rhs.fContents);
+        fEdges = std::move(rhs.fEdges);
+        fExposure = rhs.fExposure;
+        return *this;
+    }
 }
