@@ -16,23 +16,23 @@ namespace xsec {
     class IUncertaintyPropagator {
     public:
         virtual std::pair<HistType, HistType>
-        TotalFractionalUncertainty(T & nominal_obj,
+        TotalFractionalUncertainty(T * nominal_obj,
                                    std::map<std::string,
                                             xsec::Systematic<T> > & shifted_objs,
                                    Args & ... args) = 0;
 
         virtual std::pair<HistType, HistType>
-        TotalAbsoluteUncertainty(T & nominal_obj,
+        TotalAbsoluteUncertainty(T * nominal_obj,
                                  std::map<std::string,
                                           xsec::Systematic<T> > & shifted_objs,
                                  Args & ... args) = 0;
 
         virtual HistType
-        FractionalUncertainty(T & nominal_obj,
+        FractionalUncertainty(T * nominal_obj,
                               xsec::Systematic<T> & shifted_obj,
                               Args & ... args) = 0;
         virtual HistType
-        AbsoluteUncertainty(T & nominal_obj,
+        AbsoluteUncertainty(T * nominal_obj,
                             xsec::Systematic<T> & shifted_obj,
                             Args & ... args) = 0;
     };
