@@ -36,34 +36,18 @@
     pass &= test;                            \
       }
 
-//----------------------------------------------------------------------
-#define TEST_SYSTEMATIC(test_name, syst, up, down)            \
-  test = syst.Up() == (up);                        \
-  if(!test || verbose) {                        \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << syst.Up().Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (up).Contents() << std::endl; \
-    pass &= test;                            \
-  }                                    \
-  test = syst.Down() == (down);                        \
-  if(!test || verbose) {                        \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << syst.Down().Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (down).Contents() << std::endl; \
-    pass &= test;                            \
-  }
 
 //----------------------------------------------------------------------
-#define TEST_MULTIVERSE(test_name, mv1, mv2)                \
+#define TEST_MULTIVERSE(test_name, mv1, mv2, precision)                \
   test = true;                                \
   for(auto imv = 0u; imv < (mv1).GetShifts().size(); imv++) {        \
-    test &= (mv1).GetShifts()[imv] == (mv2).GetShifts()[imv];        \
+    test &= ((mv1).GetShifts()[imv]->Contents() - (mv2).GetShifts()[imv]->Contents()).isZero(precision);        \
   }                                    \
   if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
     for(auto imv = 0u; imv < (mv1).GetShifts().size(); imv++) {    \
-      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv1).GetShifts()[imv].Contents() << std::endl; \
-      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv2).GetShifts()[imv].Contents() << std::endl; \
+      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv1).GetShifts()[imv]->Contents() << std::endl; \
+      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv2).GetShifts()[imv]->Contents() << std::endl; \
     }                                    \
     pass &= test;                            \
   }
@@ -189,13 +173,13 @@ namespace xsec {
 
             /////////////////////////////////////////////////////////
             template<class HistType>
-            std::vector<HistType> make_simple_hist_multiverse(const HistType & hnominal, int nuniverses) {
+            std::vector<HistType*> make_simple_hist_multiverse(const HistType & hnominal, int nuniverses) {
                 double maxy = 0.1;
                 double miny = -0.1;
                 double step = (maxy - miny) / (nuniverses - 1);
-                std::vector<HistType> hist_universes(nuniverses);
+                std::vector<HistType*> hist_universes(nuniverses);
                 for (auto i = 0; i < nuniverses; i++) {
-                    hist_universes[i] = hnominal + hnominal * (miny + step * i);
+                    hist_universes[i] = new HistType(hnominal + hnominal * (miny + step * i));
                 }
                 return hist_universes;
             }
