@@ -11,11 +11,14 @@ namespace xsec {
 
         virtual void SaveTo(TDirectory * dir, const std::string & subdir) const = 0;
 
-        /// \brief Children must override this function
-        static std::unique_ptr<IMeasurement> LoadFrom(TDirectory * dir, const std::string & name) {
-            assert(false && "IMeasurement::LoadFrom not implemented");
+        static std::unique_ptr<IMeasurement>
+        LoadFrom(xsec::type::LoadFunction<IMeasurement> load,
+                 TDirectory * dir,
+                 const std::string & name) {
+            return load(dir, name);
         }
 
+        virtual ~IMeasurement() = default;
     private:
 
     };

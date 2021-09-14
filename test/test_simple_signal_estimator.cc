@@ -28,9 +28,15 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded = *SimpleSignalEstimator<Hist<double, 10> >::LoadFrom(input, "signal_estimator");
+  auto loaded = ISignalEstimator<Hist<double, 10> >::LoadFrom(SimpleSignalEstimator<Hist<double, 10>>::LoadFrom,
+                                                              input,
+                                                              "signal_estimator").release();
 
-  TEST_HIST("loadfrom", loaded.Signal(data), expected_signal.Contents(), expected_signal.Edges(), 0);
+  TEST_HIST("loadfrom",
+            loaded->Signal(data),
+            expected_signal.Contents(),
+            expected_signal.Edges(),
+            0);
 
   return !pass;
 }

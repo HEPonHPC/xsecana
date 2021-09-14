@@ -26,7 +26,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-        static std::unique_ptr<SimpleFlux<HistType, Integrated> >
+        static std::unique_ptr<IFlux<HistType> >
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
@@ -105,7 +105,7 @@ namespace xsec {
     //////////////////////////////////////////////////////////
     template<class HistType,
             bool Integrated>
-    std::unique_ptr<SimpleFlux<HistType, Integrated> >
+    std::unique_ptr<IFlux<HistType> >
     SimpleFlux<HistType,
                Integrated>::
     LoadFrom(TDirectory * dir, const std::string & subdir) {
@@ -117,6 +117,6 @@ namespace xsec {
         delete ptag;
 
         HistType flux = *HistType::LoadFrom(dir, "fFlux");
-        return std::make_unique<SimpleFlux<HistType, Integrated> >(flux);
+        return std::make_unique<SimpleFlux<HistType, Integrated>>(flux);
     }
 }

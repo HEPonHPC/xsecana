@@ -47,10 +47,10 @@ int main(int argc, char ** argv)
   auto unfold = new IdentityUnfold<double, 10>(bkgd.Contents().size()); // = 1
 
   SimpleCrossSection xsec(efficiency,
-			  signal_estimator,
-			  flux,
-			  unfold); // = 1 / 1e4
-  
+                          signal_estimator,
+                          flux,
+                          unfold); // = 1 / 1e4
+
   // test fail before targets is set
 
   // now set targets
@@ -83,14 +83,20 @@ int main(int argc, char ** argv)
   output->Close();
   delete output;
 
-  //TFile * input = TFile::Open(test_file_name.c_str());
-  //auto loaded_xsec = *SimpleCrossSection::LoadFrom(input, "xsec");
-  //input->Close();
-  //delete input;
-    //TEST_ARRAY("loaded xsec",
-    //         loaded_xsec.Eval(data).Contents(),
-	//     (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
-	//     0);
+  TFile * input = TFile::Open(test_file_name.c_str());
+  auto loaded_xsec =
+          *SimpleCrossSection::LoadFrom(SimpleEfficiency<histtype>::LoadFrom,
+                                        SimpleSignalEstimator<histtype>::LoadFrom,
+                                        SimpleFlux<histtype>::LoadFrom,
+                                        IdentityUnfold<double, 10>::LoadFrom,
+                                        input,
+                                        "xsec");
+  input->Close();
+  delete input;
+  TEST_ARRAY("loaded xsec",
+             loaded_xsec.Eval(data).Contents(),
+             (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
+             0);
 
   TEST_ARRAY("exposure",
 	     (Eigen::Array<double, 1, 1>::Ones() * xsec.Eval(data).Exposure()),

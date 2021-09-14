@@ -11,9 +11,10 @@ namespace xsec {
 
         virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
 
-        /// \brief Children must override this function
-        static std::unique_ptr<IUnfold> LoadFrom(TDirectory * dir, const std::string & name) {
-            assert(false && "IUnfold::LoadFrom not implemented");
+        static std::unique_ptr<IUnfold> LoadFrom(xsec::type::LoadFunction<IUnfold> load,
+                                                 TDirectory * dir,
+                                                 const std::string & name) {
+            return load(dir, name);
         }
 
         virtual ~IUnfold() = default;
@@ -31,7 +32,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr<IdentityUnfold<Scalar, Cols> > LoadFrom(TDirectory * dir, const std::string & subdir);
+        static std::unique_ptr<IUnfold<Hist<Scalar, Cols>>> LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
         Eigen::Matrix<Scalar, Cols, Cols> fMat;
@@ -78,7 +79,7 @@ namespace xsec {
 /////////////////////////////////////////////////////////
     template<class Scalar,
             int Cols>
-    std::unique_ptr<IdentityUnfold<Scalar, Cols> >
+    std::unique_ptr<IUnfold<Hist<Scalar, Cols>>>
     IdentityUnfold<Scalar,
                    Cols>::
     LoadFrom(TDirectory

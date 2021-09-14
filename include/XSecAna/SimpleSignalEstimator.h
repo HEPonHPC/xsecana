@@ -25,7 +25,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr<SimpleSignalEstimator<HistType> >
+        static std::unique_ptr<ISignalEstimator<HistType> >
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     private:
@@ -70,7 +70,7 @@ namespace xsec {
 
     //////////////////////////////////////////////////////////
     template<class HistType>
-    std::unique_ptr<SimpleSignalEstimator<HistType> >
+    std::unique_ptr<ISignalEstimator<HistType> >
     SimpleSignalEstimator<HistType>::
     LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());

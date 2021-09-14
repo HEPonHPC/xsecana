@@ -3,6 +3,7 @@
 #include "TDirectory.h"
 
 #include "XSecAna/Hist.h"
+#include "XSecAna/Type.h"
 
 namespace xsec {
 
@@ -16,9 +17,11 @@ namespace xsec {
 
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
-        /// \brief children must override
-        static std::unique_ptr<IEfficiency> LoadFrom(TDirectory * dir, const std::string & name) {
-            assert(false && "IEfficiency::LoadFrom not implemented");
+        static std::unique_ptr<IEfficiency>
+        LoadFrom(xsec::type::LoadFunction<IEfficiency> load,
+                 TDirectory * dir,
+                 const std::string & name) {
+            return load(dir, name);
         }
 
         virtual ~IEfficiency() = default;

@@ -43,13 +43,25 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded_flux = *SimpleFlux<Hist<double, 10> >::LoadFrom(input, "flux");
-  auto loaded_integrated_flux = *SimpleIntegratedFlux<Hist<double, 10> >::LoadFrom(input, "integrated_flux");
+  auto loaded_flux = IFlux<Hist<double, 10> >::LoadFrom(SimpleFlux<Hist<double, 10> >::LoadFrom,
+                                                        input,
+                                                        "flux");
+  auto loaded_integrated_flux = IFlux<Hist<double, 10> >::LoadFrom(SimpleIntegratedFlux<Hist<double, 10>>::LoadFrom,
+                                                                   input,
+                                                                   "integrated_flux");
   input->Close();
   delete input;
 
-  TEST_HIST("loaded_flux", loaded_flux.Eval(), flux_hist.Contents(), flux_hist.Edges(), 0);
-  TEST_HIST("loaded_integrated_flux", loaded_integrated_flux.Eval(), flux_hist.Contents(), flux_hist.Edges(), 0);
+  TEST_HIST("loaded_flux",
+            loaded_flux->Eval(),
+            flux_hist.Contents(),
+            flux_hist.Edges(),
+            0);
+  TEST_HIST("loaded_integrated_flux",
+            loaded_integrated_flux->Eval(),
+            flux_hist.Contents(),
+            flux_hist.Edges(),
+            0);
   
   return !pass;
 }

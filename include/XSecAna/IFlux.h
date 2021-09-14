@@ -1,6 +1,7 @@
 #pragma once
 
-#include "Hist.h"
+#include "XSecAna/Hist.h"
+#include "XSecAna/Type.h"
 
 namespace xsec {
     template<class HistType = HistXd>
@@ -14,9 +15,11 @@ namespace xsec {
 
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
-        /// \brief Children must override this function
-        static std::unique_ptr<IFlux> LoadFrom(TDirectory * dir, const std::string & name) {
-            assert(false && "IFlux::LoadFrom not implemented");
+        static std::unique_ptr<IFlux>
+        LoadFrom(xsec::type::LoadFunction<IFlux> load,
+                 TDirectory * dir,
+                 const std::string & name) {
+            return load(dir, name);
         }
 
         virtual ~IFlux() = default;

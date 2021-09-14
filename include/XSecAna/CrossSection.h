@@ -33,8 +33,12 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        /// TODO how do we serialize user's objects that inherit from the interfaces?
-        static std::unique_ptr<CrossSection> LoadFrom(TDirectory * dir, const std::string & subdir);
+        static std::unique_ptr<IMeasurement<HistType>> LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
+                                                                xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
+                                                                xsec::type::LoadFunction<IFlux<HistType>> load_flux,
+                                                                xsec::type::LoadFunction<IUnfold<HistType>> load_unfold,
+                                                                TDirectory * dir,
+                                                                const std::string & subdir);
 
         HistType Eval(const HistType & data) override;
 
@@ -117,7 +121,7 @@ namespace xsec {
     void
     CrossSection<HistType,
                  IsDifferential>::
-    SaveTo(TDirectory * dir, const std::string & subdir) const {
+                 SaveTo(TDirectory * dir, const std::string & subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
         dir->cd();
@@ -136,11 +140,16 @@ namespace xsec {
     ////////////////////////////////////////////////
     template<class HistType,
             bool IsDifferential>
-    std::unique_ptr<CrossSection<HistType,
-                                 IsDifferential> >
+    std::unique_ptr<IMeasurement<HistType>>
     CrossSection<HistType,
                  IsDifferential>::
-    LoadFrom(TDirectory * dir, const std::string & subdir) {
+    LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
+             xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
+             xsec::type::LoadFunction<IFlux<HistType>> load_flux,
+             xsec::type::LoadFunction<IUnfold<HistType>> load_unfold,
+             TDirectory * dir,
+             const std::string & subdir) {
+
         dir = dir->GetDirectory(subdir.c_str());
 
         IEfficiency<HistType> * eff = 0;
@@ -148,11 +157,11 @@ namespace xsec {
         ISignalEstimator<HistType> * sig = 0;
         IUnfold<HistType> * unfold = 0;
 
-        if (dir->GetDirectory("fEfficiency")) eff = IEfficiency<HistType>::LoadFrom(dir, "fEfficiency").release();
-        if (dir->GetDirectory("fFlux")) flux = IFlux<HistType>::LoadFrom(dir, "fFlux").release();
+        if (dir->GetDirectory("fEfficiency")) eff = load_efficiency(dir, "fEfficiency").release();
+        if (dir->GetDirectory("fFlux")) flux = load_flux(dir, "fFlux").release();
         if (dir->GetDirectory("fSignalEstimator"))
-            sig = ISignalEstimator<HistType>::LoadFrom(dir, "fSignalEstimator").release();
-        if (dir->GetDirectory("fUnfold")) unfold = IUnfold<HistType>::LoadFrom(dir, "fUnfold").release();
+            sig = load_signal(dir, "fSignalEstimator").release();
+        if (dir->GetDirectory("fUnfold")) unfold = load_unfold(dir, "fUnfold").release();
 
         auto ntargets = ((TParameter<typename HistType::scalar_type> *) dir->Get("fNTargets"))->GetVal();
 

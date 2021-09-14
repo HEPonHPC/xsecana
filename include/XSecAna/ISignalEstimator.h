@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TDirectory.h"
+#include "XSecAna/Type.h"
 
 namespace xsec {
     /// Defining interface for SignalEstimators
@@ -15,9 +16,11 @@ namespace xsec {
 
         virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
 
-        /// \brief Children must override this function
-        static std::unique_ptr<ISignalEstimator> LoadFrom(TDirectory * dir, const std::string & name) {
-            assert(false && "ISignalEstimator::LoadFrom not implemented");
+        static std::unique_ptr<ISignalEstimator>
+        LoadFrom(xsec::type::LoadFunction<ISignalEstimator> load,
+                 TDirectory * dir,
+                 const std::string & name) {
+            return load(dir, name);
         }
 
         virtual ~ISignalEstimator() = default;
