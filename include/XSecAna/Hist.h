@@ -45,6 +45,19 @@ namespace xsec {
              const Scalar & min,
              const Scalar & max);
 
+
+        Hist(const Hist & rhs)
+                : fContents(rhs.Contents()),
+                  fEdges(rhs.Edges()),
+                  fExposure(rhs.Exposure())
+        {}
+
+        Hist(const Hist && rhs)
+                : fContents(std::move(rhs.Contents())),
+                  fEdges(std::move(rhs.Edges())),
+                  fExposure(std::move(rhs.Exposure()))
+        {}
+
         virtual void Normalize(const std::string & how);
 
         virtual Scalar Integrate() const;
