@@ -219,9 +219,9 @@ namespace xsec {
         }
 
         tmp->cd();
-        return std::make_unique<Systematic<T> >(container,
-                                                (SystType_t) ftype,
-                                                name);
+        return std::make_unique<Systematic<T> >(name,
+                                                container,
+                                                (SystType_t) ftype);
     }
 
     /////////////////////////////////////////////////////////////////////////
