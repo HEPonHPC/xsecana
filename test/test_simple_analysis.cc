@@ -1,5 +1,5 @@
 #include <iostream>
-#include <stdio.h>
+#include <cstdio>
 
 #include "XSecAna/Hist.h"
 #include "XSecAna/SimpleSignalEstimator.h"
@@ -13,10 +13,24 @@
 
 #include <Eigen/Dense>
 #include "TFile.h"
+#include "TDirectory.h"
 
 using namespace xsec;
 
-std::string test_file_name = test::utils::test_dir() + "test_simple_analysis.root";
+auto test_file_name = test::utils::test_dir() + "test_simple_analysis.root";
+
+typedef xsec::Hist<double, 10> histtype;
+
+std::unique_ptr<IMeasurement<histtype>>
+LoadSimpleCrossSection(TDirectory * dir,
+                       const std::string & name) {
+    return CrossSection<histtype>::LoadFrom(SimpleEfficiency<histtype>::LoadFrom,
+                                  SimpleSignalEstimator<histtype>::LoadFrom,
+                                  SimpleFlux<histtype>::LoadFrom,
+                                  IdentityUnfold<double, 10>::LoadFrom,
+                                  dir,
+                                  name);
+}
 
 int main(int argc, char ** argv)
 {
@@ -43,22 +57,21 @@ int main(int argc, char ** argv)
   typedef Hist<double, 10> histtype;
   auto nuniverses = 50;
   auto xsec_universes = test::utils::make_simple_xsec_multiverse(hnominal, nuniverses);
-  Systematic<IMeasurement<histtype>*> syst_mv("mv", xsec_universes);
-  Systematic<IMeasurement<histtype>*> syst_1 ("1sided", up);
-  Systematic<IMeasurement<histtype>*> syst_2 ("2sided", up, down);
+  Systematic<IMeasurement<histtype>> syst_mv("mv", xsec_universes);
+  Systematic<IMeasurement<histtype>> syst_1 ("1sided", up);
+  Systematic<IMeasurement<histtype>> syst_2 ("2sided", up, down);
 
-  std::map<std::string, Systematic<IMeasurement<histtype>*> > systs = {
+  std::map<std::string, Systematic<IMeasurement<histtype>> > systs = {
     {"mv", syst_mv},
     {"1sided", syst_1},
     {"2sided", syst_2},
   };
   
   SimpleQuadSum<Hist<double, 10>,
-                IMeasurement<histtype>*,
+                IMeasurement<histtype>,
                 const Hist<double, 10> > prop;
 
-  Analysis<IMeasurement<histtype>*,
-           Hist<double, 10>> analysis(nominal_xsec,
+  Analysis<Hist<double, 10>> analysis(nominal_xsec,
                                       systs,
                                       data,
                                       &prop);
@@ -95,15 +108,16 @@ int main(int argc, char ** argv)
   output->Close();
   delete output;
 
-  //TFile * input = TFile::Open(test_file_name.c_str());
-  //auto loaded_analysis = *Analysis<Hist<double, 10>>::LoadFrom(input, "analysis");
-  //input->Close();
-  //delete input;
-  //
-  //TEST_ARRAY("save/load",
-  //           analysis.Eval().Contents(),
-  //           loaded_analysis.Eval().Contents(),
-  //           0);
+  auto input = TFile::Open(test_file_name.c_str());
+  auto loaded_analysis = Analysis<histtype>::LoadFrom(LoadSimpleCrossSection,
+                                                      input, "analysis");
+  input->Close();
+  delete input;
+
+  TEST_ARRAY("save/load",
+             analysis.Result().Contents(),
+             loaded_analysis->Result().Contents(),
+             0);
 
   return !pass;
 }
