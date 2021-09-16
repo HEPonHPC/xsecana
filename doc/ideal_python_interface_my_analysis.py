@@ -123,16 +123,38 @@ lightyeild_down_loader.Go()
 - Can make framework save all of the user's objects, but
   how do we load them later?
 """
-xsecana.SaveTo('analysis_file.h5')
+analysis.SaveTo(h5py.File('analysis_file.h5'),
+                'myanalysis')
+
+# if starting from analysis file on disk
+analysis = xsecana.Analysis.LoadFrom(
+    myanalysis.LoadMyMeasurement,
+    h5py.File('analysis_file.h5', 'r'),
+    'myanalysis',
+)
+"""
+A callable like myanlaysis.LoadMyMeasurement is how analyzers tell the framework
+how to load their classes. It is required to have a function signature like:
+(handle: hdf5.File|hdf5.Group|hdf5.Dataset, group_name: str)-> xsecana.IMeasurement 
+"""
+
+
 # but also we should be able to just use it right away (HPC + MPI jobs)
 
 # selected events are aggregated behind the scenes when they're needed
 """
 If we hadn't just saved the results, MPI reductions would happen here instead
 Analysis object calls the TemplateFitUncertainty function with nominal, systematics, and data
-This is where the events can be optionally histogrammed  
+This is where the events can be optionally histogrammed
+
+expecting a callable like:
+fun(
+  nominal     : xsecana.IMeasurement, 
+  systematics : dict(str, xsecana.IMeasurement),
+  data        : xsecana.Hist
+) -> (xsecana.Hist, xsecana.Systematic)  
 """
-central_value, uncertainty = analysis.Result(myanalysis.TemplateFitUncertainty)
+central_value, uncertainty = analysis.Result(myanalysis.TemplateFitUncertainty) # or xsecana.TemplateFitUncertainty
 
 """
 What would it look like if there just wasn't an analysis object? It doesn't do a a whole lot
@@ -158,8 +180,7 @@ systematics = {
 }
 
 """
-Save to file. CrossSection object can save user's components, but
-doesn't know how to load them, but we would like to be able to load. Same issue here.
+Save to file
 """
 nominal.SaveTo(output, 'nominal')
 data.SaveTo(output, 'data')

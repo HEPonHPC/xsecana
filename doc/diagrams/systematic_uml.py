@@ -5,16 +5,18 @@ g = pgv.AGraph(strict=False)
 g.add_node(
     0,
     label=uml_formatter('Systematic<T>',
-                        methods=['+ Invoke(f : class F, args : class ... Args) \l: Systematic<std::invoke_result<F, T, Args>>',
-                                 '+ Eval(data : const HistType) : HistType',
-                                 '+ NSigmaShift(nsigma : double, nominal : T, args ... : Args) \l: HistType',
-                                 '- BinSigma(nsigma : double, \luniverses : std::vector<ScalarType>, \lnominal & ScalarType) \l: ScalarType'],
-
+                        methods=['+ Eval(args... : class ... Args) : HistType'],
                         members=['- fContainer : std::vector<T>',
                                  '- fName : std::string'
                                  '- fType : SystType_t']),
     shape='record',
     fontsize=20,
+)
+
+g.add_node(1,
+           label=uml_formatter('Systematic<IEfficiency>',
+                               methods='+ Eval() : HistType')
+
 )
 
 g.layout(prog='dot')

@@ -48,10 +48,10 @@ def make_cross_section(loader, weight=None):
     """
     cross_section = xsecana.CrossSection(
         efficiency = efficiency,
-        flux = flux,
+        flux = flux, # xsecana.IFlux
         unfolder = unfolder,
         signal_estimator = signal_estimator,
-        ntargets = kNTargets,
+        ntargets = kNTargets, # int
     )
     return cross_section
 
@@ -110,16 +110,23 @@ When and how does optional histogramming happen?
   how do we load them later? If python, we can just pickle them
 - Events can still be saved in pd.DataFrames
 """
-analysis.SaveTo('analysis_file.h5')
+analysis.SaveTo(h5py.File('analysis_file.h5'),
+                'myanalysis')
+
+# if starting from analysis file on disk
+analysis = xsecana.Analysis.LoadFrom(
+    myanalysis.LoadMyMeasurement,
+    h5py.File('analysis_file.h5', 'r'),
+    'myanalysis',
+)
+
 # but also we should be able to just use it right away (HPC + MPI jobs)
 
 # selected events are aggregated behind the scenes when they're needed
 """
 If we hadn't just saved the results, MPI reductions would happen here instead
-Analysis object calls the TemplateFitUncertainty function with nominal, systematics, and data
-This is where the events can be optionally histogrammed, but how?  
 """
-central_value, uncertainty = analysis.Result(xsecana.SimpleQuadSum)
+histogrammed_analysis = analysis.Histogram(kBinning)
 """
 Notes on histogramming:
 - Efficiency, SignalEstimator, and Unfolder will be binned similarly
@@ -129,11 +136,23 @@ Notes on histogramming:
     flux integral.
   - Otherwise, the flux could be measured in the same space as the analysis
 """
-histogrammed_analysis = analysis.Histogram(kBinning)
+
+"""
+Analysis object calls the SimpleQuadSum uncertainty function with nominal, systematics, and data
+expecting a callable like:
+fun(
+  nominal     : xsecana.IMeasurement, 
+  systematics : dict(str, xsecana.Systematic),
+  data        : xsecana.Hist
+) -> (xsecana.Hist, xsecana.Systematic)
+"""
+central_value, uncertainty = analysis.Result(xsecana.SimpleQuadSum.TotalAbsoluteUncertainty)
+
+
 
 """
 What would it look like if there just wasn't an analysis object?
-It doesn't do a a whole lot.
+It doesn't do a a whole lot here.
 Remember Systematics are dealing with CrossSection objects here
 nominal is also a CrossSection object 
 """
@@ -163,7 +182,7 @@ nominal.SaveTo(output, 'nominal')
 data.SaveTo(output, 'data')
 systematics.SaveTo('systematics')
 
-central_value, uncertainty = xsecana.SimpleQuadSum(
+central_value, uncertainty = xsecana.SimpleQuadSum.TotalAbsoluteUncertainty(
     nominal,
     systematics,
     data
