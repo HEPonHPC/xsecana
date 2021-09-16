@@ -1,5 +1,4 @@
 #include <iostream>
-#include <cstdio>
 
 #include "XSecAna/Hist.h"
 #include "XSecAna/SimpleSignalEstimator.h"
@@ -7,7 +6,6 @@
 #include "XSecAna/SimpleFlux.h"
 #include "XSecAna/IUnfold.h"
 #include "XSecAna/CrossSection.h"
-#include "XSecAna/SimpleQuadSum.h"
 #include "XSecAna/Analysis.h"
 #include "test_utils.h"
 
@@ -61,63 +59,78 @@ int main(int argc, char ** argv)
   Systematic<IMeasurement<histtype>> syst_1 ("1sided", up);
   Systematic<IMeasurement<histtype>> syst_2 ("2sided", up, down);
 
-  std::map<std::string, Systematic<IMeasurement<histtype>> > systs = {
-    {"mv", syst_mv},
-    {"1sided", syst_1},
-    {"2sided", syst_2},
+  std::vector<Systematic<IMeasurement<histtype>>> systs = {
+    syst_mv,
+    syst_1,
+    syst_2,
   };
-  
-  SimpleQuadSum<Hist<double, 10>,
-                IMeasurement<histtype>,
-                const Hist<double, 10> > prop;
-
-  Analysis<Hist<double, 10>> analysis(nominal_xsec,
-                                      systs,
-                                      data,
-                                      &prop);
-  TEST_ARRAY("nominal closure", 
-             hnominal.Contents(),
-             analysis.Result().Contents(),
-             1e-14);
-
-  TEST_ARRAY("total abs uncert",
-             prop.TotalAbsoluteUncertainty(nominal_xsec, systs, data).first.Contents(),
-             analysis.TotalAbsoluteUncertainty().first.Contents(),
-             0);
-
-  TEST_ARRAY("total frac uncert",
-             prop.TotalFractionalUncertainty(nominal_xsec, systs, data).first.Contents(),
-             analysis.TotalFractionalUncertainty().first.Contents(),
-             0);
-	     
 
 
-  TFile * output = new TFile(test_file_name.c_str(), "recreate");
-  analysis.SaveTo(output, "analysis");
-  
-  auto results_dir = output->mkdir("results");
-    analysis.Result().SaveTo(results_dir, "nominal");
-    analysis.Result("mv").SaveTo(results_dir, "mv");
-    analysis.Result("1sided").SaveTo(results_dir, "1sided");
-    analysis.Result("2sided").SaveTo(results_dir, "2sided");
-  
-  auto abs_errors = prop.TotalAbsoluteUncertainty(nominal_xsec, systs, data);
-  (abs_errors.first + hnominal).SaveTo(results_dir, "total_up");
-  (hnominal - abs_errors.second).SaveTo(results_dir, "total_down");
-  
+  auto output = new TFile(test_file_name.c_str(), "recreate");
+  SaveAnalysis(nominal_xsec,
+               systs,
+               data,
+               output,
+               "analysis");
   output->Close();
   delete output;
 
   auto input = TFile::Open(test_file_name.c_str());
-  auto loaded_analysis = Analysis<histtype>::LoadFrom(LoadSimpleCrossSection,
-                                                      input, "analysis");
+  auto [loaded_nominal, loaded_systematics, loaded_data] = LoadAnalysis(LoadSimpleCrossSection,
+                                                                        input,
+                                                                        "analysis");
+  assert(systs.size() == loaded_systematics.size());
+
   input->Close();
   delete input;
 
-  TEST_ARRAY("save/load",
-             analysis.Result().Contents(),
-             loaded_analysis->Result().Contents(),
-             0);
+  TEST_HISTS_SAME("save/load",
+                  loaded_nominal->Eval(loaded_data),
+                  nominal_xsec->Eval(data),
+                  0);
+
+  auto eval = [](histtype & data) {
+      ForEachFunction<histtype, IMeasurement<histtype>> f = [&data](IMeasurement<histtype> * m) {
+          return new histtype(m->Eval(data));
+      };
+      return f;
+  };
+
+  for(auto i = 0u; i < systs.size(); i++) {
+      assert(systs[i].GetType() == loaded_systematics[i].GetType());
+      assert(systs[i].GetName() == loaded_systematics[i].GetName());
+
+      auto loaded_systematic_eval = loaded_systematics[i].ForEach(eval(loaded_data));
+      auto systematic_eval = systs[i].ForEach(eval(data));
+
+      if (systs[i].GetType() == kMultiverse) {
+          loaded_systematic_eval = Systematic<histtype>(loaded_systematics[i].GetName(),
+                                                        new histtype(MultiverseShift(loaded_systematic_eval,
+                                                                                     loaded_nominal->Eval(loaded_data),
+                                                                                     1)),
+                                                        new histtype(MultiverseShift(loaded_systematic_eval,
+                                                                                     loaded_nominal->Eval(loaded_data),
+                                                                                     -1)));
+          systematic_eval = Systematic<histtype>(systs[i].GetName(),
+                                                 new histtype(MultiverseShift(systematic_eval,
+                                                                              loaded_nominal->Eval(loaded_data),
+                                                                              1)),
+                                                 new histtype(MultiverseShift(systematic_eval,
+                                                                              loaded_nominal->Eval(loaded_data),
+                                                                              -1)));
+      }
+
+      TEST_HISTS_SAME(("systematic " + std::to_string(i) + " up"),
+                      (*loaded_systematic_eval.Up()),
+                      (*systematic_eval.Up()),
+                      0);
+      if (systs[i].GetType() != kOneSided) {
+          TEST_HISTS_SAME(("systematic " + std::to_string(i) + " down"),
+                          (*loaded_systematic_eval.Down()),
+                          (*systematic_eval.Down()),
+                          0);
+      }
+  }
 
   return !pass;
 }
