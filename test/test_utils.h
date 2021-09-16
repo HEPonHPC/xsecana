@@ -10,7 +10,7 @@
 
 
 //----------------------------------------------------------------------
-#define TEST_HIST(test_name, HIST, target_contents, target_edges, precision) \
+#define TEST_HIST_AND_EDGES(test_name, HIST, target_contents, target_edges, precision) \
   test = ((HIST).Contents() - (target_contents)).isZero(precision);    \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
@@ -27,7 +27,16 @@
       }
 
 //----------------------------------------------------------------------
-#define TEST_ARRAY(test_name, arr1, arr2, precision)            \
+#define TEST_HISTS_SAME(test_name, h1, h2, precision)            \
+  test = ((h1) - (h2)).Contents().isZero(precision);                \
+      if(!test || verbose) {                        \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h1).Exposure() << ") " << test_name << "\t" << (h1).Contents() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h2).Exposure() << ") " << test_name << "\t" << (h2).Contents() << std::endl; \
+    pass &= test;                            \
+      }
+
+#define TEST_ARRAY_SAME(test_name, arr1, arr2, precision)            \
   test = ((arr1) - (arr2)).isZero(precision);                \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
@@ -148,15 +157,14 @@ namespace xsec {
 
             /////////////////////////////////////////////////////////
             // make a cross section object that evaluates out to
-            //  - the input array when folded
-            //  - 2 times the input array when unfolded
+            //  the input array when folded
             template<class Scalar, int Cols>
             IMeasurement<Hist<Scalar, Cols> > * make_simple_xsec(Hist<Scalar, Cols> val) {
                 Hist<Scalar, Cols> ones(Eigen::Array<Scalar, 1, Cols>::Ones(),
                                         val.Edges());
 
                 auto efficiency = new SimpleEfficiency<Hist<Scalar, Cols> >(get_simple_signal<Scalar, Cols>(),
-                                                                            val);
+                                                                            val * get_simple_data<Scalar, Cols>().Exposure() / val.Exposure());
                 auto flux = new SimpleFlux(Hist<Scalar, Cols>(ones.Contents(),
                                                               ones.Edges(),
                                                               get_simple_data<Scalar, Cols>().Exposure()));
