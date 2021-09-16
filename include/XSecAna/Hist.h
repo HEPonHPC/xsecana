@@ -432,6 +432,7 @@ namespace xsec {
     Hist<Scalar, Cols>::
     operator/=(const Hist & rhs) {
         this->fContents /= rhs.ScaleByExposure(fExposure).fContents;
+        this->fExposure = 1;
         return *this;
     }
 
