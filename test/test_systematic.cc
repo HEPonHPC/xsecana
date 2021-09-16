@@ -38,55 +38,55 @@ bool run_tests(bool verbose, std::string dir)
 
   // two sided sytematic construction
   Systematic<Hist<Scalar, Cols> > syst_2("syst", up, down);
-  TEST_ARRAY("2-sided construction (up)",
-             syst_2.Up()->Contents(),
-             up->Contents(),
-             0);
-  TEST_ARRAY("2-sided construction (down)",
-             syst_2.Down()->Contents(),
-             down->Contents(),
-             0);
+  TEST_HISTS_SAME("2-sided construction (up)",
+                  *(syst_2.Up()),
+                  *(up),
+                  0);
+  TEST_HISTS_SAME("2-sided construction (down)",
+                  *(syst_2.Down()),
+                  *(down),
+                  0);
 
   auto syst_diff_2 = syst_2.ForEach(subtract);
-  TEST_ARRAY("two sided subtraction (up)",
-             syst_diff_2.Up()->Contents(),
-             (*up - *nominal).Contents(),
-             0);
-  TEST_ARRAY("two sided subtraction (down)",
-             syst_diff_2.Down()->Contents(),
-             (*down - *nominal).Contents(),
-             0);
+  TEST_HISTS_SAME("two sided subtraction (up)",
+                  *(syst_diff_2.Up()),
+                  (*up - *nominal),
+                  0);
+  TEST_HISTS_SAME("two sided subtraction (down)",
+                  *(syst_diff_2.Down()),
+                  (*down - *nominal),
+                  0);
 
   auto syst_div_2 = syst_2.ForEach(divide);
-  TEST_ARRAY("two sided division (up)",
-             syst_div_2.Up()->Contents(),
-             ((*up - *nominal) / *nominal).Contents(),
-             0);
-  TEST_ARRAY("two sided division (down)",
-             syst_div_2.Down()->Contents(),
-             ((*down - *nominal) / *nominal).Contents(),
-             0);
+  TEST_HISTS_SAME("two sided division (up)",
+                  *(syst_div_2.Up()),
+                  ((*up - *nominal) / *nominal),
+                  0);
+  TEST_HISTS_SAME("two sided division (down)",
+                  *(syst_div_2.Down()),
+                  ((*down - *nominal) / *nominal),
+                  0);
 
   // one sided systematic construction
   Systematic<Hist<Scalar, Cols> > syst_1("syst", up);
-  TEST_ARRAY("construction",
-             syst_1.Up()->Contents(),
-             up->Contents(),
-             0);
+  TEST_HISTS_SAME("construction",
+                  *(syst_1.Up()),
+                  *(up),
+                  0);
 
 
   auto syst_diff_1 = syst_1.ForEach(subtract);
-  TEST_ARRAY("one sided subtraction (up)",
-             syst_diff_1.Up()->Contents(),
-             (*up - *nominal).Contents(),
-             0);
+  TEST_HISTS_SAME("one sided subtraction (up)",
+                  *(syst_diff_1.Up()),
+                  (*up - *nominal),
+                  0);
 
   // one sided systematic division via invoke
   auto syst_div_1 = syst_1.ForEach(divide);
-  TEST_ARRAY("one sided division",
-             syst_div_1.Up()->Contents(),
-             ((*up - *nominal) / *nominal).Contents(),
-             0);
+  TEST_HISTS_SAME("one sided division",
+                  *(syst_div_1.Up()),
+                  ((*up - *nominal) / *nominal),
+                  0);
 
   TFile * output = new TFile(test_file_name.c_str(), "update");
   TDirectory * to = output->mkdir(dir.c_str());
@@ -105,19 +105,19 @@ bool run_tests(bool verbose, std::string dir)
   input->Close();
   delete input;
 
-  TEST_ARRAY("load 2-sided (up)",
-             loaded_2->Up()->Contents(),
-             up->Contents(),
-             0);
-  TEST_ARRAY("load 2-sided (down)",
-             loaded_2->Down()->Contents(),
-             down->Contents(),
-             0);
+  TEST_HISTS_SAME("load 2-sided (up)",
+                  *(loaded_2->Up()),
+                  *(up),
+                  0);
+  TEST_HISTS_SAME("load 2-sided (down)",
+                  *(loaded_2->Down()),
+                  *(down),
+                  0);
 
-  TEST_ARRAY("load 1-sided (up)",
-             loaded_1->Up()->Contents(),
-             up->Contents(),
-             0);
+  TEST_HISTS_SAME("load 1-sided (up)",
+                  *(loaded_1->Up()),
+                  *(up),
+                  0);
 
   // test runtime exceptions
   try {
@@ -176,7 +176,10 @@ bool run_tests_mv(bool verbose, std::string dir)
   // respectively, in a sorted array of these universes.
   // This 
   int p1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses-1) + 1;
-  TEST_ARRAY("minus 1 sigma", minus_1sigma.Contents(), universes[p1_idx]->Contents(), 0);
+  TEST_HISTS_SAME("minus 1 sigma",
+                  minus_1sigma,
+                  *(universes[p1_idx]),
+                  0);
 
   // Test ForEach
   // No need to get too fancy here. If it compiles assume it passes
@@ -246,15 +249,15 @@ int main(int argc, char ** argv)
   std::remove(test_file_name.c_str());
 
   pass &= run_tests<double, 10>(verbose, "double_10");
-  //pass &= run_tests<double, Eigen::Dynamic>(verbose, "double_dynamic");
-  //pass &= run_tests<float, 10>(verbose, "float_10");
-  //pass &= run_tests<float, Eigen::Dynamic>(verbose, "float_dynamic");
+  pass &= run_tests<double, Eigen::Dynamic>(verbose, "double_dynamic");
+  pass &= run_tests<float, 10>(verbose, "float_10");
+  pass &= run_tests<float, Eigen::Dynamic>(verbose, "float_dynamic");
 
 
   pass &= run_tests_mv<double, 10>(verbose, "mv_double_10");
-  //pass &= run_tests_mv<double, Eigen::Dynamic>(verbose, "mv_double_dynamic");
-  //pass &= run_tests_mv<float, 10>(verbose, "mv_float_10");
-  //pass &= run_tests_mv<float, Eigen::Dynamic>(verbose, "mv_float_dynamic");
+  pass &= run_tests_mv<double, Eigen::Dynamic>(verbose, "mv_double_dynamic");
+  pass &= run_tests_mv<float, 10>(verbose, "mv_float_10");
+  pass &= run_tests_mv<float, Eigen::Dynamic>(verbose, "mv_float_dynamic");
 
 
   auto nominal = test::utils::get_simple_nominal_hist<double, 10>();
@@ -280,10 +283,10 @@ int main(int argc, char ** argv)
   };
   Systematic<histtype> eff_res = syst_eff.ForEach(eval_efficiency);
 
-  TEST_ARRAY("polymorphism IEfficiency",
-             eff_res.Up()->Contents(),
-             ((nominal + 1) / nominal).Contents(),
-             0);
+  TEST_HISTS_SAME("polymorphism IEfficiency",
+                  *(eff_res.Up()),
+                  ((nominal + 1) / nominal),
+                  0);
 
   auto signal = new SimpleSignalEstimator(nominal);
   auto data = nominal + 1;
@@ -296,10 +299,10 @@ int main(int argc, char ** argv)
               return new histtype(sig->Eval(data));
           };
   Systematic<histtype> signal_res = syst_signal.ForEach(eval_signal);
-  TEST_ARRAY("polymorphism ISignalEstimator",
-             signal_res.Up()->Contents(),
-             (data - nominal).Contents(),
-             0);
+  TEST_HISTS_SAME("polymorphism ISignalEstimator",
+                  *(signal_res.Up()),
+                  (data - nominal),
+                  0);
 
   return !pass;
 }

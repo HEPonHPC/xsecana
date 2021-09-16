@@ -58,24 +58,24 @@ int main(int argc, char ** argv)
   
   auto xsec_differential = xsec.ToDifferential();
 
-  TEST_ARRAY("signal",
-	     (signal_estimator->Signal(data).Contents()),
-	     (Eigen::Array<double, 1, 10>::Ones() * 3),
-	     0);
-  TEST_ARRAY("efficiency",
-	     (efficiency->Eval().Contents()),
-	     (Eigen::Array<double, 1, 10>::Ones() / 4.),
-	     0);
+  TEST_ARRAY_SAME("signal",
+                  (signal_estimator->Signal(data).Contents()),
+                  (Eigen::Array<double, 1, 10>::Ones() * 3),
+                  0);
+  TEST_ARRAY_SAME("efficiency",
+                  (efficiency->Eval().Contents()),
+                  (Eigen::Array<double, 1, 10>::Ones() / 4.),
+                  0);
 
-  TEST_ARRAY("xsec",
-             xsec.Eval(data).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
-	     0);
+  TEST_ARRAY_SAME("xsec",
+                  xsec.Eval(data).Contents(),
+                  (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
+                  0);
 
-  TEST_ARRAY("xsec_differential",
-             xsec_differential.Eval(data).Contents(),
-	     (Eigen::Array<double, 1, 10>::Ones() / 2. * 24. / 5.),
-	     0);
+  TEST_ARRAY_SAME("xsec_differential",
+                  xsec_differential.Eval(data).Contents(),
+                  (Eigen::Array<double, 1, 10>::Ones() / 2. * 24. / 5.),
+                  0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_xsec.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -85,34 +85,24 @@ int main(int argc, char ** argv)
 
   TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded_xsec =
-          *SimpleCrossSection::LoadFrom(SimpleEfficiency<histtype>::LoadFrom,
-                                        SimpleSignalEstimator<histtype>::LoadFrom,
-                                        SimpleFlux<histtype>::LoadFrom,
-                                        IdentityUnfold<double, 10>::LoadFrom,
-                                        input,
-                                        "xsec");
+          SimpleCrossSection::LoadFrom(SimpleEfficiency<histtype>::LoadFrom,
+                                       SimpleSignalEstimator<histtype>::LoadFrom,
+                                       SimpleFlux<histtype>::LoadFrom,
+                                       IdentityUnfold<double, 10>::LoadFrom,
+                                       input,
+                                       "xsec");
   input->Close();
   delete input;
-  TEST_ARRAY("loaded xsec",
-             loaded_xsec.Eval(data).Contents(),
-             (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
-             0);
+  TEST_HISTS_SAME("loaded xsec",
+                  loaded_xsec->Eval(data),
+                  xsec.Eval(data),
+                  0);
 
-  TEST_ARRAY("exposure",
-	     (Eigen::Array<double, 1, 1>::Ones() * xsec.Eval(data).Exposure()),
-	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
-	     0);
-
-  TEST_ARRAY("exposure differential",
-	     (Eigen::Array<double, 1, 1>::Ones() * xsec_differential.Eval(data).Exposure()),
-	     (Eigen::Array<double, 1, 1>::Ones() * test::utils::data_exposure),
-	     0);
-
-
-  TEST_ARRAY("test_utils::make_simple_xsec",
-	     (test::utils::make_simple_xsec(ones)->Eval(test::utils::get_simple_data<double, 10>()).Contents()),
-	     ones.Contents(),
-	     0);
+  auto result = test::utils::make_simple_xsec(ones)->Eval(test::utils::get_simple_data<double, 10>());
+  TEST_ARRAY_SAME("test_utils::make_simple_xsec",
+                  (ones - result).Contents(),
+                  (Eigen::Array<double, 1, 10>::Zero()),
+                  0);
 
   return !pass;
 }

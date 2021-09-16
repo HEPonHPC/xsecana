@@ -20,11 +20,12 @@ int main(int argc, char ** argv)
   Hist<double, 10> den(Eigen::Array<double, 1, 10>::Ones() / 2,
                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
 
-  auto expected = Eigen::Array<double, 1, 10>::Ones() * 2;
-
   SimpleEfficiency eff(num, den);
 
-  TEST_ARRAY("ratio calculation", eff.Eval().Contents(), expected, 0);
+  TEST_HISTS_SAME("ratio calculation",
+                  eff.Eval(),
+                  (num / den),
+                  0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_efficiency.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -39,21 +40,18 @@ int main(int argc, char ** argv)
   input->Close();
   delete input;
 
-  TEST_HIST("saveto/loadfrom numerator",
-            ((SimpleEfficiency<Hist<double, 10> >*)loaded)->GetNumerator(),
-            num.Contents(),
-            num.Edges(),
-            0);
-  TEST_HIST("saveto/loadfrom denominator",
-            ((SimpleEfficiency<Hist<double, 10> >*)loaded)->GetDenominator(),
-            den.Contents(),
-            den.Edges(),
-            0);
-  TEST_HIST("saveto/loadfrom ratio",
-            loaded->Eval(),
-            eff.Eval().Contents(),
-            eff.Eval().Edges(),
-            0);
+  TEST_HISTS_SAME("saveto/loadfrom numerator",
+                  ((SimpleEfficiency<Hist<double, 10> >*)loaded)->GetNumerator(),
+                  num,
+                  0);
+  TEST_HISTS_SAME("saveto/loadfrom denominator",
+                  ((SimpleEfficiency<Hist<double, 10> > *) loaded)->GetDenominator(),
+                  den,
+                  0);
+  TEST_HISTS_SAME("saveto/loadfrom ratio",
+                  loaded->Eval(),
+                  eff.Eval(),
+                  0);
 
   return !pass;
 }
