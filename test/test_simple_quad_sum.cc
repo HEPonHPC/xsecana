@@ -24,8 +24,6 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  SimpleQuadSum<histtype, IMeasurement<histtype>, histtype> prop;
-
   Hist<double, 10> hone(Eigen::Array<double, 1, 10>::Ones(),
                         Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
   auto hnominal = test::utils::get_simple_nominal_hist<double, 10>();
@@ -34,7 +32,7 @@ int main(int argc, char ** argv)
   auto hmax_shift = hnominal;
   for(auto i = 0u; i < hmax_shift.size(); i++) {
     hmax_shift[i] = std::max(std::abs(hnominal[i] - hup[i]),
-			     std::abs(hnominal[i] - hdown[i]));
+                             std::abs(hnominal[i] - hdown[i]));
   }
 
   auto data = test::utils::get_simple_data<double, 10>();
@@ -45,29 +43,33 @@ int main(int argc, char ** argv)
 
 
   // simple test of the math
-  CrossSectionSystematic one("1", test::utils::make_simple_xsec(hone));
-  CrossSectionSystematic four("4",
-                              test::utils::make_simple_xsec(hone * 4));
-  CrossSectionSystematic three("3",
-                               test::utils::make_simple_xsec(hone * 3));
-  auto two  = test::utils::make_simple_xsec(hone * 2);
+  Systematic<histtype> one("1", new histtype(hone));
+  Systematic<histtype> four("4", new histtype(hone * 4));
+  Systematic<histtype> three("3", new histtype(hone * 3));
+  auto two  = new histtype(hone * 2);
 
 
-  auto one_half = prop.FractionalUncertainty(two,
-                                             three,
-                                             data);
-  TEST_ARRAY("one_half", one_half.Contents(), (hone / 2).Contents(), 1e-14);
+  auto one_half = SimpleQuadSum::FractionalUncertainty<histtype>(two,
+                                                                 three,
+                                                                 data);
+  TEST_HISTS_SAME("one_half",
+                  *(std::get<1>(one_half).Up()),
+                  (hone / 2),
+                  1e-14);
 
 
-  std::map<std::string, Systematic<IMeasurement<histtype>> > syst_map = {
+  std::map<std::string, Systematic<histtype> > syst_map = {
     {"1", one},
     {"3", three},
     {"4", four},
   };
-  auto sqrt_six_halves = prop.TotalFractionalUncertainty(two,
-                                                         syst_map,
-                                                         data).first;
-  TEST_ARRAY("sqrt_six_halves", sqrt_six_halves.Contents(), (hone * 6 / 4).sqrt().Contents(), 1e-14);
+  auto sqrt_six_halves = SimpleQuadSum::TotalFractionalUncertainty<histtype>(two,
+                                                                             syst_map,
+                                                                             data);
+  TEST_HISTS_SAME("sqrt_six_halves",
+                  *(std::get<1>(sqrt_six_halves).Up()),
+                  (hone * 6 / 4).sqrt(),
+                  1e-14);
 
 
 
@@ -82,62 +84,66 @@ int main(int argc, char ** argv)
   Systematic<IMeasurement<histtype>> syst_mv("mv_xsec", xsec_universes);
   Systematic<Hist<double, 10> > syst_mv_hist("mv_hist", hist_universes);
 
-  auto abs_uncert_mv = prop.AbsoluteUncertainty(nominal_xsec,
-                                                syst_mv,
-                                                data);
+
+  auto abs_uncert_mv = SimpleQuadSum::AbsoluteUncertainty<histtype>(nominal_xsec,
+                                                                    syst_mv,
+                                                                    data);
 
   // index of universe representing minus 1 sigma shift
   int m1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses-1) + 1;
 
-  TEST_ARRAY("minus 1 sigma multiverse",
-  	     abs_uncert_mv.Contents(),
-  	     (*(hist_universes[m1_idx])-hnominal).Contents().abs(),
-           1e-14);
+  auto target_minus_1_sigma_multiverse = MultiverseShift(syst_mv_hist, hnominal, 1);
+  TEST_HISTS_SAME("minus 1 sigma multiverse",
+                  *(std::get<1>(abs_uncert_mv).Up()),
+                  target_minus_1_sigma_multiverse,
+                  1e-14);
 
   /*
     Examples using 1 and 2 sided shifts
-    Test each function of the propogator
+    Test each function of the propagator
   */
   Systematic<IMeasurement<histtype>> syst_1sided("1sided", up);
   Systematic<IMeasurement<histtype>> syst_2sided("2sided", up, down);
 
   // AbsoluteUncertainty
-  auto abs_uncert_1sided = prop.AbsoluteUncertainty(nominal_xsec,
-                                                    syst_1sided,
-                                                    data);
+  auto abs_uncert_1sided = SimpleQuadSum::AbsoluteUncertainty<histtype>(nominal_xsec,
+                                                                        syst_1sided,
+                                                                        data);
 
-  TEST_ARRAY("abs_uncert 1 sided",
-	     abs_uncert_1sided.Contents(),
-	     (hup - hnominal).Contents(),
-	     1e-14);
+  auto target_abs_uncert_1_sided = hup - hnominal;
+  TEST_HISTS_SAME("abs_uncert 1 sided",
+                  *(std::get<1>(abs_uncert_1sided).Up()),
+                  target_abs_uncert_1_sided,
+                  1e-14);
 
   std::map<std::string, Systematic<IMeasurement<histtype>> > rmap = {
     {"1sided", syst_1sided},
   };
-  auto symmetrize = prop.TotalAbsoluteUncertainty(nominal_xsec,
-                                                  rmap,
-                                                  data);
-  TEST_ARRAY("symmeterize",
-             symmetrize.first.Contents(),
-             symmetrize.second.Contents(),
-             0);
+  auto symmetrize = SimpleQuadSum::TotalAbsoluteUncertainty<histtype>(nominal_xsec,
+                                                                      rmap,
+                                                                      data);
+  TEST_HISTS_SAME("symmeterize",
+                  *(std::get<1>(symmetrize).Up()),
+                  *(std::get<1>(symmetrize).Down()),
+                  0);
 
-  auto abs_uncert_2sided = prop.AbsoluteUncertainty(nominal_xsec,
-                                                    syst_2sided,
-                                                    data);
-  TEST_ARRAY("abs_uncert 2 sided",
-             abs_uncert_2sided.Contents(),
-             hmax_shift.Contents(),
-             1e-14);
+  auto abs_uncert_2sided = SimpleQuadSum::AbsoluteUncertainty<histtype>(nominal_xsec,
+                                                                        syst_2sided,
+                                                                        data);
+
+  TEST_HISTS_SAME("abs_uncert 2 sided",
+                  *(std::get<1>(abs_uncert_2sided).Up()),
+                  hmax_shift,
+                  1e-14);
 
   // FractionalUncertainty
-  auto frac_uncert_1sided = prop.FractionalUncertainty(nominal_xsec,
-                                                       syst_1sided,
-                                                       data);
-  TEST_ARRAY("fractional uncert",
-             frac_uncert_1sided.Contents(),
-             ((hup - hnominal) / hnominal).Contents(),
-             1e-14);
+  auto frac_uncert_1sided = SimpleQuadSum::FractionalUncertainty<histtype>(nominal_xsec,
+                                                                           syst_1sided,
+                                                                           data);
+  TEST_HISTS_SAME("fractional uncert",
+                  *(std::get<1>(frac_uncert_1sided).Up()),
+                  ((hup - hnominal) / hnominal),
+                  1e-14);
 
 
   // TotalAbsoluteUncertainty
@@ -147,24 +153,26 @@ int main(int argc, char ** argv)
     {"mv", syst_mv},
   };
 
-  auto total_abs_uncert = prop.TotalAbsoluteUncertainty(nominal_xsec,
-                                                        systs,
-                                                        data);
-  auto target_total_abs_uncert = (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).sqrt();
+  auto total_abs_uncert = SimpleQuadSum::TotalAbsoluteUncertainty<histtype>(nominal_xsec,
+                                                                            systs,
+                                                                            data);
+  auto target_total_abs_uncert = (std::get<1>(abs_uncert_mv).Up()->pow(2) +
+                                  std::get<1>(abs_uncert_1sided).Up()->pow(2) +
+                                  std::get<1>(abs_uncert_2sided).Up()->pow(2)).sqrt();
 
-  TEST_ARRAY("total absolute uncert",
-             total_abs_uncert.first.Contents(),
-             target_total_abs_uncert.Contents(),
-             1e-14);
+  TEST_HISTS_SAME("total absolute uncert",
+                  *(std::get<1>(total_abs_uncert).Up()),
+                  target_total_abs_uncert,
+                  1e-14);
 
   // TotalFractionalUncertainty
-  auto total_frac_uncert = prop.TotalFractionalUncertainty(nominal_xsec,
-                                                           systs,
-                                                           data);
-  TEST_ARRAY("total frac uncert",
-             total_frac_uncert.first.Contents(),
-             (abs_uncert_mv.pow(2) + abs_uncert_1sided.pow(2) + abs_uncert_2sided.pow(2)).Contents().sqrt() / hnominal.Contents(),
-             1e-14);
+  auto total_frac_uncert = SimpleQuadSum::TotalFractionalUncertainty<histtype>(nominal_xsec,
+                                                                               systs,
+                                                                               data);
+  TEST_HISTS_SAME("total frac uncert",
+                  *(std::get<1>(total_frac_uncert).Up()),
+                  (target_total_abs_uncert / hnominal),
+                  1e-14);
 
   return !pass;
 }
