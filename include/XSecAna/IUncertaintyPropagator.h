@@ -55,38 +55,15 @@ namespace xsec {
     template<typename Scalar,
             int Cols>
     inline Hist <Scalar, Cols>
-    QuadSum(std::vector<Hist < Scalar, Cols>
-
-    > deltas) {
-    auto exposure = deltas[0].Exposure();
-    // put deltas into an Eigen::Matrix for efficiency column-wise operations
-    Eigen::Matrix<Scalar, Eigen::Dynamic, Cols> mat(deltas.size(), Cols);
-    for(
-    auto irow = 0u;
-    irow<deltas.
-
-    size();
-
-    irow++) {
-    mat.
-    row(irow) = deltas[irow].Contents() * exposure / deltas[irow].Exposure();
-}
-return
-Hist<Scalar, Cols>(mat
-.
-
-colwise()
-
-.
-
-squaredNorm(),
-        deltas[0]
-
-.
-
-Edges(),
-        std::pow(deltas[0].Exposure(), 2)
-
-);
-}
+    QuadSum(std::vector<const xsec::Hist<Scalar, Cols> *> deltas) {
+        auto exposure = deltas[0]->Exposure();
+        // put deltas into an Eigen::Matrix for efficiency column-wise operations
+        Eigen::Matrix<Scalar, Eigen::Dynamic, Cols> mat(deltas.size(), Cols);
+        for (auto irow = 0u; irow < deltas.size(); irow++) {
+            mat.row(irow) = deltas[irow]->Contents() * exposure / deltas[irow]->Exposure();
+        }
+        return Hist<Scalar, Cols>(mat.colwise().squaredNorm(),
+                                  deltas[0]->Edges(),
+                                  std::pow(deltas[0]->Exposure(), 2));
+    }
 }
