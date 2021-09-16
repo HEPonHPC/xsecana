@@ -16,20 +16,16 @@ int main(int argc, char ** argv)
   bool test;
   
   Hist<double, 10> num(Eigen::Array<double, 1, 10>::Ones(),
-		       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+                       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
   Hist<double, 10> den(Eigen::Array<double, 1, 10>::Ones() / 2,
-		       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
-
-  auto expected = Eigen::Array<double, 1, 10>::Ones() * 2;
+                       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
 
   SimpleEfficiency eff(num, den);
-  
-  const Hist<double, 10> * cache_hit1 = &eff.ToHist();
-  const Hist<double, 10> * cache_hit2 = &eff.ToHist();
 
-  pass &= cache_hit1 == cache_hit2;
-
-  TEST_ARRAY("ratio calculation", eff.ToHist().Contents(), expected, 0);
+  TEST_HISTS_SAME("ratio calculation",
+                  eff.Eval(),
+                  (num / den),
+                  0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_efficiency.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -38,13 +34,24 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded = SimpleEfficiency<Hist<double, 10> >::LoadFrom(input, "simple_efficiency");
+  auto loaded = IEfficiency<Hist<double, 10> >::LoadFrom(SimpleEfficiency<Hist<double, 10>>::LoadFrom,
+                                                         input,
+                                                         "simple_efficiency").release();
   input->Close();
   delete input;
 
-  TEST_HIST("saveto/loadfrom numerator", loaded->GetNumerator(), num.Contents(), num.Edges(), 0);
-  TEST_HIST("saveto/loadfrom denominator", loaded->GetDenominator(), den.Contents(), den.Edges(), 0);
-  TEST_HIST("saveto/loadfrom ratio", loaded->ToHist(), eff.ToHist().Contents(), eff.ToHist().Edges(), 0);
+  TEST_HISTS_SAME("saveto/loadfrom numerator",
+                  ((SimpleEfficiency<Hist<double, 10> >*)loaded)->GetNumerator(),
+                  num,
+                  0);
+  TEST_HISTS_SAME("saveto/loadfrom denominator",
+                  ((SimpleEfficiency<Hist<double, 10> > *) loaded)->GetDenominator(),
+                  den,
+                  0);
+  TEST_HISTS_SAME("saveto/loadfrom ratio",
+                  loaded->Eval(),
+                  eff.Eval(),
+                  0);
 
   return !pass;
 }

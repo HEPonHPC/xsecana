@@ -36,32 +36,32 @@ bool run_tests(bool verbose)
   bool pass = true;
   bool test;
 
-  TEST_HIST("construction", hist, contents, bins, 0);
+  TEST_HIST_AND_EDGES("construction", hist, contents, bins, 0);
 
-  TEST_HIST("hist multiply", hist * hist2, contents.pow(2) / 3, bins, tol);
+  TEST_HIST_AND_EDGES("hist multiply", hist * hist2, contents.pow(2) / 3, bins, tol);
 
-  TEST_HIST("hist divide", hist / hist2, ones * 3, bins, tol);
+  TEST_HIST_AND_EDGES("hist divide", hist / hist2, ones * 3, bins, tol);
 
-  TEST_HIST("hist add", hist + hist2, contents * (4. / 3.), bins, tol);
+  TEST_HIST_AND_EDGES("hist add", hist + hist2, contents * (4. / 3.), bins, tol);
 
-  TEST_HIST("hist subtract", hist - hist2, contents * (2. / 3.), bins, tol);
+  TEST_HIST_AND_EDGES("hist subtract", hist - hist2, contents * (2. / 3.), bins, tol);
 
-  TEST_HIST("hist chained expression", (hist - hist2) / hist2, ones * (2.), bins, tol);
+  TEST_HIST_AND_EDGES("hist chained expression", (hist - hist2) / hist2, ones * (2.), bins, tol);
   
-  TEST_HIST("constant multiply", (hist*-1), contents*-1, bins, 0);
+  TEST_HIST_AND_EDGES("constant multiply", (hist * -1), contents * -1, bins, 0);
 
-  TEST_HIST("abs()", hist.abs(), contents.abs(), bins, 0);
+  TEST_HIST_AND_EDGES("abs()", hist.abs(), contents.abs(), bins, 0);
 
-  TEST_HIST("abs().sqrt()", hist.abs().sqrt(), contents.abs().sqrt(), bins, 1e-6);
+  TEST_HIST_AND_EDGES("abs().sqrt()", hist.abs().sqrt(), contents.abs().sqrt(), bins, 1e-6);
 
-  TEST_HIST("no change", hist, contents, bins, 0);
+  TEST_HIST_AND_EDGES("no change", hist, contents, bins, 0);
 
   hist = hist.abs();
-  TEST_HIST("modify abs", hist, contents.abs(), bins, 0);
+  TEST_HIST_AND_EDGES("modify abs", hist, contents.abs(), bins, 0);
   
-  TEST_ARRAY("bin width", hist.BinWidths(), ones, 0);
+  TEST_ARRAY_SAME("bin width", hist.BinWidths(), ones, 0);
 
-  TEST_ARRAY("contiguous", hist.Contents(), test::utils::is_contiguous(hist.Contents()), 0);
+  TEST_ARRAY_SAME("contiguous", hist.Contents(), test::utils::is_contiguous(hist.Contents()), 0);
 
   // saveto/loadfrom
   std::string test_file_name = test::utils::test_dir() + "test_hist.root";
@@ -72,7 +72,7 @@ bool run_tests(bool verbose)
   TFile * input = TFile::Open(test_file_name.c_str());
   auto loaded = Hist<Scalar, Cols>::LoadFrom(input, "hist");
 
-  TEST_HIST("saveto/loadfrom", (*loaded), hist.Contents(), hist.Edges(), 0);
+  TEST_HIST_AND_EDGES("saveto/loadfrom", (*loaded), hist.Contents(), hist.Edges(), 0);
 
   return pass;
 }

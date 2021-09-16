@@ -6,214 +6,167 @@
 #include "Hist.h"
 
 #include "XSecAna/IMeasurement.h"
+#include "XSecAna/IEfficiency.h"
+#include "XSecAna/ISignalEstimator.h"
+#include "XSecAna/IFlux.h"
+#include "XSecAna/IUnfold.h"
 
 namespace xsec {
-  template<class HistType,
-	   class SignalEstimatorType,
-	   class UnfoldType,
-	   class EfficiencyType,
-	   class FluxType,
-	   bool IsDifferential = false>
-  class CrossSection : public IMeasurement<HistType> {
-  public:
-    CrossSection() {}
+    template<class HistType,
+            bool IsDifferential=false>
+    class CrossSection : public IMeasurement<HistType> {
+    public:
+        CrossSection() = default;
 
-    CrossSection(EfficiencyType * efficiency,
-                 SignalEstimatorType * signal_estimator,
-                 FluxType * flux,
-                 UnfoldType * unfold,
-                 typename HistType::scalar_type ntargets = 0)
-      : fEfficiency(efficiency),
-	fSignalEstimator(signal_estimator),
-	fFlux(flux),
-	fUnfold(unfold),
-	fNTargets(ntargets)
-    {}
+        CrossSection(IEfficiency<HistType> * efficiency,
+                     ISignalEstimator<HistType> * signal_estimator,
+                     IFlux<HistType> * flux,
+                     IUnfold<HistType> * unfold,
+                     typename HistType::scalar_type ntargets = 0)
+                : fEfficiency(efficiency),
+                  fSignalEstimator(signal_estimator),
+                  fFlux(flux),
+                  fUnfold(unfold),
+                  fNTargets(ntargets) {}
 
-    void SetNTargets(double ntargets) { fNTargets = ntargets; }
+        void SetNTargets(double ntargets) { fNTargets = ntargets; }
 
-    void SaveTo(TDirectory * dir, const std::string & subdir) const override;
-    static std::unique_ptr<CrossSection> LoadFrom(TDirectory * dir, std::string subdir);
+        void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-    HistType Result(const HistType & data) override;
+        static std::unique_ptr<IMeasurement<HistType>> LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
+                                                                xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
+                                                                xsec::type::LoadFunction<IFlux<HistType>> load_flux,
+                                                                xsec::type::LoadFunction<IUnfold<HistType>> load_unfold,
+                                                                TDirectory * dir,
+                                                                const std::string & subdir);
 
+        HistType Eval(const HistType & data) override;
+
+        CrossSection<HistType,
+                     true>
+        ToDifferential();
+
+    private:
+        IEfficiency<HistType> * fEfficiency;
+        ISignalEstimator<HistType> * fSignalEstimator;
+        IFlux<HistType> * fFlux;
+        IUnfold<HistType> * fUnfold;
+
+        typename HistType::scalar_type fNTargets;
+    };
+
+    ////////////////////////////////////////////////
+    template<class HistType,
+            bool IsDifferential>
     CrossSection<HistType,
-		  SignalEstimatorType,
-		  UnfoldType,
-		  EfficiencyType,
-		  FluxType,
-		  true>
-    ToDifferential();
-
-  private:
-    EfficiencyType      * fEfficiency;
-    SignalEstimatorType * fSignalEstimator;
-    FluxType            * fFlux;
-    UnfoldType          * fUnfold;
-
-    typename HistType::scalar_type fNTargets;
-  };
-
-  ////////////////////////////////////////////////
-  template<class HistType,
-	   class SignalEstimatorType,
-	   class UnfoldType,
-	   class EfficiencyType,
-	   class FluxType,
-	   bool IsDifferential>
-  CrossSection<HistType,
-		SignalEstimatorType,
-		UnfoldType,
-		EfficiencyType,
-		FluxType,
-		true>
-  CrossSection<HistType,
-		SignalEstimatorType,
-		UnfoldType,
-		EfficiencyType,
-		FluxType,
-		IsDifferential>::
-  ToDifferential()
-  {
-    if constexpr(IsDifferential) {
-	return *this;
-      }
-    else {
-      return CrossSection<HistType,
-			   SignalEstimatorType,
-			   UnfoldType,
-			   EfficiencyType,
-			   FluxType,
-			   true>(fEfficiency,
-				 fSignalEstimator,
-				 fFlux,
-				 fUnfold,
-				 fNTargets);
+                 true>
+    CrossSection<HistType,
+                 IsDifferential>::
+    ToDifferential() {
+        if constexpr(IsDifferential) {
+            return *this;
+        } else {
+            return CrossSection<HistType,
+                                true>(fEfficiency,
+                                      fSignalEstimator,
+                                      fFlux,
+                                      fUnfold,
+                                      fNTargets);
+        }
     }
-  }
 
-  ////////////////////////////////////////////////
-  template<class HistType>
-  HistType CalculateCrossSection(const HistType & unfolded_selected_signal,
-				 const HistType & efficiency,
-				 const HistType & flux,
-				 const typename HistType::scalar_type ntargets,
-				 const bool is_differential)
-  {
-    HistType  xsec = unfolded_selected_signal;
+    ////////////////////////////////////////////////
+    template<class HistType>
+    HistType CalculateCrossSection(const HistType & unfolded_selected_signal,
+                                   const HistType & efficiency,
+                                   const HistType & flux,
+                                   const typename HistType::scalar_type ntargets,
+                                   const bool is_differential) {
+        HistType xsec = unfolded_selected_signal;
 
-    // don't scale efficiency by exposure
-    // since exposure cancels in the ratio
-    xsec = xsec.TrueDivide(efficiency);
-    xsec /= flux;
-    xsec *= 1e4/ntargets; // Convert nu/m^2 to nu/cm^2
-    if(is_differential) xsec.Normalize("width");
-    return xsec;
-  }
+        // don't scale efficiency by exposure
+        // since exposure cancels in the ratio
+        xsec = xsec.TrueDivide(efficiency);
+        xsec /= flux;
+        xsec *= 1e4 / ntargets; // Convert nu/m^2 to nu/cm^2
+        if (is_differential) xsec.Normalize("width");
+        return xsec;
+    }
 
-  ////////////////////////////////////////////////
-  template<class HistType,
-	   class SignalEstimatorType,
-	   class UnfoldType,
-	   class EfficiencyType,
-	   class FluxType,
-	   bool IsDifferential>
-  HistType
-  CrossSection<HistType,
-		SignalEstimatorType,
-		UnfoldType,
-		EfficiencyType,
-		FluxType,
-		IsDifferential>::
-  Result(const HistType & data)
-  {
-    // calculate estimated signal and scale by the exposure of the data
-    auto signal = fSignalEstimator->Signal(data);
-    signal = signal.ScaleByExposure(data.Exposure());
+    ////////////////////////////////////////////////
+    template<class HistType,
+            bool IsDifferential>
+    HistType
+    CrossSection<HistType,
+                 IsDifferential>::
+    Eval(const HistType & data) {
+        // calculate estimated signal and scale by the exposure of the data
+        auto signal = fSignalEstimator->Signal(data);
+        signal = signal.ScaleByExposure(data.Exposure());
 
-    // invoke FluxType::operator* in case we want the integrated flux
-    // Pass a histogram of ones through the flux parameter of
-    // CalculateCrossSection to divide by one
-    return CalculateCrossSection(fUnfold->Truth(signal),
-				 (*fFlux * fEfficiency->ToHist()),
-				 HistType(HistType::array_type::Ones(fEfficiency->ToHist().Contents().size()),
-					  fEfficiency->ToHist().Edges()),
-				 fNTargets,
-				 IsDifferential);
-  }
+        // invoke FluxType::operator* in case we want the integrated flux
+        // Pass a histogram of ones through the flux parameter of
+        // CalculateCrossSection to divide by one
+        return CalculateCrossSection(fUnfold->Truth(signal),
+                                     (*fFlux * fEfficiency->Eval()),
+                                     HistType(HistType::array_type::Ones(fEfficiency->Eval().Contents().size()),
+                                              fEfficiency->Eval().Edges()),
+                                     fNTargets,
+                                     IsDifferential);
+    }
 
-  ////////////////////////////////////////////////
-  template<class HistType,
-	   class SignalEstimatorType,
-	   class UnfoldType,
-	   class EfficiencyType,
-	   class FluxType,
-	   bool IsDifferential>
-  void
-  CrossSection<HistType,
-		SignalEstimatorType,
-		UnfoldType,
-		EfficiencyType,
-		FluxType,
-		IsDifferential>::
-  SaveTo(TDirectory * dir, const std::string& subdir) const
-  {
-    TDirectory * tmp = gDirectory;
-    dir = dir->mkdir(subdir.c_str());
-    dir->cd();
-    TObjString("CrossSection").Write("type");
+    ////////////////////////////////////////////////
+    template<class HistType,
+            bool IsDifferential>
+    void
+    CrossSection<HistType,
+                 IsDifferential>::
+                 SaveTo(TDirectory * dir, const std::string & subdir) const {
+        TDirectory * tmp = gDirectory;
+        dir = dir->mkdir(subdir.c_str());
+        dir->cd();
+        TObjString("CrossSection").Write("type");
 
-    if(fEfficiency     ) fEfficiency     ->SaveTo(dir, "fEfficiency"     );
-    if(fFlux           ) fFlux           ->SaveTo(dir, "fFlux"           );
-    if(fSignalEstimator) fSignalEstimator->SaveTo(dir, "fSignalEstimator");
-    if(fUnfold         ) fUnfold         ->SaveTo(dir, "fUnfold"         );
+        if (fEfficiency) fEfficiency->SaveTo(dir, "fEfficiency");
+        if (fFlux) fFlux->SaveTo(dir, "fFlux");
+        if (fSignalEstimator) fSignalEstimator->SaveTo(dir, "fSignalEstimator");
+        if (fUnfold) fUnfold->SaveTo(dir, "fUnfold");
 
-    TParameter<typename HistType::scalar_type>("fNTargets", fNTargets).Write("fNTargets");
+        TParameter<typename HistType::scalar_type>("fNTargets", fNTargets).Write("fNTargets");
 
-    tmp->cd();
-  }
+        tmp->cd();
+    }
 
-  ////////////////////////////////////////////////
-  template<class HistType,
-	   class SignalEstimatorType,
-	   class UnfoldType,
-	   class EfficiencyType,
-	   class FluxType,
-	   bool IsDifferential>
-  std::unique_ptr<CrossSection<HistType,
-				SignalEstimatorType,
-				UnfoldType,
-				EfficiencyType,
-				FluxType,
-				IsDifferential> >
-  CrossSection<HistType,
-		SignalEstimatorType,
-		UnfoldType,
-		EfficiencyType,
-		FluxType,
-		IsDifferential>::
-  LoadFrom(TDirectory * dir, std::string subdir)
-  {
-    dir = dir->GetDirectory(subdir.c_str());
+    ////////////////////////////////////////////////
+    template<class HistType,
+            bool IsDifferential>
+    std::unique_ptr<IMeasurement<HistType>>
+    CrossSection<HistType,
+                 IsDifferential>::
+    LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
+             xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
+             xsec::type::LoadFunction<IFlux<HistType>> load_flux,
+             xsec::type::LoadFunction<IUnfold<HistType>> load_unfold,
+             TDirectory * dir,
+             const std::string & subdir) {
 
-    EfficiencyType *      eff  = 0;
-    FluxType *            flux = 0;
-    SignalEstimatorType * sig  = 0;
-    UnfoldType *          unfold = 0;
+        dir = dir->GetDirectory(subdir.c_str());
 
-    if(dir->GetDirectory("fEfficiency"     )) eff  = EfficiencyType     ::LoadFrom(dir, "fEfficiency"     ).release();
-    if(dir->GetDirectory("fFlux"           )) flux = FluxType           ::LoadFrom(dir, "fFlux"           ).release();
-    if(dir->GetDirectory("fSignalEstimator")) sig  = SignalEstimatorType::LoadFrom(dir, "fSignalEstimator").release();
-    if(dir->GetDirectory("fUnfold"         )) unfold  = UnfoldType      ::LoadFrom(dir, "fUnfold").release();
+        IEfficiency<HistType> * eff = 0;
+        IFlux<HistType> * flux = 0;
+        ISignalEstimator<HistType> * sig = 0;
+        IUnfold<HistType> * unfold = 0;
 
-    auto ntargets = ((TParameter<typename HistType::scalar_type>* )dir->Get("fNTargets"))->GetVal();
+        if (dir->GetDirectory("fEfficiency")) eff = load_efficiency(dir, "fEfficiency").release();
+        if (dir->GetDirectory("fFlux")) flux = load_flux(dir, "fFlux").release();
+        if (dir->GetDirectory("fSignalEstimator"))
+            sig = load_signal(dir, "fSignalEstimator").release();
+        if (dir->GetDirectory("fUnfold")) unfold = load_unfold(dir, "fUnfold").release();
 
-    return std::make_unique<CrossSection<HistType,
-					  SignalEstimatorType,
-					  UnfoldType,
-					  EfficiencyType,
-					  FluxType,
-					  IsDifferential> >
-      (eff, sig, flux, unfold, ntargets);
-  }
+        auto ntargets = ((TParameter<typename HistType::scalar_type> *) dir->Get("fNTargets"))->GetVal();
+
+        return std::make_unique<CrossSection<HistType,
+                                             IsDifferential> >
+                (eff, sig, flux, unfold, ntargets);
+    }
 }

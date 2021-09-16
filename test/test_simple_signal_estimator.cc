@@ -19,7 +19,7 @@ int main(int argc, char ** argv)
 
   SimpleSignalEstimator signal_estimator(test::utils::get_simple_background<double, 10>());
 
-  TEST_HIST("signal", signal_estimator.Signal(data), expected_signal.Contents(), expected_signal.Edges(), 0);
+  TEST_HIST_AND_EDGES("signal", signal_estimator.Signal(data), expected_signal.Contents(), expected_signal.Edges(), 0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_signal_estimator.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -28,9 +28,15 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded = *SimpleSignalEstimator<Hist<double, 10> >::LoadFrom(input, "signal_estimator");
+  auto loaded = ISignalEstimator<Hist<double, 10> >::LoadFrom(SimpleSignalEstimator<Hist<double, 10>>::LoadFrom,
+                                                              input,
+                                                              "signal_estimator").release();
 
-  TEST_HIST("loadfrom", loaded.Signal(data), expected_signal.Contents(), expected_signal.Edges(), 0);
+  TEST_HIST_AND_EDGES("loadfrom",
+                      loaded->Signal(data),
+                      expected_signal.Contents(),
+                      expected_signal.Edges(),
+                      0);
 
   return !pass;
 }

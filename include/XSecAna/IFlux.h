@@ -1,23 +1,30 @@
 #pragma once
 
-#include "Hist.h"
+#include "XSecAna/Hist.h"
+#include "XSecAna/Type.h"
 
 namespace xsec {
-  template<class HistType = HistXd>
-  class IFlux {
-  public:
-    virtual const HistType & ToHist() = 0;
-    virtual HistType operator/(const HistType & rhs) = 0;
-    virtual HistType operator*(const HistType & rhs) = 0;
-    virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
+    template<class HistType = HistXd>
+    class IFlux {
+    public:
+        virtual HistType Eval() = 0;
 
-    /// \brief Children must override this function
-    static std::unique_ptr<IFlux> LoadFrom(TDirectory * dir, const std::string& name)
-    {
-      assert(false && "IFlux::LoadFrom not implemented");
-    }
+        virtual HistType operator/(const HistType & rhs) = 0;
 
-  private:
-    
-  };
+        virtual HistType operator*(const HistType & rhs) = 0;
+
+        virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
+
+        static std::unique_ptr<IFlux>
+        LoadFrom(xsec::type::LoadFunction<IFlux> load,
+                 TDirectory * dir,
+                 const std::string & name) {
+            return load(dir, name);
+        }
+
+        virtual ~IFlux() = default;
+
+    private:
+
+    };
 }
