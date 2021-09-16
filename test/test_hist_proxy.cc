@@ -34,18 +34,18 @@ int main(int argc, char ** argv)
     HistProxyish<HistWrap, double, 10> wrapper(registry);
 
     // wrapped histogram starts off as empty
-    TEST_ARRAY("starts empty",
-               (wrapper.GetHist().Contents()),
-               (Eigen::Array<double, 1, 10>::Zero(10)),
-               0);
+    TEST_HISTS_SAME("starts empty",
+                    (wrapper.GetHist().Contents()),
+                    (Eigen::Array<double, 1, 10>::Zero(10)),
+                    0);
 
     // externally fill the wrapped hist
     registry[0]->SetHist(test::utils::get_simple_data<double, 10>());
 
-    TEST_ARRAY("filled",
-               (wrapper.GetHist().Contents()),
-               (test::utils::get_simple_data<double, 10>().Contents()),
-               0)
+    TEST_HISTS_SAME("filled",
+                    (wrapper.GetHist().Contents()),
+                    (test::utils::get_simple_data<double, 10>().Contents()),
+                    0)
 
     bool caught_exception = false;
     try {
