@@ -105,28 +105,7 @@ namespace xsec {
 
         [[nodiscard]] std::string GetName() const { return fName; }
 
-        /*
-        ///\brief calculates nsigma shift from nominal
-        /// --If T is not an instantiation of Hist
-        ///   create a new MultiverseSystematic<Hist>
-        ///   by calling T::Eval on each universe and the
-        ///   nominal argument, and MultiverseSystematic<Hist>::NSigmaShift
-        ///   is called
-        /// --If T is an instantiation of Hist, BinSigma is called
-        ///
-        /// In either case, return type is an instantiation
-        /// of Hist, determined by return type of T::Eval, or T itself
-        template<class ... Args>
-        auto NSigmaShift(double nsigma,
-                         const T * nominal,
-                         Args & ... args) const;
-        */
-
     private:
-        //template<class Scalar>
-        //Scalar BinSigma(const double & nsigma, std::vector<Scalar> & universes, const Scalar & nominal) const;
-
-
         std::vector<T*> fContainer;
         SystType_t fType;
         std::string fName;
