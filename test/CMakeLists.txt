@@ -8,7 +8,6 @@ list(APPEND TESTS test_simple_quad_sum)
 list(APPEND TESTS test_simple_signal_estimator)
 list(APPEND TESTS test_simple_xsec)
 list(APPEND TESTS test_systematic)
-list(APPEND TESTS test_hist_proxy)
 
 
 
