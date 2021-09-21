@@ -1,7 +1,6 @@
 #include "XSecAna/Hist.h"
 #include "XSecAna/Type.h"
 #include "test_utils.h"
-#include <boost/histogram.hpp>
 
 #include <Eigen/Dense>
 
