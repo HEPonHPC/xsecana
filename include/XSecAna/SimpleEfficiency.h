@@ -40,6 +40,11 @@ namespace xsec {
         if (!fRatio) {
             fRatio = new HistType(fNumerator);
             *fRatio /= fDenominator;
+
+            // binomial error
+            auto e = fRatio->ContentsAndUOF();
+            auto nsig = fDenominator.ContentsAndUOF();
+            fRatio->SetErrorsAndUOF((e*(1-e) / nsig).sqrt());
         }
         return *fRatio;
     }
