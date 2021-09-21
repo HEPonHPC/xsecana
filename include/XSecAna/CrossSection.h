@@ -89,7 +89,7 @@ namespace xsec {
         xsec = xsec.TrueDivide(efficiency);
         xsec /= flux;
         xsec *= 1e4 / ntargets; // Convert nu/m^2 to nu/cm^2
-        if (is_differential) xsec.Normalize("width");
+        if (is_differential) xsec = xsec.BinWidthNormalize();
         return xsec;
     }
 
@@ -109,8 +109,8 @@ namespace xsec {
         // CalculateCrossSection to divide by one
         return CalculateCrossSection(fUnfold->Truth(signal),
                                      (*fFlux * fEfficiency->Eval()),
-                                     HistType(HistType::array_type::Ones(fEfficiency->Eval().Contents().size()),
-                                              fEfficiency->Eval().Edges()),
+                                     HistType(HistType::array_and_uof_type::Ones(data.ContentsAndUOF().size()),
+                                              data.EdgesAndUOF()),
                                      fNTargets,
                                      IsDifferential);
     }

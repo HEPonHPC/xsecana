@@ -32,3 +32,8 @@
 *.app
 
 build/
+cmake-build-debug/
+cmake-build-debug-remote/
+*.DS_STORE
+.idea/
+*__pycache__

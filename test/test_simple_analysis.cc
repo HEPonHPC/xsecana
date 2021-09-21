@@ -36,9 +36,8 @@ int main(int argc, char ** argv)
   if(argc > 1 && std::strcmp(argv[1], "-v") == 0)  verbose = true;
   bool pass = true;
   bool test;
-  
-  Hist<double, 10> ones(Eigen::Array<double, 1, 10>::Ones(),
-                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+
+  Hist<double, 10> ones = test::utils::get_hist_of_ones<double, 10>();
 
   auto data = test::utils::get_simple_data<double, 10>();
 

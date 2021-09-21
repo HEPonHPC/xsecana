@@ -15,10 +15,8 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
   
-  Hist<double, 10> num(Eigen::Array<double, 1, 10>::Ones(),
-                       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
-  Hist<double, 10> den(Eigen::Array<double, 1, 10>::Ones() / 2,
-                       Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+  Hist<double, 10> num = test::utils::get_hist_of_ones<double, 10>();
+  Hist<double, 10> den = test::utils::get_hist_of_ones<double, 10>() / 2;
 
   SimpleEfficiency eff(num, den);
 

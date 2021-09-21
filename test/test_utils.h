@@ -11,28 +11,28 @@
 
 //----------------------------------------------------------------------
 #define TEST_HIST_AND_EDGES(test_name, HIST, target_contents, target_edges, precision) \
-  test = ((HIST).Contents() - (target_contents)).isZero(precision);    \
+  test = ((HIST).ContentsAndUOF() - (target_contents)).isZero(precision);    \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).Contents() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).ContentsAndUOF() << std::endl; \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (target_contents) << std::endl; \
     pass &= test;                            \
       }                                    \
-      test = ((HIST).Edges() - (target_edges)).isZero(precision);    \
+      test = ((HIST).EdgesAndUOF() - (target_edges)).isZero(precision);    \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).Edges() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).EdgesAndUOF() << std::endl; \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (target_edges) << std::endl; \
     pass &= test;                            \
       }
 
 //----------------------------------------------------------------------
 #define TEST_HISTS_SAME(test_name, h1, h2, precision)            \
-  test = ((h1) - (h2)).Contents().isZero(precision);                \
+  test = ((h1) - (h2)).ContentsAndUOF().isZero(precision);                \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h1).Exposure() << ") " << test_name << "\t" << (h1).Contents() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h2).Exposure() << ") " << test_name << "\t" << (h2).Contents() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h1).Exposure() << ") " << test_name << "\t" << (h1).ContentsAndUOF() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h2).Exposure() << ") " << test_name << "\t" << (h2).ContentsAndUOF() << std::endl; \
     pass &= test;                            \
       }
 
@@ -108,16 +108,22 @@ namespace xsec {
             /////////////////////////////////////////////////////////
             template<class Scalar, int Cols>
             Hist<Scalar, Cols> get_simple_data() {
-                return Hist<Scalar, Cols>(Eigen::Array<Scalar, 1, Cols>::LinSpaced(10, 1, 2) + 2,
-                                          Eigen::Array<Scalar, 1, EdgesSize(Cols)>::LinSpaced(11, 0, 20),
+                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, 1, 2) + 2,
+                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 20),
                                           data_exposure); // data will often come at different exposure from mc
             }
 
             /////////////////////////////////////////////////////////
             template<class Scalar, int Cols>
+            Hist<Scalar, Cols> get_hist_of_ones() {
+                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::Ones(12),
+                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 13));
+            }
+            /////////////////////////////////////////////////////////
+            template<class Scalar, int Cols>
             Hist<Scalar, Cols> get_simple_background() {
-                return Hist<Scalar, Cols>(Eigen::Array<Scalar, 1, Cols>::Ones(),
-                                          Eigen::Array<Scalar, 1, EdgesSize(Cols)>::LinSpaced(11, 0, 20));
+                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::Ones(12),
+                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 20));
             }
 
             /////////////////////////////////////////////////////////
@@ -129,28 +135,30 @@ namespace xsec {
             /////////////////////////////////////////////////////////
             template<class Scalar, int Cols>
             Hist<Scalar, Cols> get_simple_nominal_hist() {
-                return Hist<Scalar, Cols>(Eigen::Array<Scalar, 1, Cols>::LinSpaced(10, -0.5, 0.5) + 4,
-                                          Eigen::Array<Scalar, 1, EdgesSize(Cols)>::LinSpaced(11, 0, 20));
+                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, -0.5, 0.5) + 4,
+                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 20));
             }
 
             /////////////////////////////////////////////////////////
             template<class Scalar, int Cols>
             Hist<Scalar, Cols> get_simple_up_hist() {
                 auto nominal = get_simple_nominal_hist<Scalar, Cols>();
-                auto step = Eigen::Array<Scalar, 1, Cols>::LinSpaced(10, 0, .3).reverse();
+                auto step = Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, 0, .3).reverse();
 
-                return Hist<Scalar, Cols>(nominal.Contents() + nominal.Contents() * step.pow(2),
-                                          nominal.Edges());
+                return Hist<Scalar, Cols>(nominal.ContentsAndUOF() +
+                                          nominal.ContentsAndUOF() * step.pow(2),
+                                          nominal.EdgesAndUOF());
             }
 
             /////////////////////////////////////////////////////////
             template<class Scalar, int Cols>
             Hist<Scalar, Cols> get_simple_down_hist() {
                 auto nominal = get_simple_nominal_hist<Scalar, Cols>();
-                auto step = Eigen::Array<Scalar, 1, Cols>::LinSpaced(10, 0, .3);
+                auto step = Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, 0, .3);
 
-                return Hist<Scalar, Cols>(nominal.Contents() - nominal.Contents() * step.pow(2),
-                                          nominal.Edges());
+                return Hist<Scalar, Cols>(nominal.ContentsAndUOF() -
+                                          nominal.ContentsAndUOF() * step.pow(2),
+                                          nominal.EdgesAndUOF());
             }
 
             const static double ntargets = 1e4;
@@ -160,20 +168,20 @@ namespace xsec {
             //  the input array when folded
             template<class Scalar, int Cols>
             IMeasurement<Hist<Scalar, Cols> > * make_simple_xsec(Hist<Scalar, Cols> val) {
-                Hist<Scalar, Cols> ones(Eigen::Array<Scalar, 1, Cols>::Ones(),
-                                        val.Edges());
+                Hist<Scalar, Cols> ones(Hist<Scalar, Cols>::array_and_uof_type::Ones(12),
+                                        val.EdgesAndUOF());
 
                 auto efficiency = new SimpleEfficiency<Hist<Scalar, Cols> >(get_simple_signal<Scalar, Cols>(),
                                                                             val * get_simple_data<Scalar, Cols>().Exposure() / val.Exposure());
-                auto flux = new SimpleFlux(Hist<Scalar, Cols>(ones.Contents(),
-                                                              ones.Edges(),
+                auto flux = new SimpleFlux(Hist<Scalar, Cols>(ones.ContentsAndUOF(),
+                                                              ones.EdgesAndUOF(),
                                                               get_simple_data<Scalar, Cols>().Exposure()));
                 auto signal_estimator = new SimpleSignalEstimator(get_simple_background<Scalar, Cols>());
-                auto unfold = new IdentityUnfold<Scalar, Cols>(ones.Contents().size());
+                auto unfold = new IdentityUnfold<Scalar, Cols>(ones.ContentsAndUOF().size());
                 auto ret = new SimpleCrossSection(efficiency,
-                                              signal_estimator,
-                                              flux,
-                                              unfold);
+                                                  signal_estimator,
+                                                  flux,
+                                                  unfold);
                 ret->SetNTargets(ntargets);
                 return ret;
             }
