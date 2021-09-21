@@ -107,10 +107,12 @@ namespace xsec {
         // invoke FluxType::operator* in case we want the integrated flux
         // Pass a histogram of ones through the flux parameter of
         // CalculateCrossSection to divide by one
+
+        auto flux = fFlux->Eval(data.EdgesAndUOF());
+
         return CalculateCrossSection(fUnfold->Truth(signal),
-                                     (*fFlux * fEfficiency->Eval()),
-                                     HistType(HistType::array_and_uof_type::Ones(data.ContentsAndUOF().size()),
-                                              data.EdgesAndUOF()),
+                                     fEfficiency->Eval(),
+                                     fFlux->Eval(data.EdgesAndUOF()),
                                      fNTargets,
                                      IsDifferential);
     }
