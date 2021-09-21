@@ -169,10 +169,11 @@ namespace xsec {
             template<class Scalar, int Cols>
             IMeasurement<Hist<Scalar, Cols> > * make_simple_xsec(Hist<Scalar, Cols> val) {
                 Hist<Scalar, Cols> ones(Hist<Scalar, Cols>::array_and_uof_type::Ones(12),
-                                        val.EdgesAndUOF());
+                                        val.EdgesAndUOF(),
+                                        data_exposure);
 
-                auto efficiency = new SimpleEfficiency<Hist<Scalar, Cols> >(get_simple_signal<Scalar, Cols>(),
-                                                                            val * get_simple_data<Scalar, Cols>().Exposure() / val.Exposure());
+                auto efficiency = new SimpleEfficiency<Hist<Scalar, Cols> >(get_simple_signal<Scalar, Cols>() / val,
+                                                                            ones);
                 auto flux = new SimpleFlux(Hist<Scalar, Cols>(ones.ContentsAndUOF(),
                                                               ones.EdgesAndUOF(),
                                                               get_simple_data<Scalar, Cols>().Exposure()));
