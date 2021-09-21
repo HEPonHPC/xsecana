@@ -24,13 +24,12 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  Hist<double, 10> hone(Eigen::Array<double, 1, 10>::Ones(),
-                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+  auto hone = test::utils::get_hist_of_ones<double, 10>();
   auto hnominal = test::utils::get_simple_nominal_hist<double, 10>();
   auto hup = test::utils::get_simple_up_hist<double, 10>();
   auto hdown = test::utils::get_simple_down_hist<double, 10>();
   auto hmax_shift = hnominal;
-  for(auto i = 0u; i < hmax_shift.size(); i++) {
+  for(auto i = 0u; i < hmax_shift.ContentsAndUOF().size(); i++) {
     hmax_shift[i] = std::max(std::abs(hnominal[i] - hup[i]),
                              std::abs(hnominal[i] - hdown[i]));
   }

@@ -35,7 +35,9 @@ namespace xsec {
         static std::unique_ptr<IUnfold<Hist<Scalar, Cols>>> LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
-        Eigen::Matrix<Scalar, Cols, Cols> fMat;
+        Eigen::Matrix<Scalar,
+                      ContentsAndUOFSize(Cols),
+                      ContentsAndUOFSize(Cols)> fMat;
     };
 
 
@@ -44,8 +46,11 @@ namespace xsec {
             int Cols>
     IdentityUnfold<Scalar,
                    Cols>::
-    IdentityUnfold(int nbins) {
-        fMat = Eigen::Matrix<Scalar, Cols, Cols>::Identity(nbins, nbins);
+    IdentityUnfold(int nbins_and_uof) {
+        fMat = Eigen::Matrix<Scalar,
+                             ContentsAndUOFSize(Cols),
+                             ContentsAndUOFSize(Cols)>::
+        Identity(nbins_and_uof, nbins_and_uof);
     }
 
 /////////////////////////////////////////////////////////
@@ -55,8 +60,8 @@ namespace xsec {
     IdentityUnfold<Scalar,
                    Cols>::
     Truth(const Hist <Scalar, Cols> & reco) const {
-        return Hist<Scalar, Cols>(fMat * reco.Contents().matrix().transpose(),
-                                  reco.Edges(),
+        return Hist<Scalar, Cols>(fMat * reco.ContentsAndUOF().matrix().transpose(),
+                                  reco.EdgesAndUOF(),
                                   reco.Exposure());
     }
 

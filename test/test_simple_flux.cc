@@ -14,26 +14,37 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  Hist<double, 10> flux_hist(Eigen::Array<double, 1, 10>::Ones(),
-                             Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 10));
+  Hist<double, 10> flux_hist = test::utils::get_hist_of_ones<double, 10>();
 
   SimpleFlux flux(flux_hist);
   SimpleIntegratedFlux<Hist<double, 10> > integrated_flux(flux_hist);
 
-  TEST_HIST_AND_EDGES("flux.Eval()"           , flux.Eval()           , flux_hist.Contents(), flux_hist.Edges(), 0);
-  TEST_HIST_AND_EDGES("integrated_flux.Eval()", integrated_flux.Eval(), flux_hist.Contents(), flux_hist.Edges(), 0);
+  TEST_HISTS_SAME("flux.Eval()" ,
+                  flux.Eval(),
+                  flux_hist,
+                  0);
+  TEST_HISTS_SAME("integrated_flux.Eval()",
+                  integrated_flux.Eval(),
+                  flux_hist,
+                  0);
   
-  TEST_HIST_AND_EDGES ("flux.operator/", (flux / flux_hist), flux_hist.Contents(), flux_hist.Edges(), 0);
-  TEST_HIST_AND_EDGES ("integrated_flux.operator/",
-                       (integrated_flux / flux.Eval()),
-	     flux_hist.Contents() * 10,
-                       flux_hist.Edges(), 0);
+  TEST_HISTS_SAME("flux.operator/",
+                  (flux / flux_hist),
+                  flux_hist,
+                  0);
+  TEST_HISTS_SAME("integrated_flux.operator/",
+                  (integrated_flux / flux.Eval()),
+                  flux_hist * 12,
+                  0);
 
-  TEST_HIST_AND_EDGES ("flux.operator*", (flux * flux_hist), flux_hist.Contents(), flux_hist.Edges(), 0);
-  TEST_HIST_AND_EDGES ("integrated_flux.operator*",
-                       (integrated_flux * flux.Eval()),
-	     flux_hist.Contents() * 10,
-                       flux_hist.Edges(), 0);
+  TEST_HISTS_SAME("flux.operator*",
+                  (flux * flux_hist),
+                  flux_hist,
+                  0);
+  TEST_HISTS_SAME("integrated_flux.operator*",
+                  (integrated_flux * flux.Eval()),
+                  flux_hist * 12,
+                  0);
 
   std::string test_file_name = test::utils::test_dir() + "test_simple_flux.root";
   TFile * output = new TFile(test_file_name.c_str(), "recreate");
@@ -52,16 +63,14 @@ int main(int argc, char ** argv)
   input->Close();
   delete input;
 
-  TEST_HIST_AND_EDGES("loaded_flux",
-                      loaded_flux->Eval(),
-                      flux_hist.Contents(),
-                      flux_hist.Edges(),
-                      0);
-  TEST_HIST_AND_EDGES("loaded_integrated_flux",
-                      loaded_integrated_flux->Eval(),
-                      flux_hist.Contents(),
-                      flux_hist.Edges(),
-                      0);
+  TEST_HISTS_SAME("loaded_flux",
+                  loaded_flux->Eval(),
+                  flux_hist,
+                  0);
+  TEST_HISTS_SAME("loaded_integrated_flux",
+                  loaded_integrated_flux->Eval(),
+                  flux_hist,
+                  0);
   
   return !pass;
 }

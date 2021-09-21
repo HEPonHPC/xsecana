@@ -44,11 +44,11 @@ namespace xsec {
     MaxShift(const Hist <Scalar, Cols> & h1,
              const Hist <Scalar, Cols> & h2) {
         // stack then take max value in each column
-        Eigen::Matrix<Scalar, 2, Cols> stack;
-        stack << h1.Contents(), h2.Contents();
+        Eigen::Matrix<Scalar, 2, ContentsAndUOFSize(Cols)> stack;
+        stack << h1.ContentsAndUOF(), h2.ContentsAndUOF();
 
         return Hist<Scalar, Cols>(stack.colwise().maxCoeff(),
-                                  h1.Edges(),
+                                  h1.EdgesAndUOF(),
                                   h1.Exposure());
     }
 
@@ -58,12 +58,13 @@ namespace xsec {
     QuadSum(std::vector<const xsec::Hist<Scalar, Cols> *> deltas) {
         auto exposure = deltas[0]->Exposure();
         // put deltas into an Eigen::Matrix for efficiency column-wise operations
-        Eigen::Matrix<Scalar, Eigen::Dynamic, Cols> mat(deltas.size(), Cols);
+        Eigen::Matrix<Scalar, Eigen::Dynamic, ContentsAndUOFSize(Cols)> mat(deltas.size(),
+                                                        deltas[0]->ContentsAndUOF().size());
         for (auto irow = 0u; irow < deltas.size(); irow++) {
-            mat.row(irow) = deltas[irow]->Contents() * exposure / deltas[irow]->Exposure();
+            mat.row(irow) = deltas[irow]->ContentsAndUOF() * exposure / deltas[irow]->Exposure();
         }
         return Hist<Scalar, Cols>(mat.colwise().squaredNorm(),
-                                  deltas[0]->Edges(),
+                                  deltas[0]->EdgesAndUOF(),
                                   std::pow(deltas[0]->Exposure(), 2));
     }
 }

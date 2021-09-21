@@ -23,12 +23,16 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  Hist<double, 10> ones(Eigen::Array<double, 1, 10>::Ones(),
-                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 20));
-  Hist<double, 10> bkgd = ones * 2;
+  auto nbins_and_uof = 12;
+  Eigen::Array<double, 1, -1> bins = Eigen::Array<double, 1, -1>::Zero(nbins_and_uof+1);
+  for(auto i = 0u; i < nbins_and_uof+1; i++) {
+      bins(i) = 2*i;
+  }
 
-  Hist<double, 10> data(Eigen::Array<double, 1, 10>::Ones() * 4,
-                        Eigen::Array<double, 1, 11>::LinSpaced(11, 0, 20),
+  Hist<double, 10> ones(Eigen::Array<double, 1, 12>::Ones(nbins_and_uof), bins);
+  Hist<double, 10> bkgd = ones * 2;
+  Hist<double, 10> data(ones.ContentsAndUOF() * 4,
+                        ones.EdgesAndUOF(),
                         test::utils::data_exposure);
 
   Hist<double, 10> flux_hist = ones * 5;
@@ -37,14 +41,13 @@ int main(int argc, char ** argv)
 
   Hist<double, 10> eff_den = ones;
 
-
   typedef Hist<double, 10> histtype;
 
   // why is this template deduction failing??
   auto efficiency = new SimpleEfficiency<histtype>(eff_num, eff_den); // = 1/4 (no exposure scaling)
   auto flux = new SimpleFlux(flux_hist);                              // = 5/2 (after scaling by data exposure)
   auto signal_estimator = new SimpleSignalEstimator(bkgd);            // = 3 (after scaling by data exposure)
-  auto unfold = new IdentityUnfold<double, 10>(bkgd.Contents().size()); // = 1
+  auto unfold = new IdentityUnfold<double, 10>(bkgd.ContentsAndUOF().size()); // = 1
 
   SimpleCrossSection xsec(efficiency,
                           signal_estimator,
@@ -72,6 +75,7 @@ int main(int argc, char ** argv)
                   (Eigen::Array<double, 1, 10>::Ones() * 24. / 5.),
                   0);
 
+  auto xsec_differential_result = xsec_differential.Eval(data);
   TEST_ARRAY_SAME("xsec_differential",
                   xsec_differential.Eval(data).Contents(),
                   (Eigen::Array<double, 1, 10>::Ones() / 2. * 24. / 5.),
@@ -98,10 +102,12 @@ int main(int argc, char ** argv)
                   xsec.Eval(data),
                   0);
 
-  auto result = test::utils::make_simple_xsec(ones)->Eval(test::utils::get_simple_data<double, 10>());
-  TEST_ARRAY_SAME("test_utils::make_simple_xsec",
-                  (ones - result).Contents(),
-                  (Eigen::Array<double, 1, 10>::Zero()),
+  auto simple_data = test::utils::get_simple_data<double, 10>();
+  auto simple_ones = simple_data / simple_data;
+  auto result = test::utils::make_simple_xsec(simple_ones)->Eval(test::utils::get_simple_data<double, 10>());
+  TEST_HISTS_SAME("test_utils::make_simple_xsec",
+                  simple_ones,
+                  result,
                   0);
 
   return !pass;
