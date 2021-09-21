@@ -15,6 +15,6 @@ endif()
 message(STATUS "ROOT_INCLUDE_DIRS ${ROOT_INCLUDE_DIRS}")
 message(STATUS "CAFANA_INCLUDE_DIR ${CAFANA_INCLUDE_DIR}")
 
-
+add_compile_options("-Wno-unknown-warning-option")
 
 add_subdirectory(test)
