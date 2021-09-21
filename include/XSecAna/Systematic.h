@@ -44,7 +44,7 @@ namespace xsec {
             }
 
             [[nodiscard]] const char * what() const throw() override {
-                return &fMsg[0];
+                return fMsg;
             }
 
         private:
@@ -245,7 +245,7 @@ namespace xsec {
         }
 
         Hist<Scalar, Cols> shift = nominal;
-        for (auto ibin = 0u; ibin < nominal.size(); ibin++) {
+        for (auto ibin = 0u; ibin < nominal.ContentsAndUOF().size(); ibin++) {
             std::vector<Scalar> vals;
             for (auto iuniv = 0u; iuniv < multiverse.GetShifts().size(); iuniv++) {
                 vals.push_back((*multiverse.GetShifts()[iuniv])[ibin]);
