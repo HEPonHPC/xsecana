@@ -165,6 +165,12 @@ namespace xsec {
         { return fEdgesAndUOF(Eigen::seq(1, fEdgesAndUOF.size()-2)); }
         virtual const edges_type & EdgesAndUOF() const { return fEdgesAndUOF; }
 
+        virtual void SetContentsAndUOF(const array_and_uof_type & contents_and_uof)
+        { fContentsAndUOF = contents_and_uof; }
+
+        virtual void SetErrorsAndUOF(const array_and_uof_type & errors_and_uof)
+        { fErrorsAndUOF = errors_and_uof; }
+
         virtual Scalar Exposure() const { return fExposure; }
 
         virtual Eigen::Array<Scalar, 1, Cols> BinWidths() const;
