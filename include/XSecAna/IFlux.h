@@ -7,11 +7,7 @@ namespace xsec {
     template<class HistType = HistXd>
     class IFlux {
     public:
-        virtual HistType Eval() = 0;
-
-        virtual HistType operator/(const HistType & rhs) = 0;
-
-        virtual HistType operator*(const HistType & rhs) = 0;
+        virtual HistType Eval(const typename HistType::edges_type & edges_and_uof) const = 0;
 
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
