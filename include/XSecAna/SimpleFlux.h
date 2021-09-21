@@ -56,8 +56,8 @@ namespace xsec {
         if (!fResult) {
             if constexpr(Integrated) {
                 fResult = new HistType(
-                        std::decay_t<decltype(rhs.Contents())>::Ones(rhs.Contents().size()) * fFlux.Integrate(),
-                        rhs.Edges());
+                        HistType::array_and_uof_type::Ones(rhs.ContentsAndUOF().size()) * fFlux.Integrate(),
+                        rhs.EdgesAndUOF());
             } else {
                 fResult = &fFlux;
             }
