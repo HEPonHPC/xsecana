@@ -63,7 +63,11 @@ namespace xsec {
                   fEdgesAndUOF(edges_and_uof),
                   fErrorsAndUOF(errors_and_uof),
                   fExposure(exposure)
-        {}
+        {
+            assert(contents_and_uof.size() == edges_and_uof.size()+1 &&
+                   contents_and_uof.size() == edges_and_uof.size() &&
+                   "Incompatible edges, contents, and/or errors");
+        }
 
         /// \brief ctor using existing arrays for contents and edges
         /// including under/overflow
@@ -75,7 +79,10 @@ namespace xsec {
                   fEdgesAndUOF(edges_and_uof),
                   fErrorsAndUOF(array_and_uof_type::Zero(fContentsAndUOF.size())),
                   fExposure(exposure)
-        {}
+        {
+            assert(contents_and_uof.size() == edges_and_uof.size()+1 &&
+                   "Incompatible edges, contents, and/or errors");
+        }
 
         /// \brief convenience constructor.
         /// works for dynamic and fixed-size histograms
@@ -165,11 +172,17 @@ namespace xsec {
         { return fEdgesAndUOF(Eigen::seq(1, fEdgesAndUOF.size()-2)); }
         virtual const edges_type & EdgesAndUOF() const { return fEdgesAndUOF; }
 
-        virtual void SetContentsAndUOF(const array_and_uof_type & contents_and_uof)
-        { fContentsAndUOF = contents_and_uof; }
+        virtual void SetContentsAndUOF(const array_and_uof_type & contents_and_uof) {
+            assert(fContentsAndUOF.size() == contents_and_uof.size() &&
+                   "Incompatible contents array");
+            fContentsAndUOF = contents_and_uof;
+        }
 
-        virtual void SetErrorsAndUOF(const array_and_uof_type & errors_and_uof)
-        { fErrorsAndUOF = errors_and_uof; }
+        virtual void SetErrorsAndUOF(const array_and_uof_type & errors_and_uof) {
+            assert(fErrorsAndUOF.size() == errors_and_uof.size() &&
+                   "Incompatible contents array");
+            fErrorsAndUOF = errors_and_uof;
+        }
 
         virtual Scalar Exposure() const { return fExposure; }
 
