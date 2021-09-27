@@ -10,7 +10,7 @@
 
 namespace xsec {
     namespace fit {
-        namespace {
+        namespace detail {
             Eigen::Map<const Eigen::VectorXd> STDToEigen(const std::vector<double> & v) {
                 return Eigen::Map<const Eigen::VectorXd>(&v[0], v.size(), 1);
             }
@@ -120,7 +120,7 @@ namespace xsec {
         double
         Minuit2TemplateFitter<Scalar, Cols>::
         operator()(const std::vector<double> & params) const {
-            return fFitCalc->fun(STDToEigen(params), fData);
+            return fFitCalc->fun(detail::STDToEigen(params), fData);
         }
 
     }
