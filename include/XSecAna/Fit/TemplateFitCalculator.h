@@ -128,6 +128,9 @@ namespace xsec {
             virtual unsigned int GetNMinimizerParams() const override { return fParamMap.GetNMinimizerParams(); }
 
             Eigen::VectorXd Predict(const Eigen::VectorXd & user_params) const;
+            double Chi2(const Eigen::VectorXd & user_params,
+                        const Eigen::Array<Scalar, 1, Cols> & data) const;
+
             Eigen::VectorXd U(const Eigen::VectorXd & minimizer_params) const;
 
             virtual double fun(const Eigen::VectorXd & minimizer_params,
@@ -154,12 +157,22 @@ namespace xsec {
                 int Cols>
         double
         TemplateFitCalculator<Scalar, Cols>::
+        Chi2(const Eigen::VectorXd & user_params,
+             const Eigen::Array<Scalar, 1, Cols> & data) const {
+            return (data.matrix() - this->Predict(user_params).transpose()) *
+                   fInvCov *
+                   (data.matrix().transpose() - this->Predict(user_params));
+        }
+
+        template<class Scalar,
+                int Cols>
+        double
+        TemplateFitCalculator<Scalar, Cols>::
         fun(const Eigen::VectorXd & minimizer_params,
             const Eigen::Array<Scalar, 1, Cols> & data) const {
             fNFunCalls++;
-            return (data.matrix() - this->U(minimizer_params).transpose()) *
-                   fInvCov *
-                   (data.matrix().transpose() - this->U(minimizer_params));
+            return this->Chi2(this->ToUserParams(minimizer_params), data);
+
         }
 
         /// \brief User-level function for returning sum
