@@ -8,8 +8,7 @@ list(APPEND TESTS test_simple_quad_sum)
 list(APPEND TESTS test_simple_signal_estimator)
 list(APPEND TESTS test_simple_xsec)
 list(APPEND TESTS test_systematic)
-
-
+list(APPEND TESTS test_template_fit_calculator)
 
 foreach(TEST ${TESTS})
 	     add_executable("${TEST}" "${TEST}.cc")
@@ -19,7 +18,8 @@ foreach(TEST ${TESTS})
 						${ROOT_INCLUDE_DIRS}
 	     )
 	     target_link_libraries("${TEST}" PRIVATE
-	     				   ${ROOT_LIBRARIES}
+				 ${ROOT_LIBRARIES}
+				 ROOT::Minuit2
 	     )
 	     add_test(NAME "${TEST}" COMMAND "${TEST}")
 endforeach(TEST)
