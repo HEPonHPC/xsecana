@@ -7,12 +7,16 @@
 #include "Minuit2/MnMinos.h"
 #include "Minuit2/FunctionMinimum.h"
 #include "Minuit2/MnMigrad.h"
+#include "Minuit2/MnPrint.h"
 
 namespace xsec {
     namespace fit {
         namespace detail {
             Eigen::Map<const Eigen::VectorXd> STDToEigen(const std::vector<double> & v) {
                 return Eigen::Map<const Eigen::VectorXd>(&v[0], v.size(), 1);
+            }
+            std::vector<double> EigenToSTD(const Eigen::VectorXd & v) {
+                return std::vector<double>(v.data(), v.data() + v.size());
             }
         }
         template<class Scalar=double,
@@ -36,7 +40,7 @@ namespace xsec {
             virtual double operator()(const std::vector<double> & params) const override;
             virtual double Up() const override { return fUp; }
 
-            void SetPrintLevel(int level) { ROOT::Minuit2::MnPrint::SetLevel(level); }
+            static void SetPrintLevel(int level) { ROOT::Minuit2::MnPrint::SetGlobalLevel(level); }
 
         private:
             IFitCalculator<Scalar, Cols> * fFitCalc;
@@ -96,13 +100,11 @@ namespace xsec {
             ROOT::Minuit2::MnMinos minos(*this, mins[global_min_idx], fMnStrategy);
             Eigen::VectorXd plus_one_sigma_errors(fFitCalc->GetNMinimizerParams());
             Eigen::VectorXd minus_one_sigma_errors(fFitCalc->GetNMinimizerParams());
-            Eigen::VectorXd best_fit_params(fFitCalc->GetNMinimizerParams());
             for(auto i = 0u; i < fFitCalc->GetNMinimizerParams(); i++) {
                 // each call to minos does a fit so this part will take some time
                 auto e = minos(i);
                 minus_one_sigma_errors(i) = std::get<0>(e);
                 plus_one_sigma_errors(i) = std::get<1>(e);
-                best_fit_params(i) = mins[global_min_idx].UserState().Params()[i];
             }
 
             // return as FitResult
@@ -110,8 +112,16 @@ namespace xsec {
             result.plus_one_sigma_errors = plus_one_sigma_errors;
             result.minus_one_sigma_errors = minus_one_sigma_errors;
             result.fun_val = mins[global_min_idx].Fval();
-            result.params = best_fit_params;
+            result.params = detail::STDToEigen(mins[global_min_idx].UserState().Params());
             result.fun_calls = fFitCalc->GetNFunCalls();
+            result.covariance = Eigen::MatrixXd::Zero(fFitCalc->GetNMinimizerParams(),
+                                                      fFitCalc->GetNMinimizerParams());
+            for(auto irow = 0u; irow < fFitCalc->GetNMinimizerParams(); irow++) {
+                for(auto icol = 0u; icol < fFitCalc->GetNMinimizerParams(); icol++) {
+                    result.covariance(irow, icol) = mins[global_min_idx].UserCovariance()(irow, icol);
+                }
+            }
+
             return result;
         }
 
@@ -122,6 +132,5 @@ namespace xsec {
         operator()(const std::vector<double> & params) const {
             return fFitCalc->fun(detail::STDToEigen(params), fData);
         }
-
     }
 }
