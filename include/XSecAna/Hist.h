@@ -64,8 +64,8 @@ namespace xsec {
                   fErrorsAndUOF(errors_and_uof),
                   fExposure(exposure)
         {
-            assert(contents_and_uof.size() == edges_and_uof.size()+1 &&
-                   contents_and_uof.size() == edges_and_uof.size() &&
+            assert(contents_and_uof.size()+1 == edges_and_uof.size() &&
+                   contents_and_uof.size() == errors_and_uof.size() &&
                    "Incompatible edges, contents, and/or errors");
         }
 
@@ -80,7 +80,7 @@ namespace xsec {
                   fErrorsAndUOF(array_and_uof_type::Zero(fContentsAndUOF.size())),
                   fExposure(exposure)
         {
-            assert(contents_and_uof.size() == edges_and_uof.size()+1 &&
+            assert(contents_and_uof.size()+1 == edges_and_uof.size() &&
                    "Incompatible edges, contents, and/or errors");
         }
 
