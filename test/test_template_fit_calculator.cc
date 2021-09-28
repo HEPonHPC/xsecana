@@ -99,7 +99,7 @@ int main(int argc, char ** argv) {
 
     inverse_covariance *= (1 / total.array()).matrix().asDiagonal();
 
-    auto fit_calc = new fit::TemplateFitCalculator(templates, dims, inverse_covariance);
+    auto fit_calc = new fit::TemplateFitCalculator<double, -1>(templates, dims, inverse_covariance);
 
     user_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0]);
     minimizer_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0] - 1);
@@ -115,7 +115,7 @@ int main(int argc, char ** argv) {
 
     user_params(4) = 1.5;
 
-    fit::Minuit2TemplateFitter fitter(fit_calc, 3);
+    fit::Minuit2TemplateFitter<double, -1> fitter(fit_calc, 3);
     fitter.SetPrintLevel(0);
     auto result = fitter.Fit(fit_calc->Predict(user_params));
 
