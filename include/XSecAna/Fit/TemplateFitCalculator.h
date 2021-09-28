@@ -131,16 +131,15 @@ namespace xsec {
             double Chi2(const Eigen::VectorXd & user_params,
                         const Eigen::Array<Scalar, 1, Cols> & data) const;
 
-            Eigen::VectorXd U(const Eigen::VectorXd & minimizer_params) const;
+            Eigen::VectorXd ToUserParams(const Eigen::VectorXd & minimizer_coords) const;
 
             virtual double fun(const Eigen::VectorXd & minimizer_params,
                                const Eigen::Array<Scalar, 1, Cols> & data) const override;
 
-            Eigen::VectorXd ToUserParams(const Eigen::VectorXd & minimizer_coords) const;
+        private:
 
             Eigen::VectorXd ToMinimizerParams(const Eigen::VectorXd & user_coords) const;
 
-        private:
             covariance_matrix_type fInvCov;
             std::vector<int> fDims;
             Eigen::MatrixXd fTemplates;
@@ -186,17 +185,6 @@ namespace xsec {
             return (fTemplates * user_params.asDiagonal())
                     .template reshaped(fInvCov.rows(), fNComponents)
                     .rowwise().sum();
-        }
-
-        /// \brief Minimizer-level function returning sum
-        /// of all templates given the input template normalization
-        /// parameters, where the parameters are in minimizer coordinates
-        template<class Scalar,
-                int Cols>
-        Eigen::VectorXd
-        TemplateFitCalculator<Scalar, Cols>::
-        U(const Eigen::VectorXd & minimizer_params) const {
-            return Predict(this->ToUserParams(minimizer_params));
         }
 
         template<class Scalar,
