@@ -7,6 +7,9 @@
 #include "Minuit2/MnMinos.h"
 #include "Minuit2/FunctionMinimum.h"
 #include "Minuit2/MnMigrad.h"
+#include "Minuit2/MnPrint.h"
+
+#include "RVersion.h"
 
 namespace xsec {
     namespace fit {
@@ -36,7 +39,7 @@ namespace xsec {
             virtual double operator()(const std::vector<double> & params) const override;
             virtual double Up() const override { return fUp; }
 
-            void SetPrintLevel(int level) { ROOT::Minuit2::MnPrint::SetLevel(level); }
+	    void SetPrintLevel(const int & level) const;
 
         private:
             IFitCalculator<Scalar, Cols> * fFitCalc;
@@ -45,6 +48,26 @@ namespace xsec {
             Eigen::Array<Scalar, 1, Cols> fData;
 
         };
+
+
+        template<class Scalar,
+                int Cols>
+        void
+        Minuit2TemplateFitter<Scalar, Cols>::
+        SetPrintLevel(const int & level) const {
+#if ROOT_VERSION_CODE >= ROOT_VERSION(6,24,0)
+	    ROOT::Minuit2::MnPrint::SetGlobalLevel(level);
+#elif ROOT_VERSION_CODE >= ROOT_VERSION(6,22,00)
+	    ROOT::Minuit2::MnPrint::SetLevel(level);
+#else
+	    std::cerr << "Attempting to set Minuit2 print level for ROOT version ";
+	    std::cerr << ROOT_VERSION_CODE;
+	    std::cerr << ", but I'm not yet sure how to do that. Provide implementation in ";
+	    std::cerr << __PRETTY_FUNCTION__ << std::endl;
+#endif
+	}
+
+
 
         template<class Scalar,
                 int Cols>
