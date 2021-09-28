@@ -4,10 +4,10 @@
 
 #include "XSecAna/Fit/TemplateFitCalculator.h"
 #include "XSecAna/Fit/Minuit2TemplateFitter.h"
+#include "XSecAna/Hist.h"
 
 #include <Eigen/Dense>
 #include <iostream>
-#include <iomanip>
 
 #include "TFile.h"
 
@@ -73,7 +73,9 @@ int main(int argc, char ** argv) {
     Eigen::VectorXd from_std = fit::detail::STDToEigen(std_vector);
     for(auto i = 0u; i < std_vector.size(); i++) {
         assert(from_std[i] == std_vector[i]);
+        assert(fit::detail::EigenToSTD(from_std)[i] == std_vector[i]);
     }
+
 
     std::vector<int> dims = {4, 10};
     Eigen::Matrix<double, -1, -1, Eigen::RowMajor> signal_templates(dims[0], dims[1]);
@@ -82,9 +84,9 @@ int main(int argc, char ** argv) {
 
     auto x = Eigen::Array<double, 1, -1>::LinSpaced(dims[1], 0, dims[1]);
     for (auto i = 0u; i < signal_templates.rows(); i++) {
-        signal_templates.row(i) = (i + 1) * x + 0.5;
-        background1_templates.row(i) = (i + 1) * x.reverse() + 0.5;
-        background2_templates.row(i) = (i + 1) * Eigen::Matrix<double, 1, -1>::Ones(dims[1]);
+        signal_templates.row(i) = (i + 1) * x * x + 0.5;
+        background1_templates.row(i) = 1.4 * (i + 1) * x.reverse() * x.reverse() + 0.5;
+        background2_templates.row(i) = -1 * (x - dims[1] / 2) * (x - dims[1] / 2) / 5. + i * 20;
     }
 
     std::vector<Eigen::Array<double, 1, -1>> templates{
@@ -94,6 +96,11 @@ int main(int argc, char ** argv) {
     };
     Eigen::VectorXd total = templates[0] + templates[1] + templates[2];
 
+    auto output = new TFile("test_template_fit_calculator.root", "recreate");
+    Eigen::Array<double, 1, -1> bins = Eigen::Array<double, 1, -1>::LinSpaced(dims[0] * dims[1] + 1,
+                                                                              0,
+                                                                              dims[0] * dims[1] + 1);
+
     Eigen::MatrixXd inverse_covariance = Eigen::MatrixXd::Identity(dims[0] * dims[1],
                                                                    dims[0] * dims[1]);
 
@@ -102,73 +109,24 @@ int main(int argc, char ** argv) {
     auto fit_calc = new fit::TemplateFitCalculator(templates, dims, inverse_covariance);
 
     user_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0]);
-    minimizer_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0] - 1);
 
     assert((total - fit_calc->Predict(user_params)).isZero(0));
-
-    // TODO make sure we can fix the same template to a different value
 
     // now release a template
     fit_calc->ReleaseTemplate(fit_calc->GetNTemplates() - 1);
     user_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0]);
-    assert((total - fit_calc->U(user_params)).isZero(0));
+    assert((total - fit_calc->Predict(user_params)).isZero(0));
 
     user_params(4) = 1.5;
 
     fit::Minuit2TemplateFitter fitter(fit_calc, 3);
+
     fitter.SetPrintLevel(0);
+
     auto result = fitter.Fit(fit_calc->Predict(user_params));
 
-    user_params(4) = 1;
-
-    std::vector<double> p;
-    std::vector<double> c;
-    std::vector<double> c2;
-    std::vector<double> c3;
-    std::vector<double> std_params(user_params.size()-1);
-    auto eigen_params = user_params;
-    double nfits = 5;
-    for(auto i = 0u; i < nfits; i++) {
-        auto delta = 0. + (20 / nfits) * i;
-        fit_calc->FixTemplate(user_params.size()-1, delta);
-        auto r = fitter.Fit(total);
-        p.push_back(delta);
-        c.push_back(r.fun_val);
-
-        for(auto i = 0u; i < std_params.size()-1; i++) {
-            std_params[i] = r.params(i);
-
-        }
-        std::cout << r.params.transpose() << std::endl;
-        std_params[std_params.size()-1] = delta;
-
-        c2.push_back(fit_calc->fun(fit::detail::STDToEigen(std_params), total));
-        c3.push_back(fitter(std_params));
-    }
-
-    for(auto i = 0u; i < nfits; i++) {
-        std::cout << std::setw(20) << p[i] << "|";
-    }
-    std::cout << std::endl;
-    for(auto i = 0u; i < nfits; i++) {
-        std::cout << std::setw(20) << c[i] << "|";
-    }
-    std::cout << std::endl;
-    for(auto i = 0u; i < nfits; i++) {
-        std::cout << std::setw(20) << c2[i] << "|";
-    }
-    std::cout << std::endl;
-    for(auto i = 0u; i < nfits; i++) {
-        std::cout << std::setw(20) << c3[i] << "|";
-    }
-    std::cout << std::endl;
-
-    std::cout << "-----------------------------------" << std::endl;
-    std::cout << result.params.transpose() << std::endl;
-    std::cout << result.plus_one_sigma_errors.transpose() << std::endl;
-    std::cout << result.minus_one_sigma_errors.transpose() << std::endl;
-    std::cout << result.fun_val << std::endl;
-    std::cout << result.fun_calls << std::endl;
+    assert(result.fun_val == fit_calc->Chi2(fit_calc->ToUserParams(result.params),
+                                            fit_calc->Predict(user_params)));
 }
 
 
