@@ -185,7 +185,7 @@ bool run_tests_mv(bool verbose, std::string dir)
   // No need to get too fancy here. If it compiles assume it passes
   std::vector<test::utils::Ratio<Scalar, Cols>*>vratio_mv;
   for(auto i = 0u; i < syst.GetShifts().size(); i++) {
-    vratio_mv.push_back(new test::utils::Ratio(*syst.GetShifts()[i], nominal));
+    vratio_mv.push_back(new test::utils::Ratio<Scalar, Cols>(*syst.GetShifts()[i], nominal));
   }
   
   Systematic ratio_mv("ratio_mv", vratio_mv);
@@ -269,13 +269,13 @@ int main(int argc, char ** argv)
   double miny = -1;
   std::vector<test::utils::Ratio<double, 10>* > universes(nuniverses);
   for(auto i = 0; i < nuniverses; i++) {
-    universes[i] = new test::utils::Ratio(nominal + (-1 + (maxy - miny) / (nuniverses-1) * i),
-                                          nominal);
+    universes[i] = new test::utils::Ratio<double, 10>(nominal + (-1 + (maxy - miny) / (nuniverses-1) * i),
+						      nominal);
   }
   
   // test of polymorphism of objects in the systematics container
   typedef Hist<double, 10> histtype;
-  auto eff = new SimpleEfficiency(nominal + 1, nominal);
+  auto eff = new SimpleEfficiency<Hist<double, 10>>(nominal + 1, nominal);
   Systematic<IEfficiency<histtype>> syst_eff("eff",
                                                eff);
   ForEachFunction<histtype, IEfficiency<histtype>> eval_efficiency = [](IEfficiency<histtype> * eff) {

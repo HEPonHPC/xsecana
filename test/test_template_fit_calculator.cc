@@ -73,9 +73,7 @@ int main(int argc, char ** argv) {
     Eigen::VectorXd from_std = fit::detail::STDToEigen(std_vector);
     for(auto i = 0u; i < std_vector.size(); i++) {
         assert(from_std[i] == std_vector[i]);
-        assert(fit::detail::EigenToSTD(from_std)[i] == std_vector[i]);
     }
-
 
     std::vector<int> dims = {4, 10};
     Eigen::Matrix<double, -1, -1, Eigen::RowMajor> signal_templates(dims[0], dims[1]);
@@ -84,9 +82,9 @@ int main(int argc, char ** argv) {
 
     auto x = Eigen::Array<double, 1, -1>::LinSpaced(dims[1], 0, dims[1]);
     for (auto i = 0u; i < signal_templates.rows(); i++) {
-        signal_templates.row(i) = (i + 1) * x * x + 0.5;
-        background1_templates.row(i) = 1.4 * (i + 1) * x.reverse() * x.reverse() + 0.5;
-        background2_templates.row(i) = -1 * (x - dims[1] / 2) * (x - dims[1] / 2) / 5. + i * 20;
+        signal_templates.row(i) = (i + 1) * x + 0.5;
+        background1_templates.row(i) = (i + 1) * x.reverse() + 0.5;
+        background2_templates.row(i) = (i + 1) * Eigen::Matrix<double, 1, -1>::Ones(dims[1]);
     }
 
     std::vector<Eigen::Array<double, 1, -1>> templates{
@@ -96,17 +94,12 @@ int main(int argc, char ** argv) {
     };
     Eigen::VectorXd total = templates[0] + templates[1] + templates[2];
 
-    auto output = new TFile("test_template_fit_calculator.root", "recreate");
-    Eigen::Array<double, 1, -1> bins = Eigen::Array<double, 1, -1>::LinSpaced(dims[0] * dims[1] + 1,
-                                                                              0,
-                                                                              dims[0] * dims[1] + 1);
-
     Eigen::MatrixXd inverse_covariance = Eigen::MatrixXd::Identity(dims[0] * dims[1],
                                                                    dims[0] * dims[1]);
 
     inverse_covariance *= (1 / total.array()).matrix().asDiagonal();
 
-    auto fit_calc = new fit::TemplateFitCalculator(templates, dims, inverse_covariance);
+    auto fit_calc = new fit::TemplateFitCalculator<double, -1>(templates, dims, inverse_covariance);
 
     user_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0]);
 
@@ -119,10 +112,9 @@ int main(int argc, char ** argv) {
 
     user_params(4) = 1.5;
 
-    fit::Minuit2TemplateFitter fitter(fit_calc, 3);
+    fit::Minuit2TemplateFitter<double, -1> fitter(fit_calc, 3);
 
     fitter.SetPrintLevel(0);
-
     auto result = fitter.Fit(fit_calc->Predict(user_params));
 
     assert(result.fun_val == fit_calc->Chi2(fit_calc->ToUserParams(result.params),
