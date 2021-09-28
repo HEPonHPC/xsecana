@@ -110,7 +110,6 @@ namespace xsec {
         class TemplateFitCalculator : public IFitCalculator<Scalar, Cols> {
         public:
             typedef Eigen::Matrix<Scalar, Cols, Cols> covariance_matrix_type;
-            typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic, Eigen::ColMajor> templates_matrix_type;
 
             TemplateFitCalculator(const std::vector<Eigen::Array<Scalar, 1, Cols>> & templates,
                                   std::vector<int> dims,
@@ -265,8 +264,8 @@ namespace xsec {
             fNComponents = templates.size();
 
             // copy templates into an eigen matrix for fast linalg
-            fTemplates = templates_matrix_type(templates[0].size(),
-                                               templates.size());
+            fTemplates = Eigen::MatrixXd(templates[0].size(),
+					 templates.size());
             for (auto i = 0u; i < templates.size(); i++) {
                 fTemplates.col(i) = templates[i];
             }
