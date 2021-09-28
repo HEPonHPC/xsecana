@@ -8,52 +8,76 @@ from myanalysis import *
 # other general comments are like this
 
 # user-defined function
-def make_cross_section(loader, weight=None):
-    """interface with pandana"""
-    efficiency = xsecana.SimpleEfficiency(
-        numerator = pandana.Spectrum(loader, kVar, kSelection & kReconstructedSignal, weight=weight),
-        denominator = pandana.Spectrum(loader, kVar, kAllSignal, weight=weight),
-        binning=kBinning, # or xsecana.kUnbinned/None?
-    )
+def make_cross_sections(loader, weights: List(pandana.Weight)=None):
+    if type(weights) is not list: weights = [weights]
 
-    """interface with pandana"""
-    flux = xsecana.SimpleFlux(
-        pandana.Spectrum(loader, kNeutrinoEnergy, kNuebarCC, weight=weight),
-        integrated = True,
-        binning = kBinning, # or xsecana.kUnbinned/None?
-    )
+    selected_signal = [
+        pandana.Spectrum(
+            loader,
+            kVar,
+            kSelection & kReconstructedSignal,
+            weight=weight
+        )
+        for weight in weights
+    ]
+    selected_background = [
+        pandana.Spectrum(
+            loader,
+            kVar,
+            kSelection & kReconstructedBackground,
+            weight=weight
+        )
+        for weight in weights
+    ]
+    all_signal = [
+        pandana.Spectrum(
+            loader,
+            kVar,
+            kAllSignal,
+            weight=weight
+        )
+        for weight in weights
+    ]
 
-    """interface with pandana"""
-    unfolder = xsecana.IterativeUnfolder(
-        matrix=pandana.Spectrum(
+    unfolding_matrix = [
+        pandana.Spectrum(
             loader,
             kRecoVsTrue,
             kReconstructedSignal,
             weight=weight,
-        ),
-        binning = kBinning, # or xsecana.kUnbinned/None?
-    )
+        )
+        for weight in weights
+    ]
 
-    """interface with pandana"""
-    signal_estimator = xsecana.SimpleSignalEstimator(
-        signal = pandana.Spectrum(loader, kVar, kSelection & kReconstructedSignal, weight=weight),
-        background = pandana.Spectrum(loader, kVar, kSelection & kReconstructedBackground, weight=weight),
-        binning = kBinning, # or xsecana.kUnbinned/None?
-    )
+    flux = NOvAPandAna.DeriveFlux(pdg=-14)
+    # fill spectra
+    loader.Go()
+
     """
     - Given these components, this calculates the cross section and
       keeps everything together.
     - Together, these components can calculate a cross section for this 
       particular sample independently. It is complete.
     """
-    cross_section = xsecana.CrossSection(
-        efficiency = efficiency,
-        flux = flux, # xsecana.IFlux
-        unfolder = unfolder,
-        signal_estimator = signal_estimator,
-        ntargets = kNTargets, # int
+    cross_sections = [xsecana.CrossSectionCalculator(
+        efficiency=xsecana.SimpleEfficiencyCalculator(
+            selected_signal[iweight]._df,
+            all_signal[weight]._df
+        ),
+        flux=xsecana.SimpleFluxCalculator(
+            flux._df
+        ),  # xsecana.IFlux
+        unfolder=xsecana.IterativeUnfolder(
+            unfolding_matrix[weight]._df
+        ),
+        signal_estimator=xsecana.SimpleSignalEstimationCalculator(
+            selected_background[iweight]._df
+        ),
+        ntargets=kNTargets,  # int
     )
-    return cross_section
+        for iweight in range(len(weights))
+    ]
+    return cross_sections[0] if len(weights) == 1 else cross_sections
 
 nominal_loader = pandana.Loader('nominal_file.h5')
 calibration_loader = pandana.Loader('calibration_file.h5')
@@ -69,125 +93,82 @@ object with the same interface for the three types of systematics
 Analysis object keeps a container of Systematics, nominal measurement, and "data"
 Can it also propagate binning throughout the entire analysis?
 """
-analysis = xsecana.Analysis(
-    data = pandana.Spectrum(data_loader, kSelection, kVar),
-    nominal = make_cross_section(nominal_loader),
-    systematics={
-        'calibration_shape': xsecana.Systematic(
-            make_cross_section(calibration_loader),
-        ),
-        'lightyeild': xsecana.Systematic(
-            make_cross_section(lightyeild_up_loader),
-            make_cross_section(lightyeild_down_loader)
-        ),
-        'genie_multiverse' : xsecana.Systematic(
-            make_cross_section_multiverse(
-                nominal_loader,
-                genie_multiverse_weights,
-            )
+
+data_spectrum = pandana.Spectrum(data_loader, kSelection, kVar)
+data_loader.Go()
+
+data = xsecana.Array(data_spectrum._df)
+nominal = make_cross_section(nominal_loader)
+systematics = {
+    'calibration_shape': xsecana.Systematic(
+        make_cross_sections(calibration_loader),
+    ),
+    'lightyeild': xsecana.Systematic(
+        make_cross_sections(lightyeild_up_loader),
+        make_cross_sections(lightyeild_down_loader)
+    ),
+    'genie_multiverse': xsecana.Systematic(
+        make_cross_sections(
+            nominal_loader,
+            weights = genie_multiverse_weights,
         )
-    },
-)
-
-nominal_loader.Go()
-calibration_loader.Go()
-lightyeild_up_loader.Go()
-lightyeild_down_loader.Go()
-
-"""
-When using pandana, the events are held in pd.DataFrames
-When and how does optional histogramming happen?
-"""
-
+    )
+}
 
 # should be able to save data to file
 # so analysis could be performed as a separate step from the selection.
 # Useful for current analysis workflow where a grid job creates many files
 # that are aggregated after the selection
 """
-- MPI reductions happen here
-- Can make framework save all of the user's objects, but
-  how do we load them later? If python, we can just pickle them
-- Events can still be saved in pd.DataFrames
+- MPI reductions happen on save
+xsecana.SaveAnalysis(
+  group : hdf5.Group,
+  data : llama.array,
+  nominal : xsecana.IMeasurement,
+  systematics : dict(str, xsecana.Systematic),
+)->None
 """
-analysis.SaveTo(h5py.File('analysis_file.h5'),
-                'myanalysis')
+with h5py.File('analysis_file.h5', 'w') as f:
+    xsecana.SaveAnalysis(
+        f.create_group('myanalysis'),
+        data,
+        nominal,
+        systematics,
+    )
 
+"""
+A callable like myanlaysis.LoadMyMeasurement is how analyzers tell the framework
+how to load their classes. It is required to have a function signature like:
+(handle: hdf5.File|hdf5.Group|hdf5.Dataset, group_name: str)-> xsecana.IMeasurement 
+"""
 # if starting from analysis file on disk
-analysis = xsecana.Analysis.LoadFrom(
-    myanalysis.LoadMyMeasurement,
-    h5py.File('analysis_file.h5', 'r'),
-    'myanalysis',
-)
+with h5py.File('analysis_file.h5', 'r') as f:
+    data, nominal, systematics = xsecana.LoadAnalysis(
+        f.get('myanalysis'),
+        myanalysis.LoadMyMeasurement,
+    )
 
 # but also we should be able to just use it right away (HPC + MPI jobs)
 
-# selected events are aggregated behind the scenes when they're needed
 """
-If we hadn't just saved the results, MPI reductions would happen here instead
+Events are aggregated behind the scenes when they're needed
+for these calculations
 """
-histogrammed_analysis = analysis.Histogram(kBinning)
-"""
-Notes on histogramming:
-- Efficiency, SignalEstimator, and Unfolder will be binned similarly
-- Flux is unique.
-  - If measurement is flux-integrated, the binning will 
-    be the same, but the contents of that histogram will all be equal to the 
-    flux integral.
-  - Otherwise, the flux could be measured in the same space as the analysis
-"""
-
-"""
-Analysis object calls the SimpleQuadSum uncertainty function with nominal, systematics, and data
-expecting a callable like:
-fun(
-  nominal     : xsecana.IMeasurement, 
-  systematics : dict(str, xsecana.Systematic),
-  data        : xsecana.Hist
-) -> (xsecana.Hist, xsecana.Systematic)
-"""
-central_value, uncertainty = analysis.Result(xsecana.SimpleQuadSum.TotalAbsoluteUncertainty)
-
-
-
-"""
-What would it look like if there just wasn't an analysis object?
-It doesn't do a a whole lot here.
-Remember Systematics are dealing with CrossSection objects here
-nominal is also a CrossSection object 
-"""
-data = pandana.Spectrum(data_loader, kSelection, kVar),
-nominal = make_cross_section(nominal_loader),
-systematics = {
-    'calibration_shape': xsecana.Systematic(
-        make_cross_section(calibration_loader),
-    ),
-    'lightyeild': xsecana.Systematic(
-        make_cross_section(lightyeild_up_loader),
-        make_cross_section(lightyeild_down_loader)
-    ),
-    'genie_multiverse': xsecana.Systematic(
-        make_cross_section_multiverse(
-            nominal_loader,
-            genie_multiverse_weights,
-        )
-    )
-}
-
-"""
-Save to file. CrossSection object can save user's components, but
-doesn't know how to load them, but we would like to be able to load. Same issue here.
-"""
-nominal.SaveTo(output, 'nominal')
-data.SaveTo(output, 'data')
-systematics.SaveTo('systematics')
-
-central_value, uncertainty = xsecana.SimpleQuadSum.TotalAbsoluteUncertainty(
+# maybe we want an individual uncertainty when events are summarized in
+# some given binning
+central_value, uncertainty = xsecana.SimpleQuadSum.AbsoluteUncertainty(
+    data,
     nominal,
-    systematics,
-    data
+    systematics['calibration_shape'],
+    myanalysis.kBinning,
 )
 
-"""
-So Analysis is saving two lines of code in this case. 
-"""
+# or maybe we want the total uncertainty on final result when events are
+# summarized in some given binning
+central_value, uncertainty = xsecana.SimpleQuadSum.TotalAbsoluteUncertainty(
+    data,
+    nominal,
+    systematics,
+    myanalysis.kBinning,
+)
+
