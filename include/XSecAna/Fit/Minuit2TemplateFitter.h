@@ -42,7 +42,7 @@ namespace xsec {
             virtual double operator()(const std::vector<double> & params) const override;
             virtual double Up() const override { return fUp; }
 
-	    void SetPrintLevel(const int & level) const;
+            void SetPrintLevel(const int & level) const;
 
         private:
             IFitCalculator<Scalar, Cols> * fFitCalc;
