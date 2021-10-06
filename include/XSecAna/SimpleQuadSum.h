@@ -27,7 +27,7 @@ namespace xsec {
                      class ... Args>
             inline
             Systematic<HistType>
-            EvalSystematic(xsec::Systematic<T> & shifted_obj,
+            EvalSystematic(const xsec::Systematic<T> & shifted_obj,
                            Args && ...  args) {
                 std::vector<HistType*> shifts(shifted_obj.GetShifts().size());
                 for (auto i = 0u; i < shifted_obj.GetShifts().size(); i++) {
@@ -136,8 +136,8 @@ namespace xsec {
                  class ... Args>
         inline
         std::pair<HistType, Systematic<HistType>>
-        AbsoluteUncertainty(T * nominal_obj,
-                            xsec::Systematic<T> & shifted_obj,
+        AbsoluteUncertainty(const T * nominal_obj,
+                            const xsec::Systematic<T> & shifted_obj,
                             Args & ...  args) {
             if constexpr(xsec::type::IsHist<T>()) {
                 return _AbsoluteUncertainty(*nominal_obj, shifted_obj);
@@ -170,8 +170,8 @@ namespace xsec {
                  class ... Args>
         inline
         std::pair<HistType, Systematic<HistType>>
-        FractionalUncertainty(T * nominal_obj,
-                              xsec::Systematic<T> & shifted_obj,
+        FractionalUncertainty(const T * nominal_obj,
+                              const xsec::Systematic<T> & shifted_obj,
                               Args & ...  args) {
             if constexpr(xsec::type::IsHist<T>()) {
                 return _FractionalUncertainty(*nominal_obj, shifted_obj);
@@ -206,9 +206,9 @@ namespace xsec {
                  class ... Args>
         inline
         std::pair<HistType, Systematic<HistType>>
-        TotalAbsoluteUncertainty(T * nominal_obj,
-                                 std::map<std::string,
-                                          xsec::Systematic<T> > & shifted_objs,
+        TotalAbsoluteUncertainty(const T * nominal_obj,
+                                 const std::map<std::string,
+                                                xsec::Systematic<T> > & shifted_objs,
                                  Args & ...  args) {
             if constexpr(xsec::type::IsHist<T>()) {
                 return _TotalAbsoluteUncertainty(*nominal_obj, shifted_objs);
@@ -247,9 +247,9 @@ namespace xsec {
                  class ... Args>
         inline
         std::pair<HistType, Systematic<HistType>>
-        TotalFractionalUncertainty(T * nominal_obj,
-                                   std::map<std::string,
-                                            xsec::Systematic<T> > & shifted_objs,
+        TotalFractionalUncertainty(const T * nominal_obj,
+                                   const std::map<std::string,
+                                                  xsec::Systematic<T> > & shifted_objs,
                                    Args & ... args) {
             if constexpr(xsec::type::IsHist<T>()) {
                 return _TotalFractionalUncertainty(*nominal_obj, shifted_objs);

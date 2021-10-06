@@ -40,7 +40,7 @@ namespace xsec {
                                                                 TDirectory * dir,
                                                                 const std::string & subdir);
 
-        HistType Eval(const HistType & data) override;
+        HistType Eval(const HistType & data) const override;
 
         CrossSection<HistType,
                      true>
@@ -99,7 +99,7 @@ namespace xsec {
     HistType
     CrossSection<HistType,
                  IsDifferential>::
-    Eval(const HistType & data) {
+    Eval(const HistType & data) const {
         // calculate estimated signal and scale by the exposure of the data
         auto signal = fSignalEstimator->Signal(data);
         signal = signal.ScaleByExposure(data.Exposure());
