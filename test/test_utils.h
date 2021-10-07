@@ -14,15 +14,15 @@
   test = ((HIST).ContentsAndUOF() - (target_contents)).isZero(precision);    \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).ContentsAndUOF() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (target_contents) << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).ContentsAndUOF().transpose() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (target_contents).transpose() << std::endl; \
     pass &= test;                            \
       }                                    \
       test = ((HIST).EdgesAndUOF() - (target_edges)).isZero(precision);    \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).EdgesAndUOF() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (target_edges) << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (HIST).EdgesAndUOF().transpose() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (target_edges).transpose() << std::endl; \
     pass &= test;                            \
       }
 
@@ -31,8 +31,8 @@
   test = ((h1) - (h2)).ContentsAndUOF().isZero(precision);                \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h1).Exposure() << ") " << test_name << "\t" << (h1).ContentsAndUOF() << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h2).Exposure() << ") " << test_name << "\t" << (h2).ContentsAndUOF() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h1).Exposure() << ") " << test_name << "\t" << (h1).ContentsAndUOF().transpose() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t (" << (h2).Exposure() << ") " << test_name << "\t" << (h2).ContentsAndUOF().transpose() << std::endl; \
     pass &= test;                            \
       }
 
@@ -40,8 +40,8 @@
   test = ((arr1) - (arr2)).isZero(precision);                \
       if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (arr1) << std::endl; \
-    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (arr2) << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (arr1).transpose() << std::endl; \
+    std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "\t" << (arr2).transpose() << std::endl; \
     pass &= test;                            \
       }
 
@@ -55,8 +55,8 @@
   if(!test || verbose) {                        \
     std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << (test? ": PASSED" : ": FAILED") << std::endl; \
     for(auto imv = 0u; imv < (mv1).GetShifts().size(); imv++) {    \
-      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv1).GetShifts()[imv]->Contents() << std::endl; \
-      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv2).GetShifts()[imv]->Contents() << std::endl; \
+      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv1).GetShifts()[imv]->Contents().transpose() << std::endl; \
+      std::cerr << __PRETTY_FUNCTION__ << "\t" << test_name << "[" << imv << "]\t" << (mv2).GetShifts()[imv]->Contents().transpose() << std::endl; \
     }                                    \
     pass &= test;                            \
   }
@@ -80,9 +80,6 @@ namespace xsec {
                     return numerator / denominator;
                 }
             };
-
-            /////////////////////////////////////////////////////////
-            typedef CrossSection<Hist> SimpleCrossSection;
 
             /////////////////////////////////////////////////////////
             template<typename ArrayType>
@@ -157,7 +154,7 @@ namespace xsec {
             /////////////////////////////////////////////////////////
             // make a cross section object that evaluates out to
             //  the input array when folded
-            IMeasurement<Hist> * make_simple_xsec(Hist val) {
+            IMeasurement <Hist> * make_simple_xsec(Hist val) {
                 Hist ones(Array::Ones(12),
                           val.EdgesAndUOF(),
                           data_exposure);
@@ -169,11 +166,11 @@ namespace xsec {
                                                 get_simple_data().Exposure()));
                 auto signal_estimator = new SimpleSignalEstimator(get_simple_background());
                 auto unfold = new IdentityUnfold(ones.ContentsAndUOF().size());
-                auto ret = new SimpleCrossSection(efficiency,
-                                                  signal_estimator,
-                                                  flux,
-                                                  unfold);
-                ret->SetNTargets(ntargets);
+                auto ret = new CrossSection(efficiency,
+                                            signal_estimator,
+                                            flux,
+                                            unfold,
+                                            ntargets);
                 return ret;
             }
 
@@ -191,7 +188,8 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            std::vector<IMeasurement<Hist> *>
+            std::vector<IMeasurement < Hist> *>
+
             make_simple_xsec_multiverse(const Hist & hnominal, int nuniverses) {
                 std::vector<IMeasurement<Hist> *> xsec_universes(nuniverses);
                 auto hist_universes = make_simple_hist_multiverse(hnominal, nuniverses);
