@@ -17,15 +17,13 @@ using namespace xsec;
 
 auto test_file_name = test::utils::test_dir() + "test_simple_analysis.root";
 
-typedef xsec::Hist<double, -1> histtype;
-
-std::unique_ptr<IMeasurement<histtype>>
+std::unique_ptr<IMeasurement>
 LoadSimpleCrossSection(TDirectory * dir,
                        const std::string & name) {
-    return CrossSection<histtype>::LoadFrom(SimpleEfficiency<histtype>::LoadFrom,
-                                  SimpleSignalEstimator<histtype>::LoadFrom,
-                                  SimpleFlux<histtype>::LoadFrom,
-                                  IdentityUnfold<double, -1>::LoadFrom,
+    return CrossSection::LoadFrom(SimpleEfficiency::LoadFrom,
+                                  SimpleSignalEstimator::LoadFrom,
+                                  SimpleFlux::LoadFrom,
+                                  IdentityUnfold::LoadFrom,
                                   dir,
                                   name);
 }
@@ -37,28 +35,27 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  Hist<double, -1> ones = test::utils::get_hist_of_ones<double, -1>();
+  Hist ones = test::utils::get_hist_of_ones();
 
-  auto data = test::utils::get_simple_data<double, -1>();
+  auto data = test::utils::get_simple_data();
 
 
-  auto hnominal = test::utils::get_simple_nominal_hist<double, -1>();
-  auto hup = test::utils::get_simple_up_hist<double, -1>();
-  auto hdown = test::utils::get_simple_down_hist<double, -1>();
+  auto hnominal = test::utils::get_simple_nominal_hist();
+  auto hup = test::utils::get_simple_up_hist();
+  auto hdown = test::utils::get_simple_down_hist();
 
 
   auto nominal_xsec = test::utils::make_simple_xsec(hnominal);
   auto up   = test::utils::make_simple_xsec(hup);
   auto down = test::utils::make_simple_xsec(hdown);
 
-  typedef Hist<double, -1> histtype;
   auto nuniverses = 50;
   auto xsec_universes = test::utils::make_simple_xsec_multiverse(hnominal, nuniverses);
-  Systematic<IMeasurement<histtype>> syst_mv("mv", xsec_universes);
-  Systematic<IMeasurement<histtype>> syst_1 ("1sided", up);
-  Systematic<IMeasurement<histtype>> syst_2 ("2sided", up, down);
+  Systematic<IMeasurement> syst_mv("mv", xsec_universes);
+  Systematic<IMeasurement> syst_1 ("1sided", up);
+  Systematic<IMeasurement> syst_2 ("2sided", up, down);
 
-  std::vector<Systematic<IMeasurement<histtype>>> systs = {
+  std::vector<Systematic<IMeasurement>> systs = {
     syst_mv,
     syst_1,
     syst_2,
@@ -88,9 +85,9 @@ int main(int argc, char ** argv)
                   nominal_xsec->Eval(data),
                   0);
 
-  auto eval = [](histtype & data) {
-      ForEachFunction<histtype, IMeasurement<histtype>> f = [&data](IMeasurement<histtype> * m) {
-          return new histtype(m->Eval(data));
+  auto eval = [](Hist & data) {
+      ForEachFunction<Hist, IMeasurement> f = [&data](IMeasurement * m) {
+          return new Hist(m->Eval(data));
       };
       return f;
   };
@@ -103,18 +100,18 @@ int main(int argc, char ** argv)
       auto systematic_eval = systs[i].ForEach(eval(data));
 
       if (systs[i].GetType() == kMultiverse) {
-          loaded_systematic_eval = Systematic<histtype>(loaded_systematics[i].GetName(),
-                                                        new histtype(MultiverseShift(loaded_systematic_eval,
+          loaded_systematic_eval = Systematic<Hist>(loaded_systematics[i].GetName(),
+                                                        new Hist(MultiverseShift(loaded_systematic_eval,
                                                                                      loaded_nominal->Eval(loaded_data),
                                                                                      1)),
-                                                        new histtype(MultiverseShift(loaded_systematic_eval,
+                                                        new Hist(MultiverseShift(loaded_systematic_eval,
                                                                                      loaded_nominal->Eval(loaded_data),
                                                                                      -1)));
-          systematic_eval = Systematic<histtype>(systs[i].GetName(),
-                                                 new histtype(MultiverseShift(systematic_eval,
+          systematic_eval = Systematic<Hist>(systs[i].GetName(),
+                                                 new Hist(MultiverseShift(systematic_eval,
                                                                               loaded_nominal->Eval(loaded_data),
                                                                               1)),
-                                                 new histtype(MultiverseShift(systematic_eval,
+                                                 new Hist(MultiverseShift(systematic_eval,
                                                                               loaded_nominal->Eval(loaded_data),
                                                                               -1)));
       }

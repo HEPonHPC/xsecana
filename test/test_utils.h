@@ -154,7 +154,7 @@ namespace xsec {
             /////////////////////////////////////////////////////////
             // make a cross section object that evaluates out to
             //  the input array when folded
-            IMeasurement <Hist> * make_simple_xsec(Hist val) {
+            IMeasurement * make_simple_xsec(Hist val) {
                 Hist ones(Array::Ones(12),
                           val.EdgesAndUOF(),
                           data_exposure);
@@ -188,10 +188,9 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            std::vector<IMeasurement < Hist> *>
-
+            std::vector<IMeasurement *>
             make_simple_xsec_multiverse(const Hist & hnominal, int nuniverses) {
-                std::vector<IMeasurement<Hist> *> xsec_universes(nuniverses);
+                std::vector<IMeasurement *> xsec_universes(nuniverses);
                 auto hist_universes = make_simple_hist_multiverse(hnominal, nuniverses);
 
                 for (auto i = 0; i < nuniverses; i++) {
@@ -199,7 +198,6 @@ namespace xsec {
                 }
                 return xsec_universes;
             }
-
 
         } // utils
     } // test

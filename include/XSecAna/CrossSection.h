@@ -12,7 +12,7 @@
 #include "XSecAna/IUnfold.h"
 
 namespace xsec {
-    class CrossSectionBase : public IMeasurement<Hist> {
+    class CrossSectionBase : public IMeasurement {
     public:
         CrossSectionBase() = default;
 
@@ -30,12 +30,12 @@ namespace xsec {
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
         template<class DerivedCrossSection>
-        static std::unique_ptr<IMeasurement<Hist>> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
-                                                            xsec::type::LoadFunction<ISignalEstimator> load_signal,
-                                                            xsec::type::LoadFunction<IFlux> load_flux,
-                                                            xsec::type::LoadFunction<IUnfold> load_unfold,
-                                                            TDirectory * dir,
-                                                            const std::string & subdir);
+        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
+                                                      xsec::type::LoadFunction<ISignalEstimator> load_signal,
+                                                      xsec::type::LoadFunction<IFlux> load_flux,
+                                                      xsec::type::LoadFunction<IUnfold> load_unfold,
+                                                      TDirectory * dir,
+                                                      const std::string & subdir);
 
         virtual Hist Eval(const Hist & data) const override = 0;
 
@@ -66,12 +66,12 @@ namespace xsec {
 
         virtual Hist Eval(const Hist & data) const override;
 
-        static std::unique_ptr<IMeasurement<Hist>> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
-                                                            xsec::type::LoadFunction<ISignalEstimator> load_signal,
-                                                            xsec::type::LoadFunction<IFlux> load_flux,
-                                                            xsec::type::LoadFunction<IUnfold> load_unfold,
-                                                            TDirectory * dir,
-                                                            const std::string & subdir);
+        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
+                                                      xsec::type::LoadFunction<ISignalEstimator> load_signal,
+                                                      xsec::type::LoadFunction<IFlux> load_flux,
+                                                      xsec::type::LoadFunction<IUnfold> load_unfold,
+                                                      TDirectory * dir,
+                                                      const std::string & subdir);
     };
 
     class CrossSection : public CrossSectionBase {
@@ -91,12 +91,12 @@ namespace xsec {
 
         virtual Hist Eval(const Hist & data) const override;
 
-        static std::unique_ptr<IMeasurement<Hist>> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
-                                                            xsec::type::LoadFunction<ISignalEstimator> load_signal,
-                                                            xsec::type::LoadFunction<IFlux> load_flux,
-                                                            xsec::type::LoadFunction<IUnfold> load_unfold,
-                                                            TDirectory * dir,
-                                                            const std::string & subdir);
+        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
+                                                      xsec::type::LoadFunction<ISignalEstimator> load_signal,
+                                                      xsec::type::LoadFunction<IFlux> load_flux,
+                                                      xsec::type::LoadFunction<IUnfold> load_unfold,
+                                                      TDirectory * dir,
+                                                      const std::string & subdir);
     };
 
     ////////////////////////////////////////////////
@@ -171,7 +171,7 @@ namespace xsec {
 
     ////////////////////////////////////////////////
     template<class DerivedCrossSection>
-    std::unique_ptr<IMeasurement<Hist>>
+    std::unique_ptr<IMeasurement>
     CrossSectionBase::
     LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
              xsec::type::LoadFunction<ISignalEstimator> load_signal,
@@ -200,7 +200,7 @@ namespace xsec {
     }
 
     ////////////////////////////////////////////////
-    std::unique_ptr<IMeasurement<Hist>>
+    std::unique_ptr<IMeasurement>
     DifferentialCrossSection::
     LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
              xsec::type::LoadFunction<ISignalEstimator> load_signal,
@@ -217,7 +217,7 @@ namespace xsec {
     }
 
     ////////////////////////////////////////////////
-    std::unique_ptr<IMeasurement<Hist>>
+    std::unique_ptr<IMeasurement>
     CrossSection::
     LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
              xsec::type::LoadFunction<ISignalEstimator> load_signal,

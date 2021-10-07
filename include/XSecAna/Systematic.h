@@ -232,11 +232,9 @@ namespace xsec {
     }
 
     /////////////////////////////////////////////////////////////////////////
-    template<class Scalar,
-            int Cols>
-    Hist<Scalar, Cols>
-    MultiverseShift(Systematic<Hist<Scalar, Cols>> multiverse,
-                    const Hist<Scalar, Cols> & nominal,
+    Hist
+    MultiverseShift(Systematic<Hist> multiverse,
+                    const Hist & nominal,
                     double nsigma = 1) {
         if (multiverse.GetType() != kMultiverse) {
             throw exceptions::SystematicTypeError(__PRETTY_FUNCTION__,
@@ -244,9 +242,9 @@ namespace xsec {
                                                   multiverse.GetType());
         }
 
-        Hist<Scalar, Cols> shift = nominal;
+        Hist shift = nominal;
         for (auto ibin = 0u; ibin < nominal.ContentsAndUOF().size(); ibin++) {
-            std::vector<Scalar> vals;
+            std::vector<double> vals;
             for (auto iuniv = 0u; iuniv < multiverse.GetShifts().size(); iuniv++) {
                 vals.push_back((*multiverse.GetShifts()[iuniv])[ibin]);
             }

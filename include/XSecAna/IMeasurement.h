@@ -5,10 +5,9 @@
 #include "Type.h"
 
 namespace xsec {
-    template<class HistType>
     class IMeasurement {
     public:
-        virtual HistType Eval(const HistType & data) const = 0;
+        virtual Hist Eval(const Hist & data) const = 0;
 
         virtual void SaveTo(TDirectory * dir, const std::string & subdir) const = 0;
 
