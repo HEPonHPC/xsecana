@@ -5,14 +5,13 @@
 
 namespace xsec {
     /// Defining interface for SignalEstimators
-    template<class HistType>
     class ISignalEstimator {
     public:
-        virtual HistType Eval(const HistType & data) = 0;
+        virtual Hist Eval(const Hist & data) = 0;
 
-        virtual const HistType & Background(const HistType & data) = 0;
+        virtual const Hist & Background(const Hist & data) = 0;
 
-        virtual const HistType & Signal(const HistType & data) = 0;
+        virtual const Hist & Signal(const Hist & data) = 0;
 
         virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
 
@@ -24,6 +23,7 @@ namespace xsec {
         }
 
         virtual ~ISignalEstimator() = default;
+
     protected:
     };
 }

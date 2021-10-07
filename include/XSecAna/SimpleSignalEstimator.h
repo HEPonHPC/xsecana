@@ -4,59 +4,55 @@
 #include "XSecAna/ISignalEstimator.h"
 
 namespace xsec {
-    template<class HistType>
-    class SimpleSignalEstimator : public ISignalEstimator<HistType> {
+    class SimpleSignalEstimator : public ISignalEstimator {
     public:
         SimpleSignalEstimator() = default;
 
-        explicit SimpleSignalEstimator(const HistType & bkgd)
+        explicit SimpleSignalEstimator(const Hist & bkgd)
                 : fBackground(bkgd) {}
 
         /// \brief An implementation of Eval allows this object to
         /// interact with the systematics framework. This one just forwards a call to Signal
         /// TODO don't really like this
-        HistType Eval(const HistType & data) override { return Signal(data); }
+        Hist Eval(const Hist & data) override { return Signal(data); }
 
         /// \brief background could be dependent on data
         /// in this case it isn't
-        const HistType & Background(const HistType & data) override;
+        const Hist & Background(const Hist & data) override;
 
-        const HistType & Signal(const HistType & data) override;
+        const Hist & Signal(const Hist & data) override;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr<ISignalEstimator<HistType> >
+        static std::unique_ptr<ISignalEstimator>
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     private:
-        HistType fBackground;
+        Hist fBackground;
 
         // cache signal hist
-        HistType * fSignal = 0;
+        Hist * fSignal = 0;
 
     };
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    const HistType &
-    SimpleSignalEstimator<HistType>::
-    Background(const HistType & data) {
+    const Hist &
+    SimpleSignalEstimator::
+    Background(const Hist & data) {
         return fBackground;
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    const HistType &
-    SimpleSignalEstimator<HistType>::
-    Signal(const HistType & data) {
-        if (!fSignal) fSignal = new HistType(data - fBackground);
+    const Hist &
+    SimpleSignalEstimator::
+    Signal(const Hist & data) {
+        if (!fSignal) fSignal = new Hist(data - fBackground);
         return *fSignal;
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
     void
-    SimpleSignalEstimator<HistType>::
+    SimpleSignalEstimator::
     SaveTo(TDirectory * dir, const std::string & subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -69,9 +65,8 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    std::unique_ptr<ISignalEstimator<HistType> >
-    SimpleSignalEstimator<HistType>::
+    std::unique_ptr<ISignalEstimator>
+    SimpleSignalEstimator::
     LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
@@ -80,8 +75,8 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleSignalEstimator" && "Type does not match SimpleSignalEstimator");
         delete ptag;
 
-        HistType background = *HistType::LoadFrom(dir, "fBackground");
-        return std::make_unique<SimpleSignalEstimator<HistType> >(background);
+        Hist background = *Hist::LoadFrom(dir, "fBackground");
+        return std::make_unique<SimpleSignalEstimator>(background);
     }
 
 

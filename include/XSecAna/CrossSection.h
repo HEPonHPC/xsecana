@@ -19,7 +19,7 @@ namespace xsec {
         CrossSection() = default;
 
         CrossSection(IEfficiency * efficiency,
-                     ISignalEstimator<HistType> * signal_estimator,
+                     ISignalEstimator * signal_estimator,
                      IFlux * flux,
                      IUnfold * unfold,
                      double ntargets = 0)
@@ -34,7 +34,7 @@ namespace xsec {
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
         static std::unique_ptr<IMeasurement<HistType>> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
-                                                                xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
+                                                                xsec::type::LoadFunction<ISignalEstimator> load_signal,
                                                                 xsec::type::LoadFunction<IFlux> load_flux,
                                                                 xsec::type::LoadFunction<IUnfold> load_unfold,
                                                                 TDirectory * dir,
@@ -48,7 +48,7 @@ namespace xsec {
 
     private:
         IEfficiency * fEfficiency;
-        ISignalEstimator<HistType> * fSignalEstimator;
+        ISignalEstimator * fSignalEstimator;
         IFlux * fFlux;
         IUnfold * fUnfold;
 
@@ -146,7 +146,7 @@ namespace xsec {
     CrossSection<HistType,
                  IsDifferential>::
     LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
-             xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
+             xsec::type::LoadFunction<ISignalEstimator> load_signal,
              xsec::type::LoadFunction<IFlux> load_flux,
              xsec::type::LoadFunction<IUnfold> load_unfold,
              TDirectory * dir,
@@ -156,7 +156,7 @@ namespace xsec {
 
         IEfficiency * eff = 0;
         IFlux * flux = 0;
-        ISignalEstimator<HistType> * sig = 0;
+        ISignalEstimator * sig = 0;
         IUnfold * unfold = 0;
 
         if (dir->GetDirectory("fEfficiency")) eff = load_efficiency(dir, "fEfficiency").release();
