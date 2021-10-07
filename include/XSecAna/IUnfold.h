@@ -48,7 +48,7 @@ namespace xsec {
     Hist
     IdentityUnfold::
     Truth(const Hist & reco) const {
-        return Hist(fMat * reco.ContentsAndUOF().matrix().transpose(),
+        return Hist(fMat * reco.ContentsAndUOF().matrix(),
                     reco.EdgesAndUOF(),
                     reco.Exposure());
     }
