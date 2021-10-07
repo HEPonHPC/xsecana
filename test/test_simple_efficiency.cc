@@ -32,18 +32,18 @@ int main(int argc, char ** argv) {
     delete output;
 
     TFile * input = TFile::Open(test_file_name.c_str());
-    auto loaded = IEfficiency<Hist>::LoadFrom(SimpleEfficiency<Hist>::LoadFrom,
-                                              input,
-                                              "simple_efficiency").release();
+    auto loaded = IEfficiency::LoadFrom(SimpleEfficiency::LoadFrom,
+                                        input,
+                                        "simple_efficiency").release();
     input->Close();
     delete input;
 
     TEST_HISTS_SAME("saveto/loadfrom numerator",
-                    ((SimpleEfficiency<Hist> *) loaded)->GetNumerator(),
+                    ((SimpleEfficiency *) loaded)->GetNumerator(),
                     num,
                     0);
     TEST_HISTS_SAME("saveto/loadfrom denominator",
-                    ((SimpleEfficiency<Hist> *) loaded)->GetDenominator(),
+                    ((SimpleEfficiency *) loaded)->GetDenominator(),
                     den,
                     0);
     TEST_HISTS_SAME("saveto/loadfrom ratio",

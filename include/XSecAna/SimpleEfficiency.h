@@ -7,52 +7,49 @@
 
 namespace xsec {
 
-    template<class HistType>
-    class SimpleEfficiency : public IEfficiency<HistType> {
+    class SimpleEfficiency : public IEfficiency {
     public:
-        SimpleEfficiency(HistType num,
-                         HistType den)
+        SimpleEfficiency(Hist num,
+                         Hist den)
                 : fNumerator(num), fDenominator(den) {}
 
-        HistType Eval() override;
+        Hist Eval() override;
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-        static std::unique_ptr<IEfficiency<HistType> > LoadFrom(TDirectory * dir, const std::string & subdir);
+        static std::unique_ptr<IEfficiency> LoadFrom(TDirectory * dir, const std::string & subdir);
 
-        const HistType & GetNumerator() const { return fNumerator; }
+        const Hist & GetNumerator() const { return fNumerator; }
 
-        const HistType & GetDenominator() const { return fDenominator; }
+        const Hist & GetDenominator() const { return fDenominator; }
 
     private:
-        HistType fNumerator;
-        HistType fDenominator;
+        Hist fNumerator;
+        Hist fDenominator;
 
         // cache the ratio
-        HistType * fRatio = 0;
+        Hist * fRatio = 0;
     };
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    HistType
-    SimpleEfficiency<HistType>::
+    Hist
+    SimpleEfficiency::
     Eval() {
         if (!fRatio) {
-            fRatio = new HistType(fNumerator);
+            fRatio = new Hist(fNumerator);
             *fRatio /= fDenominator;
 
             // binomial error
             auto e = fRatio->ContentsAndUOF();
             auto nsig = fDenominator.ContentsAndUOF();
-            fRatio->SetErrorsAndUOF((e*(1-e) / nsig).sqrt());
+            fRatio->SetErrorsAndUOF((e * (1 - e) / nsig).sqrt());
         }
         return *fRatio;
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
     void
-    SimpleEfficiency<HistType>::
+    SimpleEfficiency::
     SaveTo(TDirectory * dir, std::string subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -66,9 +63,8 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    std::unique_ptr<IEfficiency<HistType> >
-    SimpleEfficiency<HistType>::
+    std::unique_ptr<IEfficiency>
+    SimpleEfficiency::
     LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
@@ -77,9 +73,9 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleEfficiency" && "Type does not match SimpleEfficiency");
         delete ptag;
 
-        HistType numerator = *HistType::LoadFrom(dir, "fNumerator").release();
-        HistType denominator = *HistType::LoadFrom(dir, "fDenominator").release();
-        return std::make_unique<SimpleEfficiency<HistType> >(numerator,
-                                                             denominator);
+        Hist numerator = *Hist::LoadFrom(dir, "fNumerator").release();
+        Hist denominator = *Hist::LoadFrom(dir, "fDenominator").release();
+        return std::make_unique<SimpleEfficiency>(numerator,
+                                                  denominator);
     }
 }

@@ -18,7 +18,7 @@ namespace xsec {
     public:
         CrossSection() = default;
 
-        CrossSection(IEfficiency<HistType> * efficiency,
+        CrossSection(IEfficiency * efficiency,
                      ISignalEstimator<HistType> * signal_estimator,
                      IFlux * flux,
                      IUnfold * unfold,
@@ -33,7 +33,7 @@ namespace xsec {
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr<IMeasurement<HistType>> LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
+        static std::unique_ptr<IMeasurement<HistType>> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
                                                                 xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
                                                                 xsec::type::LoadFunction<IFlux> load_flux,
                                                                 xsec::type::LoadFunction<IUnfold> load_unfold,
@@ -47,7 +47,7 @@ namespace xsec {
         ToDifferential();
 
     private:
-        IEfficiency<HistType> * fEfficiency;
+        IEfficiency * fEfficiency;
         ISignalEstimator<HistType> * fSignalEstimator;
         IFlux * fFlux;
         IUnfold * fUnfold;
@@ -145,7 +145,7 @@ namespace xsec {
     std::unique_ptr<IMeasurement<HistType>>
     CrossSection<HistType,
                  IsDifferential>::
-    LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
+    LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
              xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
              xsec::type::LoadFunction<IFlux> load_flux,
              xsec::type::LoadFunction<IUnfold> load_unfold,
@@ -154,7 +154,7 @@ namespace xsec {
 
         dir = dir->GetDirectory(subdir.c_str());
 
-        IEfficiency<HistType> * eff = 0;
+        IEfficiency * eff = 0;
         IFlux * flux = 0;
         ISignalEstimator<HistType> * sig = 0;
         IUnfold * unfold = 0;

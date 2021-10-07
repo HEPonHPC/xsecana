@@ -162,8 +162,8 @@ namespace xsec {
                           val.EdgesAndUOF(),
                           data_exposure);
 
-                auto efficiency = new SimpleEfficiency<Hist>(get_simple_signal() / val,
-                                                             ones);
+                auto efficiency = new SimpleEfficiency(get_simple_signal() / val,
+                                                       ones);
                 auto flux = new SimpleFlux(Hist(ones.ContentsAndUOF(),
                                                 ones.EdgesAndUOF(),
                                                 get_simple_data().Exposure()));

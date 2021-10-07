@@ -8,12 +8,11 @@
 namespace xsec {
 
     ///\brief Define an interface for saving, loading, and calculating an efficiency
-    template<class HistType>
     class IEfficiency {
 
     public:
         ///\brief return the calculated efficiency
-        virtual HistType Eval() = 0;
+        virtual Hist Eval() = 0;
 
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 
