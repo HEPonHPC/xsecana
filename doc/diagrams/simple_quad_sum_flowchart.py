@@ -7,7 +7,7 @@ g.add_node('SM', label='Systematically-shifted \\nMeasurements', shape='box3d')
 g.add_node('NM', label='Nominal Measurement', shape='box')
 g.add_node('Data', shape='box')
 
-g.add_node('SE', label='Invoke(Measurement::Eval)', shape='parallelogram')
+g.add_node('SE', label='Apply(Measurement::Eval)', shape='parallelogram')
 g.add_edge('SM', 'SE')
 g.add_edge('Data', 'SE')
 
