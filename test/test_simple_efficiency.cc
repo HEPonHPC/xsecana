@@ -8,48 +8,48 @@
 
 using namespace xsec;
 
-int main(int argc, char ** argv)
-{
-  bool verbose = false;
-  if(argc > 1 && std::strcmp(argv[1], "-v") == 0)  verbose = true;
-  bool pass = true;
-  bool test;
-  
-  Hist<double, -1> num = test::utils::get_hist_of_ones<double, -1>();
-  Hist<double, -1> den = test::utils::get_hist_of_ones<double, -1>() / 2;
+int main(int argc, char ** argv) {
+    bool verbose = false;
+    if (argc > 1 && std::strcmp(argv[1], "-v") == 0) verbose = true;
+    bool pass = true;
+    bool test;
 
-  SimpleEfficiency eff(num, den);
+    Hist num = test::utils::get_hist_of_ones();
+    Hist den = test::utils::get_hist_of_ones() / 2;
 
-  TEST_HISTS_SAME("ratio calculation",
-                  eff.Eval(),
-                  (num / den),
-                  0);
 
-  std::string test_file_name = test::utils::test_dir() + "test_simple_efficiency.root";
-  TFile * output = new TFile(test_file_name.c_str(), "recreate");
-  eff.SaveTo(output, "simple_efficiency");
-  output->Close();
-  delete output;
+    SimpleEfficiency eff(num, den);
 
-  TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded = IEfficiency<Hist<double, -1> >::LoadFrom(SimpleEfficiency<Hist<double, -1>>::LoadFrom,
-                                                         input,
-                                                         "simple_efficiency").release();
-  input->Close();
-  delete input;
+    TEST_HISTS_SAME("ratio calculation",
+                    eff.Eval(),
+                    (num / den),
+                    0);
 
-  TEST_HISTS_SAME("saveto/loadfrom numerator",
-                  ((SimpleEfficiency<Hist<double, -1> >*)loaded)->GetNumerator(),
-                  num,
-                  0);
-  TEST_HISTS_SAME("saveto/loadfrom denominator",
-                  ((SimpleEfficiency<Hist<double, -1> > *) loaded)->GetDenominator(),
-                  den,
-                  0);
-  TEST_HISTS_SAME("saveto/loadfrom ratio",
-                  loaded->Eval(),
-                  eff.Eval(),
-                  0);
+    std::string test_file_name = test::utils::test_dir() + "test_simple_efficiency.root";
+    auto output = new TFile(test_file_name.c_str(), "recreate");
+    eff.SaveTo(output, "simple_efficiency");
+    output->Close();
+    delete output;
 
-  return !pass;
+    TFile * input = TFile::Open(test_file_name.c_str());
+    auto loaded = IEfficiency<Hist>::LoadFrom(SimpleEfficiency<Hist>::LoadFrom,
+                                              input,
+                                              "simple_efficiency").release();
+    input->Close();
+    delete input;
+
+    TEST_HISTS_SAME("saveto/loadfrom numerator",
+                    ((SimpleEfficiency<Hist> *) loaded)->GetNumerator(),
+                    num,
+                    0);
+    TEST_HISTS_SAME("saveto/loadfrom denominator",
+                    ((SimpleEfficiency<Hist> *) loaded)->GetDenominator(),
+                    den,
+                    0);
+    TEST_HISTS_SAME("saveto/loadfrom ratio",
+                    loaded->Eval(),
+                    eff.Eval(),
+                    0);
+
+    return !pass;
 }
