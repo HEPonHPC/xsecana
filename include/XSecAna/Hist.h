@@ -11,6 +11,8 @@
 #include <iostream>
 #include <exception>
 
+#include "XSecAna/Array.h"
+
 namespace xsec {
     namespace exceptions {
         class InconsistentBinningError : public std::exception {
@@ -25,6 +27,7 @@ namespace xsec {
             [[nodiscard]] const char * what() const throw() override {
                 return fMsg;
             }
+
         private:
             char fMsg[500];
         };
@@ -36,7 +39,6 @@ namespace xsec {
     /// Wraps Eigen arrays for fast mathematical operations especially linear algebra
     ///
     /// TODO Users can create conversion functions to/from this object
-    typedef Eigen::ArrayXd Array;
     class Hist {
     public:
         Hist() {}
@@ -47,12 +49,21 @@ namespace xsec {
              const Array & edges_and_uof,
              const Array & errors_and_uof,
              const double & exposure = 1)
+                : fContentsAndUOF(contents_and_uof, exposure),
+                  fEdgesAndUOF(edges_and_uof),
+                  fErrorsAndUOF(errors_and_uof) {
+            assert(contents_and_uof.size() + 1 == edges_and_uof.size() &&
+                   contents_and_uof.size() == errors_and_uof.size() &&
+                   "Incompatible edges, contents, and/or errors");
+        }
+
+        Hist(const WeightedArray & contents_and_uof,
+             const Array & edges_and_uof,
+             const Array & errors_and_uof)
                 : fContentsAndUOF(contents_and_uof),
                   fEdgesAndUOF(edges_and_uof),
-                  fErrorsAndUOF(errors_and_uof),
-                  fExposure(exposure)
-        {
-            assert(contents_and_uof.size()+1 == edges_and_uof.size() &&
+                  fErrorsAndUOF(errors_and_uof) {
+            assert(contents_and_uof.size() + 1 == edges_and_uof.size() &&
                    contents_and_uof.size() == errors_and_uof.size() &&
                    "Incompatible edges, contents, and/or errors");
         }
@@ -63,12 +74,19 @@ namespace xsec {
         Hist(const Array & contents_and_uof,
              const Array & edges_and_uof,
              const double & exposure = 1)
+                : fContentsAndUOF(contents_and_uof, exposure),
+                  fEdgesAndUOF(edges_and_uof),
+                  fErrorsAndUOF(Array::Zero(fContentsAndUOF.size())) {
+            assert(contents_and_uof.size() + 1 == edges_and_uof.size() &&
+                   "Incompatible edges, contents, and/or errors");
+        }
+
+        Hist(const WeightedArray & contents_and_uof,
+             const Array & edges_and_uof)
                 : fContentsAndUOF(contents_and_uof),
                   fEdgesAndUOF(edges_and_uof),
-                  fErrorsAndUOF(Array::Zero(fContentsAndUOF.size())),
-                  fExposure(exposure)
-        {
-            assert(contents_and_uof.size()+1 == edges_and_uof.size() &&
+                  fErrorsAndUOF(Array::Zero(fContentsAndUOF.size())) {
+            assert(contents_and_uof.size() + 1 == edges_and_uof.size() &&
                    "Incompatible edges, contents, and/or errors");
         }
 
@@ -78,19 +96,21 @@ namespace xsec {
         /// to the underlaying arrays
         Hist(const int & nbins,
              const double & min,
-             const double & max);
+             const double & max,
+             const double & exposure = 1);
 
         Hist(const Hist & rhs)
-                : fContentsAndUOF(rhs.ContentsAndUOF()),
+                : fContentsAndUOF(rhs.ContentsAndUOF(),
+                                  rhs.Exposure()),
                   fEdgesAndUOF(rhs.EdgesAndUOF()),
-                  fErrorsAndUOF(rhs.ErrorsAndUOF()),
-                  fExposure(rhs.Exposure())
-        {}
+                  fErrorsAndUOF(rhs.ErrorsAndUOF()) {}
 
         virtual Hist BinWidthNormalize() const;
+
         virtual Hist & BinWidthNormalize();
 
         virtual Hist AreaNormalize() const;
+
         virtual Hist & AreaNormalize();
 
         virtual double Integrate() const;
@@ -133,7 +153,7 @@ namespace xsec {
 
         virtual Hist operator=(const Hist & rhs);
 
-        virtual Hist operator=(Hist && rhs);
+        virtual Hist & operator=(Hist && rhs);
 
         virtual Hist ScaleByExposure(double new_expo) const;
 
@@ -148,22 +168,25 @@ namespace xsec {
 
         virtual Hist pow(double exp) const;
 
-        virtual const Array Contents() const
-        { return fContentsAndUOF(Eigen::seq(1, fContentsAndUOF.size()-2)); }
-        virtual const Array & ContentsAndUOF() const { return fContentsAndUOF; }
+        virtual const Array Contents() const {
+            return fContentsAndUOF.array()(Eigen::seq(1, fContentsAndUOF.size() - 2));
+        }
 
-        virtual const Array Errors() const
-        { return fErrorsAndUOF(Eigen::seq(1, fErrorsAndUOF.size()-2)); }
-        virtual const Array & ErrorsAndUOF() const { return fErrorsAndUOF; }
+        virtual const Array ContentsAndUOF() const { return fContentsAndUOF.array(); }
 
-        virtual const Array Edges() const
-        { return fEdgesAndUOF(Eigen::seq(1, fEdgesAndUOF.size()-2)); }
-        virtual const Array & EdgesAndUOF() const { return fEdgesAndUOF; }
+        virtual const Array Errors() const { return fErrorsAndUOF.array()(Eigen::seq(1, fErrorsAndUOF.size() - 2)); }
+
+        virtual const Array ErrorsAndUOF() const { return fErrorsAndUOF; }
+
+        virtual const Array Edges() const { return fEdgesAndUOF(Eigen::seq(1, fEdgesAndUOF.size() - 2)); }
+
+        virtual const Array EdgesAndUOF() const { return fEdgesAndUOF; }
 
         virtual void SetContentsAndUOF(const Array & contents_and_uof) {
             assert(fContentsAndUOF.size() == contents_and_uof.size() &&
                    "Incompatible contents array");
-            fContentsAndUOF = contents_and_uof;
+            fContentsAndUOF = WeightedArray(contents_and_uof,
+                                            this->Exposure());
         }
 
         virtual void SetErrorsAndUOF(const Array & errors_and_uof) {
@@ -172,13 +195,13 @@ namespace xsec {
             fErrorsAndUOF = errors_and_uof;
         }
 
-        virtual double Exposure() const { return fExposure; }
+        virtual double Exposure() const { return fContentsAndUOF.weight(); }
 
         virtual Array BinWidths() const;
 
-        virtual double & operator[](int index) { return fContentsAndUOF(index); }
+        virtual double & operator[](int index) { return fContentsAndUOF.array()(index); }
 
-        virtual double operator[](int index) const { return fContentsAndUOF(index); }
+        virtual double operator[](int index) const { return fContentsAndUOF.array()(index); }
 
         virtual void SaveTo(TDirectory * dir, const std::string & subdir) const;
 
@@ -187,12 +210,11 @@ namespace xsec {
     private:
         void EnsureConsistentBinning(const Hist & rhs, const char * caller, double tol = 1e-5) const;
 
-        Array fContentsAndUOF;
+        WeightedArray fContentsAndUOF;
         Array fErrorsAndUOF;
         Array fEdgesAndUOF;
-        double fExposure = 1;
     };
-    
+
     // ROOT interface
     // we're still dependent enough on ROOT for this to be here
     // but eventually all ROOT things will be put into an optional interface
@@ -229,7 +251,7 @@ namespace xsec {
                 contents(i) = h->GetBinContent(i);
                 errors(i) = h->GetBinError(i);
             }
-            edges(nedges-1) = h->GetBinLowEdge(h->GetNbinsX() + 2);
+            edges(nedges - 1) = h->GetBinLowEdge(h->GetNbinsX() + 2);
 
             return Hist(std::move(contents),
                         std::move(edges),
@@ -245,7 +267,7 @@ namespace xsec {
     void
     Hist::
     EnsureConsistentBinning(const Hist & rhs, const char * caller, double tol) const {
-        if(!(this->fEdgesAndUOF - rhs.fEdgesAndUOF).isZero(tol)) {
+        if (!(this->fEdgesAndUOF - rhs.fEdgesAndUOF).isZero(tol)) {
             std::cout << this->fEdgesAndUOF << std::endl;
             std::cout << rhs.fEdgesAndUOF << std::endl;
             throw exceptions::InconsistentBinningError(__PRETTY_FUNCTION__, tol);
@@ -261,36 +283,39 @@ namespace xsec {
     TrueDivide(const Hist & rhs) const {
         EnsureConsistentBinning(rhs, __PRETTY_FUNCTION__);;
 
-        return Hist(fContentsAndUOF / rhs.ContentsAndUOF(),
-                                  fEdgesAndUOF,
-                                  (fErrorsAndUOF.pow(2) + rhs.fErrorsAndUOF.pow(2)).sqrt(),
-                                  fExposure);
+        return Hist(fContentsAndUOF.TrueDivide(rhs.fContentsAndUOF).array(),
+                    fEdgesAndUOF,
+                    (fErrorsAndUOF.array().pow(2) +
+                     rhs.fErrorsAndUOF.array().pow(2)).sqrt(),
+                    this->Exposure());
     }
 
     /////////////////////////////////////////////////////////
     Hist
     Hist::
     ScaleByExposure(double new_expo) const {
-        return Hist(fContentsAndUOF * (new_expo / fExposure),
-                                  fEdgesAndUOF,
-                                  fErrorsAndUOF * (new_expo / fExposure),
-                                  new_expo);
+        return Hist(fContentsAndUOF.ScaleByWeight(new_expo).array(),
+                    fEdgesAndUOF,
+                    fErrorsAndUOF * new_expo / this->Exposure(),
+                    new_expo);
     }
 
     /////////////////////////////////////////////////////////
     double
     Hist::
     Integrate() const {
-        return fContentsAndUOF.sum();
+        return fContentsAndUOF.array().sum();
     }
 
     /////////////////////////////////////////////////////////
     Hist::
     Hist(const int & nbins,
          const double & min,
-         const double & max) {
-        fContentsAndUOF = Array::Zero(nbins+2);
-        fErrorsAndUOF = Array::Zero(nbins+2);
+         const double & max,
+         const double & exposure) {
+        fContentsAndUOF = WeightedArray(Array::Zero(nbins + 2),
+                                        exposure);
+        fErrorsAndUOF = Array::Zero(nbins + 2);
 
         auto step = (max - min) / nbins;
         fEdgesAndUOF = Array::LinSpaced(nbins + 3,
@@ -313,7 +338,7 @@ namespace xsec {
         // exposure is saved in a histogram so it gets accumulated with ROOT's hadd
         TH1 * exposure = new TH1D("", "", 1, 0, 1);
 
-        exposure->SetBinContent(1, fExposure);
+        exposure->SetBinContent(1, this->Exposure());
         exposure->Write("exposure");
 
         tmp->cd();
@@ -334,18 +359,17 @@ namespace xsec {
             exit(1);
         }
 
-        return std::make_unique<Hist >(root::FromTH1(h, exposure->GetBinContent(1)));
+        return std::make_unique<Hist>(root::FromTH1(h, exposure->GetBinContent(1)));
     }
 
     /////////////////////////////////////////////////////////
     bool
     Hist::
     operator==(const Hist & rhs) const {
-        auto scale_exposure = this->fExposure / rhs.fExposure;
-        return (this->fContentsAndUOF - rhs.fContentsAndUOF * scale_exposure).isZero(0) &&
+        auto scale_exposure = this->Exposure() / rhs.Exposure();
+        return (this->fContentsAndUOF == rhs.fContentsAndUOF) &&
                (this->fEdgesAndUOF - rhs.fEdgesAndUOF).isZero(0) &&
-               (this->fErrorsAndUOF - rhs.fErrorsAndUOF * scale_exposure).isZero(0) &&
-               (this->fExposure == rhs.fExposure);
+               (this->fErrorsAndUOF - rhs.fErrorsAndUOF).isZero(0);
     }
 
     /////////////////////////////////////////////////////////
@@ -354,7 +378,7 @@ namespace xsec {
     Hist &
     Hist::
     BinWidthNormalize() {
-        fContentsAndUOF(Eigen::seqN(1, fContentsAndUOF.size() - 2)) /= this->BinWidths();
+        fContentsAndUOF.array()(Eigen::seqN(1, fContentsAndUOF.size() - 2)) /= this->BinWidths();
         return *this;
     }
 
@@ -397,8 +421,8 @@ namespace xsec {
     Array
     Hist::
     BinWidths() const {
-        return fEdgesAndUOF(Eigen::seqN(3, fContentsAndUOF.size()-2)) -
-               fEdgesAndUOF(Eigen::seqN(2, fContentsAndUOF.size()-2));
+        return fEdgesAndUOF(Eigen::seqN(3, fContentsAndUOF.size() - 2)) -
+               fEdgesAndUOF(Eigen::seqN(2, fContentsAndUOF.size() - 2));
     }
 
     /////////////////////////////////////////////////////////
@@ -407,10 +431,10 @@ namespace xsec {
     Hist
     Hist::
     abs() const {
-        return Hist(this->fContentsAndUOF.abs(),
-                                  this->fEdgesAndUOF,
-                                  this->fErrorsAndUOF.abs(),
-                                  this->fExposure);
+        return Hist(this->fContentsAndUOF.abs().array(),
+                    this->fEdgesAndUOF,
+                    this->fErrorsAndUOF.abs(),
+                    this->Exposure());
     }
 
     /////////////////////////////////////////////////////////
@@ -421,9 +445,8 @@ namespace xsec {
     Hist::
     abs2() const {
         return Hist(this->fContentsAndUOF.abs2(),
-                                  this->fEdgesAndUOF,
-                                  this->fErrorsAndUOF.abs2(),
-                                  this->fExposure);
+                    this->fEdgesAndUOF,
+                    this->fErrorsAndUOF.abs2());
     }
 
     /////////////////////////////////////////////////////////
@@ -434,9 +457,8 @@ namespace xsec {
     Hist::
     sqrt() const {
         return Hist(this->fContentsAndUOF.sqrt(),
-                                  this->fEdgesAndUOF,
-                                  this->fErrorsAndUOF / 2.,
-                                  std::sqrt(this->fExposure));
+                    this->fEdgesAndUOF,
+                    this->fErrorsAndUOF / 2.);
     }
 
     /////////////////////////////////////////////////////////
@@ -447,9 +469,8 @@ namespace xsec {
     Hist::
     pow(double exp) const {
         return Hist(this->fContentsAndUOF.pow(exp),
-                                  this->fEdgesAndUOF,
-                                  this->fErrorsAndUOF * exp,
-                                  std::pow(this->fExposure, exp));
+                    this->fEdgesAndUOF,
+                    this->fErrorsAndUOF * exp);
     }
 
     /////////////////////////////////////////////////////////
@@ -466,10 +487,9 @@ namespace xsec {
     Hist::
     operator-=(const Hist & rhs) {
         EnsureConsistentBinning(rhs, __PRETTY_FUNCTION__);;
-
-        this->fContentsAndUOF -= rhs.fContentsAndUOF * fExposure / rhs.fExposure;
+        this->fContentsAndUOF -= rhs.fContentsAndUOF;
         this->fErrorsAndUOF = (this->fErrorsAndUOF.pow(2) +
-                               (rhs.fErrorsAndUOF * fExposure / rhs.fExposure).pow(2)).sqrt();
+                               (rhs.fErrorsAndUOF * this->Exposure() / rhs.Exposure()).pow(2)).sqrt();
         return *this;
     }
 
@@ -487,10 +507,9 @@ namespace xsec {
     Hist::
     operator+=(const Hist & rhs) {
         EnsureConsistentBinning(rhs, __PRETTY_FUNCTION__);;
-
-        this->fContentsAndUOF += rhs.fContentsAndUOF * fExposure / rhs.fExposure;
+        this->fContentsAndUOF += rhs.fContentsAndUOF;
         this->fErrorsAndUOF = (this->fErrorsAndUOF.pow(2) +
-                               (rhs.fErrorsAndUOF * fExposure / rhs.fExposure).pow(2)).sqrt();
+                               (rhs.fErrorsAndUOF * this->Exposure() / rhs.Exposure()).pow(2)).sqrt();
         return *this;
     }
 
@@ -509,9 +528,9 @@ namespace xsec {
     operator*=(const Hist & rhs) {
         EnsureConsistentBinning(rhs, __PRETTY_FUNCTION__);;
 
-        this->fContentsAndUOF *= rhs.fContentsAndUOF * fExposure / rhs.fExposure;
+        this->fContentsAndUOF *= rhs.fContentsAndUOF;
         this->fErrorsAndUOF = (this->fErrorsAndUOF.pow(2) +
-                               (rhs.fErrorsAndUOF * fExposure / rhs.fExposure).pow(2)).sqrt();
+                               (rhs.fErrorsAndUOF * this->Exposure() / rhs.Exposure()).pow(2)).sqrt();
         return *this;
     }
 
@@ -530,10 +549,9 @@ namespace xsec {
     operator/=(const Hist & rhs) {
         EnsureConsistentBinning(rhs, __PRETTY_FUNCTION__);;
 
-        this->fContentsAndUOF /= rhs.fContentsAndUOF * fExposure / rhs.fExposure;
+        this->fContentsAndUOF /= rhs.fContentsAndUOF;
         this->fErrorsAndUOF = (this->fErrorsAndUOF.pow(2) +
-                               (rhs.fErrorsAndUOF * fExposure / rhs.fExposure).pow(2)).sqrt();
-        this->fExposure = 1;
+                               (rhs.fErrorsAndUOF * this->Exposure() / rhs.Exposure()).pow(2)).sqrt();
         return *this;
     }
 
@@ -614,19 +632,17 @@ namespace xsec {
         fContentsAndUOF = rhs.fContentsAndUOF;
         fEdgesAndUOF = rhs.fEdgesAndUOF;
         fErrorsAndUOF = rhs.fErrorsAndUOF;
-        fExposure = rhs.fExposure;
         return *this;
     }
 
     /////////////////////////////////////////////////////////
-    Hist
+    Hist &
     Hist::
     operator=(Hist && rhs) {
-        if(this == &rhs) return *this;
+        if (this == &rhs) return *this;
         fContentsAndUOF = std::move(rhs.fContentsAndUOF);
         fEdgesAndUOF = std::move(rhs.fEdgesAndUOF);
         fErrorsAndUOF = std::move(rhs.fErrorsAndUOF);
-        fExposure = rhs.fExposure;
         return *this;
     }
 }
