@@ -36,7 +36,7 @@ namespace xsec {
                 : fFlux(flux)
         {}
 
-        virtual HistType Eval(const typename HistType::edges_type & edges_and_uof) const override;
+        virtual HistType Eval(const Array & edges_and_uof) const override;
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
@@ -81,9 +81,9 @@ namespace xsec {
     template<class HistType>
     HistType
     SimpleIntegratedFlux<HistType>::
-    Eval(const typename HistType::edges_type & edges_and_uof) const {
+    Eval(const Array & edges_and_uof) const {
         auto N = fFlux.Integrate();
-        auto ones = HistType::array_and_uof_type::Ones(edges_and_uof.size() - 1);
+        auto ones = Array::Ones(edges_and_uof.size() - 1);
         return HistType(ones * N,
                         edges_and_uof,
                         ones * std::sqrt(N),
