@@ -7,7 +7,7 @@
 
 namespace xsec {
 
-    template<class HistType = HistXd>
+    template<class HistType>
     class SimpleEfficiency : public IEfficiency<HistType> {
     public:
         SimpleEfficiency(HistType num,

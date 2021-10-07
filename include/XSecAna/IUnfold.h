@@ -1,13 +1,14 @@
 #pragma once
 
 #include "XSecAna/Hist.h"
+#include "XSecAna/Type.h"
 #include "TParameter.h"
 
+
 namespace xsec {
-    template<class HistType = HistXd>
     class IUnfold {
     public:
-        virtual HistType Truth(const HistType & reco) const = 0;
+        virtual Hist Truth(const Hist & reco) const = 0;
 
         virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
 
@@ -21,72 +22,53 @@ namespace xsec {
     };
 
     /////////////////////////////////////////////////////////
-    template<class Scalar,
-            int Cols>
-    class IdentityUnfold : public IUnfold<xsec::Hist<Scalar, Cols> > {
+    class IdentityUnfold : public IUnfold {
     public:
 
-        explicit IdentityUnfold(int nbins);
+        explicit IdentityUnfold(int nbins_and_uof);
 
-        Hist <Scalar, Cols> Truth(const Hist <Scalar, Cols> & reco) const override;
+        Hist Truth(const Hist & reco) const override;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr<IUnfold<Hist<Scalar, Cols>>> LoadFrom(TDirectory * dir, const std::string & subdir);
+        static std::unique_ptr<IUnfold> LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
-        Eigen::Matrix<Scalar,
-                      ContentsAndUOFSize(Cols),
-                      ContentsAndUOFSize(Cols)> fMat;
+        Eigen::MatrixXd fMat;
     };
 
 
-/////////////////////////////////////////////////////////
-    template<class Scalar,
-            int Cols>
-    IdentityUnfold<Scalar,
-                   Cols>::
+    /////////////////////////////////////////////////////////
+    IdentityUnfold::
     IdentityUnfold(int nbins_and_uof) {
-        fMat = Eigen::Matrix<Scalar,
-                             ContentsAndUOFSize(Cols),
-                             ContentsAndUOFSize(Cols)>::
-        Identity(nbins_and_uof, nbins_and_uof);
+        fMat = Eigen::MatrixXd::Identity(nbins_and_uof, nbins_and_uof);
     }
 
-/////////////////////////////////////////////////////////
-    template<class Scalar,
-            int Cols>
-    Hist <Scalar, Cols>
-    IdentityUnfold<Scalar,
-                   Cols>::
-    Truth(const Hist <Scalar, Cols> & reco) const {
-        return Hist<Scalar, Cols>(fMat * reco.ContentsAndUOF().matrix().transpose(),
-                                  reco.EdgesAndUOF(),
-                                  reco.Exposure());
+    /////////////////////////////////////////////////////////
+    Hist
+    IdentityUnfold::
+    Truth(const Hist & reco) const {
+        return Hist(fMat * reco.ContentsAndUOF().matrix().transpose(),
+                    reco.EdgesAndUOF(),
+                    reco.Exposure());
     }
 
-/////////////////////////////////////////////////////////
-    template<class Scalar,
-            int Cols>
+    /////////////////////////////////////////////////////////
     void
-    IdentityUnfold<Scalar,
-                   Cols>::
+    IdentityUnfold::
     SaveTo(TDirectory * dir, const std::string & subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
         dir->cd();
 
-        TParameter<Scalar>("cols", fMat.cols()).Write("cols");
+        TParameter<double>("cols", fMat.cols()).Write("cols");
 
         tmp->cd();
     }
 
-/////////////////////////////////////////////////////////
-    template<class Scalar,
-            int Cols>
-    std::unique_ptr<IUnfold<Hist<Scalar, Cols>>>
-    IdentityUnfold<Scalar,
-                   Cols>::
+    /////////////////////////////////////////////////////////
+    std::unique_ptr<IUnfold>
+    IdentityUnfold::
     LoadFrom(TDirectory
              * dir,
              const std::string & subdir) {
@@ -94,10 +76,10 @@ namespace xsec {
         dir = dir->GetDirectory(subdir.c_str());
         dir->cd();
 
-        auto cols = ((TParameter<Scalar> *) dir->Get("cols"))->GetVal();
+        auto cols = ((TParameter<double> *) dir->Get("cols"))->GetVal();
         tmp->cd();
 
-        return std::make_unique<IdentityUnfold<Scalar, Cols> >(cols);
+        return std::make_unique<IdentityUnfold>(cols);
     }
 
 }

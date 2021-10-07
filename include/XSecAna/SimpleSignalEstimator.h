@@ -4,7 +4,7 @@
 #include "XSecAna/ISignalEstimator.h"
 
 namespace xsec {
-    template<class HistType = HistXd>
+    template<class HistType>
     class SimpleSignalEstimator : public ISignalEstimator<HistType> {
     public:
         SimpleSignalEstimator() = default;

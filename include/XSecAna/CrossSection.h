@@ -21,8 +21,8 @@ namespace xsec {
         CrossSection(IEfficiency<HistType> * efficiency,
                      ISignalEstimator<HistType> * signal_estimator,
                      IFlux<HistType> * flux,
-                     IUnfold<HistType> * unfold,
-                     typename HistType::scalar_type ntargets = 0)
+                     IUnfold * unfold,
+                     double ntargets = 0)
                 : fEfficiency(efficiency),
                   fSignalEstimator(signal_estimator),
                   fFlux(flux),
@@ -36,7 +36,7 @@ namespace xsec {
         static std::unique_ptr<IMeasurement<HistType>> LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
                                                                 xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
                                                                 xsec::type::LoadFunction<IFlux<HistType>> load_flux,
-                                                                xsec::type::LoadFunction<IUnfold<HistType>> load_unfold,
+                                                                xsec::type::LoadFunction<IUnfold> load_unfold,
                                                                 TDirectory * dir,
                                                                 const std::string & subdir);
 
@@ -50,9 +50,9 @@ namespace xsec {
         IEfficiency<HistType> * fEfficiency;
         ISignalEstimator<HistType> * fSignalEstimator;
         IFlux<HistType> * fFlux;
-        IUnfold<HistType> * fUnfold;
+        IUnfold * fUnfold;
 
-        typename HistType::scalar_type fNTargets;
+        double fNTargets;
     };
 
     ////////////////////////////////////////////////
@@ -80,7 +80,7 @@ namespace xsec {
     HistType CalculateCrossSection(const HistType & unfolded_selected_signal,
                                    const HistType & efficiency,
                                    const HistType & flux,
-                                   const typename HistType::scalar_type ntargets,
+                                   const double ntargets,
                                    const bool is_differential) {
         HistType xsec = unfolded_selected_signal;
 
@@ -134,7 +134,7 @@ namespace xsec {
         if (fSignalEstimator) fSignalEstimator->SaveTo(dir, "fSignalEstimator");
         if (fUnfold) fUnfold->SaveTo(dir, "fUnfold");
 
-        TParameter<typename HistType::scalar_type>("fNTargets", fNTargets).Write("fNTargets");
+        TParameter<double>("fNTargets", fNTargets).Write("fNTargets");
 
         tmp->cd();
     }
@@ -148,7 +148,7 @@ namespace xsec {
     LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
              xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
              xsec::type::LoadFunction<IFlux<HistType>> load_flux,
-             xsec::type::LoadFunction<IUnfold<HistType>> load_unfold,
+             xsec::type::LoadFunction<IUnfold> load_unfold,
              TDirectory * dir,
              const std::string & subdir) {
 
@@ -157,7 +157,7 @@ namespace xsec {
         IEfficiency<HistType> * eff = 0;
         IFlux<HistType> * flux = 0;
         ISignalEstimator<HistType> * sig = 0;
-        IUnfold<HistType> * unfold = 0;
+        IUnfold * unfold = 0;
 
         if (dir->GetDirectory("fEfficiency")) eff = load_efficiency(dir, "fEfficiency").release();
         if (dir->GetDirectory("fFlux")) flux = load_flux(dir, "fFlux").release();

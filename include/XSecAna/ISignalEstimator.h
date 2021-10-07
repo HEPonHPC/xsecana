@@ -5,7 +5,7 @@
 
 namespace xsec {
     /// Defining interface for SignalEstimators
-    template<class HistType = HistXd>
+    template<class HistType>
     class ISignalEstimator {
     public:
         virtual HistType Eval(const HistType & data) = 0;

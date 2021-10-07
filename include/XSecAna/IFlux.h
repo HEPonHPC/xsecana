@@ -4,10 +4,10 @@
 #include "XSecAna/Type.h"
 
 namespace xsec {
-    template<class HistType = HistXd>
+    template<class HistType>
     class IFlux {
     public:
-        virtual HistType Eval(const typename HistType::edges_type & edges_and_uof) const = 0;
+        virtual HistType Eval(const Array & edges_and_uof) const = 0;
 
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 

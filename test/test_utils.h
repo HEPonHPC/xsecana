@@ -66,26 +66,23 @@ namespace xsec {
     namespace test {
         namespace utils {
             /////////////////////////////////////////////////////////
-            template<class Scalar,
-                    int Cols>
             struct Ratio {
                 Ratio() {}
 
-                Ratio(Hist<Scalar, Cols> num,
-                      Hist<Scalar, Cols> den)
+                Ratio(Hist num,
+                      Hist den)
                         : numerator(num), denominator(den) {}
 
-                Hist<Scalar, Cols> numerator;
-                Hist<Scalar, Cols> denominator;
+                Hist numerator;
+                Hist denominator;
 
-                Hist<Scalar, Cols> Eval() const {
+                Hist Eval() const {
                     return numerator / denominator;
                 }
             };
 
             /////////////////////////////////////////////////////////
-            typedef Hist<double, -1> histtype;
-            typedef CrossSection<histtype> SimpleCrossSection;
+            typedef CrossSection<Hist> SimpleCrossSection;
 
             /////////////////////////////////////////////////////////
             template<typename ArrayType>
@@ -106,59 +103,53 @@ namespace xsec {
             const static double data_exposure = 0.5;
 
             /////////////////////////////////////////////////////////
-            template<class Scalar, int Cols>
-            Hist<Scalar, Cols> get_simple_data() {
-                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, 1, 2) + 2,
-                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 20),
-                                          data_exposure); // data will often come at different exposure from mc
+            Hist get_simple_data() {
+                return Hist(Array::LinSpaced(12, 1, 2) + 2,
+                            Array::LinSpaced(13, 0, 20),
+                            data_exposure); // data will often come at different exposure from mc
             }
 
             /////////////////////////////////////////////////////////
-            template<class Scalar, int Cols>
-            Hist<Scalar, Cols> get_hist_of_ones() {
-                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::Ones(12),
-                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 13));
-            }
-            /////////////////////////////////////////////////////////
-            template<class Scalar, int Cols>
-            Hist<Scalar, Cols> get_simple_background() {
-                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::Ones(12),
-                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 20));
+            Hist get_hist_of_ones() {
+                return Hist(Array::Ones(12),
+                            Array::LinSpaced(13, 0, 13));
             }
 
             /////////////////////////////////////////////////////////
-            template<class Scalar, int Cols>
-            Hist<Scalar, Cols> get_simple_signal() {
-                return get_simple_data<Scalar, Cols>() - get_simple_background<Scalar, Cols>();
+            Hist get_simple_background() {
+                return Hist(Array::Ones(12),
+                            Array::LinSpaced(13, 0, 20));
             }
 
             /////////////////////////////////////////////////////////
-            template<class Scalar, int Cols>
-            Hist<Scalar, Cols> get_simple_nominal_hist() {
-                return Hist<Scalar, Cols>(Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, -0.5, 0.5) + 4,
-                                          Hist<Scalar, Cols>::edges_type::LinSpaced(13, 0, 20));
+            Hist get_simple_signal() {
+                return get_simple_data() - get_simple_background();
             }
 
             /////////////////////////////////////////////////////////
-            template<class Scalar, int Cols>
-            Hist<Scalar, Cols> get_simple_up_hist() {
-                auto nominal = get_simple_nominal_hist<Scalar, Cols>();
-                auto step = Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, 0, .3).reverse();
-
-                return Hist<Scalar, Cols>(nominal.ContentsAndUOF() +
-                                          nominal.ContentsAndUOF() * step.pow(2),
-                                          nominal.EdgesAndUOF());
+            Hist get_simple_nominal_hist() {
+                return Hist(Array::LinSpaced(12, -0.5, 0.5) + 4,
+                            Array::LinSpaced(13, 0, 20));
             }
 
             /////////////////////////////////////////////////////////
-            template<class Scalar, int Cols>
-            Hist<Scalar, Cols> get_simple_down_hist() {
-                auto nominal = get_simple_nominal_hist<Scalar, Cols>();
-                auto step = Hist<Scalar, Cols>::array_and_uof_type::LinSpaced(12, 0, .3);
+            Hist get_simple_up_hist() {
+                auto nominal = get_simple_nominal_hist();
+                auto step = Array::LinSpaced(12, 0, .3).reverse();
 
-                return Hist<Scalar, Cols>(nominal.ContentsAndUOF() -
-                                          nominal.ContentsAndUOF() * step.pow(2),
-                                          nominal.EdgesAndUOF());
+                return Hist(nominal.ContentsAndUOF() +
+                            nominal.ContentsAndUOF() * step.pow(2),
+                            nominal.EdgesAndUOF());
+            }
+
+            /////////////////////////////////////////////////////////
+            Hist get_simple_down_hist() {
+                auto nominal = get_simple_nominal_hist();
+                auto step = Array::LinSpaced(12, 0, .3);
+
+                return Hist(nominal.ContentsAndUOF() -
+                            nominal.ContentsAndUOF() * step.pow(2),
+                            nominal.EdgesAndUOF());
             }
 
             const static double ntargets = 1e4;
@@ -166,19 +157,18 @@ namespace xsec {
             /////////////////////////////////////////////////////////
             // make a cross section object that evaluates out to
             //  the input array when folded
-            template<class Scalar, int Cols>
-            IMeasurement<Hist<Scalar, Cols> > * make_simple_xsec(Hist<Scalar, Cols> val) {
-                Hist<Scalar, Cols> ones(Hist<Scalar, Cols>::array_and_uof_type::Ones(12),
-                                        val.EdgesAndUOF(),
-                                        data_exposure);
+            IMeasurement<Hist> * make_simple_xsec(Hist val) {
+                Hist ones(Array::Ones(12),
+                          val.EdgesAndUOF(),
+                          data_exposure);
 
-                auto efficiency = new SimpleEfficiency<Hist<Scalar, Cols> >(get_simple_signal<Scalar, Cols>() / val,
-                                                                            ones);
-                auto flux = new SimpleFlux(Hist<Scalar, Cols>(ones.ContentsAndUOF(),
-                                                              ones.EdgesAndUOF(),
-                                                              get_simple_data<Scalar, Cols>().Exposure()));
-                auto signal_estimator = new SimpleSignalEstimator(get_simple_background<Scalar, Cols>());
-                auto unfold = new IdentityUnfold<Scalar, Cols>(ones.ContentsAndUOF().size());
+                auto efficiency = new SimpleEfficiency<Hist>(get_simple_signal() / val,
+                                                             ones);
+                auto flux = new SimpleFlux(Hist(ones.ContentsAndUOF(),
+                                                ones.EdgesAndUOF(),
+                                                get_simple_data().Exposure()));
+                auto signal_estimator = new SimpleSignalEstimator(get_simple_background());
+                auto unfold = new IdentityUnfold(ones.ContentsAndUOF().size());
                 auto ret = new SimpleCrossSection(efficiency,
                                                   signal_estimator,
                                                   flux,
@@ -189,22 +179,21 @@ namespace xsec {
 
 
             /////////////////////////////////////////////////////////
-            template<class HistType>
-            std::vector<HistType*> make_simple_hist_multiverse(const HistType & hnominal, int nuniverses) {
+            std::vector<Hist *> make_simple_hist_multiverse(const Hist & hnominal, int nuniverses) {
                 double maxy = 0.1;
                 double miny = -0.1;
                 double step = (maxy - miny) / (nuniverses - 1);
-                std::vector<HistType*> hist_universes(nuniverses);
+                std::vector<Hist *> hist_universes(nuniverses);
                 for (auto i = 0; i < nuniverses; i++) {
-                    hist_universes[i] = new HistType(hnominal + hnominal * (miny + step * i));
+                    hist_universes[i] = new Hist(hnominal + hnominal * (miny + step * i));
                 }
                 return hist_universes;
             }
 
             /////////////////////////////////////////////////////////
-            template<class HistType>
-            std::vector<IMeasurement<HistType>*> make_simple_xsec_multiverse(const HistType & hnominal, int nuniverses) {
-                std::vector<IMeasurement<HistType>*> xsec_universes(nuniverses);
+            std::vector<IMeasurement<Hist> *>
+            make_simple_xsec_multiverse(const Hist & hnominal, int nuniverses) {
+                std::vector<IMeasurement<Hist> *> xsec_universes(nuniverses);
                 auto hist_universes = make_simple_hist_multiverse(hnominal, nuniverses);
 
                 for (auto i = 0; i < nuniverses; i++) {

@@ -8,7 +8,7 @@
 
 namespace xsec {
 
-    template<class HistType = HistXd>
+    template<class HistType>
     class SimpleFlux : public IFlux<HistType> {
     public:
         SimpleFlux() = default;
@@ -16,7 +16,7 @@ namespace xsec {
         explicit SimpleFlux(const HistType & flux)
                 : fFlux(flux) {}
 
-        virtual HistType Eval(const typename HistType::edges_type & edges_and_uof) const override
+        virtual HistType Eval(const Array & edges_and_uof) const override
         { return fFlux; }
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
@@ -32,7 +32,7 @@ namespace xsec {
     class SimpleIntegratedFlux : public IFlux<HistType> {
     public:
         SimpleIntegratedFlux() = default;
-        explicit SimpleIntegratedFlux(const HistXd & flux)
+        explicit SimpleIntegratedFlux(const Hist & flux)
                 : fFlux(flux)
         {}
 
@@ -43,7 +43,7 @@ namespace xsec {
         static std::unique_ptr<IFlux<HistType>>
         LoadFrom(TDirectory * dir, const std::string & subdir);
     private:
-        HistXd fFlux;
+        Hist fFlux;
     };
 
     //////////////////////////////////////////////////////////
@@ -117,7 +117,7 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleIntegratedFlux" && "Type does not match SimpleFlux");
         delete ptag;
 
-        auto flux = *HistXd::LoadFrom(dir, "fFlux");
+        auto flux = *Hist::LoadFrom(dir, "fFlux");
         return std::make_unique<SimpleIntegratedFlux<HistType>>(flux);
     }
 }
