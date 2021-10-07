@@ -15,8 +15,8 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
   
-  Hist<double, 10> num = test::utils::get_hist_of_ones<double, 10>();
-  Hist<double, 10> den = test::utils::get_hist_of_ones<double, 10>() / 2;
+  Hist<double, -1> num = test::utils::get_hist_of_ones<double, -1>();
+  Hist<double, -1> den = test::utils::get_hist_of_ones<double, -1>() / 2;
 
   SimpleEfficiency eff(num, den);
 
@@ -32,18 +32,18 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded = IEfficiency<Hist<double, 10> >::LoadFrom(SimpleEfficiency<Hist<double, 10>>::LoadFrom,
+  auto loaded = IEfficiency<Hist<double, -1> >::LoadFrom(SimpleEfficiency<Hist<double, -1>>::LoadFrom,
                                                          input,
                                                          "simple_efficiency").release();
   input->Close();
   delete input;
 
   TEST_HISTS_SAME("saveto/loadfrom numerator",
-                  ((SimpleEfficiency<Hist<double, 10> >*)loaded)->GetNumerator(),
+                  ((SimpleEfficiency<Hist<double, -1> >*)loaded)->GetNumerator(),
                   num,
                   0);
   TEST_HISTS_SAME("saveto/loadfrom denominator",
-                  ((SimpleEfficiency<Hist<double, 10> > *) loaded)->GetDenominator(),
+                  ((SimpleEfficiency<Hist<double, -1> > *) loaded)->GetDenominator(),
                   den,
                   0);
   TEST_HISTS_SAME("saveto/loadfrom ratio",

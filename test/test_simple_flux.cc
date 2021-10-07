@@ -14,7 +14,7 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  auto flux_hist = test::utils::get_hist_of_ones<double, 10>();
+  auto flux_hist = test::utils::get_hist_of_ones<double, -1>();
   auto flux_binning = flux_hist.EdgesAndUOF();
 
   HistXd flux_histxd(flux_hist.ContentsAndUOF(),
@@ -23,8 +23,8 @@ int main(int argc, char ** argv)
                      flux_hist.Exposure());
 
   // arbitrary binning
-  auto analysis_binning = Hist<double, 40>::edges_type::LinSpaced(43, 0, 41);
-  Hist<double, 40> ones_analysis_binning(Hist<double, 40>::array_and_uof_type::Ones(42),
+  auto analysis_binning = Hist<double, -1>::edges_type::LinSpaced(43, 0, 41);
+  Hist<double, -1> ones_analysis_binning(Hist<double, -1>::array_and_uof_type::Ones(42),
                                          analysis_binning);
 
   if(flux_binning.size() == analysis_binning.size()) {
@@ -32,7 +32,7 @@ int main(int argc, char ** argv)
   }
 
   SimpleFlux flux(flux_hist);
-  SimpleIntegratedFlux<Hist<double, 40> > integrated_flux(flux_histxd);
+  SimpleIntegratedFlux<Hist<double, -1> > integrated_flux(flux_histxd);
 
 
   TEST_HISTS_SAME("flux.Eval()" ,
@@ -56,10 +56,10 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded_flux = IFlux<Hist<double, 10> >::LoadFrom(SimpleFlux<Hist<double, 10> >::LoadFrom,
+  auto loaded_flux = IFlux<Hist<double, -1> >::LoadFrom(SimpleFlux<Hist<double, -1> >::LoadFrom,
                                                         input,
                                                         "flux");
-  auto loaded_integrated_flux = IFlux<Hist<double, 40> >::LoadFrom(SimpleIntegratedFlux<Hist<double, 40>>::LoadFrom,
+  auto loaded_integrated_flux = IFlux<Hist<double, -1> >::LoadFrom(SimpleIntegratedFlux<Hist<double,-1>>::LoadFrom,
                                                                    input,
                                                                    "integrated_flux");
   input->Close();

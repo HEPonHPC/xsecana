@@ -44,7 +44,7 @@ namespace xsec {
     MaxShift(const Hist <Scalar, Cols> & h1,
              const Hist <Scalar, Cols> & h2) {
         // stack then take max value in each column
-        Eigen::Matrix<Scalar, 2, ContentsAndUOFSize(Cols)> stack;
+        Eigen::Matrix<Scalar, 2, ContentsAndUOFSize(Cols)> stack(2, h1.ContentsAndUOF().size());
         stack << h1.ContentsAndUOF(), h2.ContentsAndUOF();
 
         return Hist<Scalar, Cols>(stack.colwise().maxCoeff(),

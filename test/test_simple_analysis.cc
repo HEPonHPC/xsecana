@@ -17,7 +17,7 @@ using namespace xsec;
 
 auto test_file_name = test::utils::test_dir() + "test_simple_analysis.root";
 
-typedef xsec::Hist<double, 10> histtype;
+typedef xsec::Hist<double, -1> histtype;
 
 std::unique_ptr<IMeasurement<histtype>>
 LoadSimpleCrossSection(TDirectory * dir,
@@ -25,7 +25,7 @@ LoadSimpleCrossSection(TDirectory * dir,
     return CrossSection<histtype>::LoadFrom(SimpleEfficiency<histtype>::LoadFrom,
                                   SimpleSignalEstimator<histtype>::LoadFrom,
                                   SimpleFlux<histtype>::LoadFrom,
-                                  IdentityUnfold<double, 10>::LoadFrom,
+                                  IdentityUnfold<double, -1>::LoadFrom,
                                   dir,
                                   name);
 }
@@ -37,21 +37,21 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  Hist<double, 10> ones = test::utils::get_hist_of_ones<double, 10>();
+  Hist<double, -1> ones = test::utils::get_hist_of_ones<double, -1>();
 
-  auto data = test::utils::get_simple_data<double, 10>();
+  auto data = test::utils::get_simple_data<double, -1>();
 
 
-  auto hnominal = test::utils::get_simple_nominal_hist<double, 10>();
-  auto hup = test::utils::get_simple_up_hist<double, 10>();
-  auto hdown = test::utils::get_simple_down_hist<double, 10>();
+  auto hnominal = test::utils::get_simple_nominal_hist<double, -1>();
+  auto hup = test::utils::get_simple_up_hist<double, -1>();
+  auto hdown = test::utils::get_simple_down_hist<double, -1>();
 
 
   auto nominal_xsec = test::utils::make_simple_xsec(hnominal);
   auto up   = test::utils::make_simple_xsec(hup);
   auto down = test::utils::make_simple_xsec(hdown);
 
-  typedef Hist<double, 10> histtype;
+  typedef Hist<double, -1> histtype;
   auto nuniverses = 50;
   auto xsec_universes = test::utils::make_simple_xsec_multiverse(hnominal, nuniverses);
   Systematic<IMeasurement<histtype>> syst_mv("mv", xsec_universes);

@@ -171,10 +171,7 @@ int main(int argc, char ** argv)
   if(argc > 1 && std::strcmp(argv[1], "-v") == 0)  verbose = true;
   bool pass = true;
 
-  pass &= run_tests<double, 10>(verbose);
   pass &= run_tests<double, Eigen::Dynamic>(verbose);
-  pass &= run_tests<float, 10>(verbose);
-  pass &= run_tests<float, Eigen::Dynamic>(verbose);
 
   pass &= !type::IsHist<double>();
   pass &=  type::IsHist<Hist<double, 1> >();

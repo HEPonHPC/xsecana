@@ -1,8 +1,4 @@
 #include "XSecAna/Hist.h"
-#include "XSecAna/SimpleSignalEstimator.h"
-#include "XSecAna/SimpleEfficiency.h"
-#include "XSecAna/SimpleFlux.h"
-#include "XSecAna/IUnfold.h"
 #include "XSecAna/CrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
 #include "test_utils.h"
@@ -13,7 +9,7 @@
 
 using namespace xsec;
 
-typedef Hist<double, 10> histtype;
+typedef Hist<double, -1> histtype;
 typedef CrossSection<histtype> SimpleCrossSection;
 typedef Systematic<IMeasurement<histtype>> CrossSectionSystematic;
 
@@ -24,17 +20,17 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  auto hone = test::utils::get_hist_of_ones<double, 10>();
-  auto hnominal = test::utils::get_simple_nominal_hist<double, 10>();
-  auto hup = test::utils::get_simple_up_hist<double, 10>();
-  auto hdown = test::utils::get_simple_down_hist<double, 10>();
+  auto hone = test::utils::get_hist_of_ones<double, -1>();
+  auto hnominal = test::utils::get_simple_nominal_hist<double, -1>();
+  auto hup = test::utils::get_simple_up_hist<double, -1>();
+  auto hdown = test::utils::get_simple_down_hist<double, -1>();
   auto hmax_shift = hnominal;
   for(auto i = 0u; i < hmax_shift.ContentsAndUOF().size(); i++) {
     hmax_shift[i] = std::max(std::abs(hnominal[i] - hup[i]),
                              std::abs(hnominal[i] - hdown[i]));
   }
 
-  auto data = test::utils::get_simple_data<double, 10>();
+  auto data = test::utils::get_simple_data<double, -1>();
 
   auto nominal_xsec = test::utils::make_simple_xsec(hnominal);
   auto up   = test::utils::make_simple_xsec(hup);
@@ -78,10 +74,10 @@ int main(int argc, char ** argv)
   int nuniverses = 50;
 
   std::vector<IMeasurement<histtype>*> xsec_universes = test::utils::make_simple_xsec_multiverse(hnominal, nuniverses);
-  std::vector<Hist<double, 10>*> hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
+  std::vector<Hist<double, -1>*> hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
 
   Systematic<IMeasurement<histtype>> syst_mv("mv_xsec", xsec_universes);
-  Systematic<Hist<double, 10> > syst_mv_hist("mv_hist", hist_universes);
+  Systematic<Hist<double, -1> > syst_mv_hist("mv_hist", hist_universes);
 
 
   auto abs_uncert_mv = SimpleQuadSum::AbsoluteUncertainty<histtype>(nominal_xsec,

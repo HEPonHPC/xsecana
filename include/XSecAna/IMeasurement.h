@@ -2,6 +2,7 @@
 
 #include "TDirectory.h"
 #include "Hist.h"
+#include "Type.h"
 
 namespace xsec {
     template<class HistType>

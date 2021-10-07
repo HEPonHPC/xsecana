@@ -84,7 +84,7 @@ namespace xsec {
             };
 
             /////////////////////////////////////////////////////////
-            typedef Hist<double, 10> histtype;
+            typedef Hist<double, -1> histtype;
             typedef CrossSection<histtype> SimpleCrossSection;
 
             /////////////////////////////////////////////////////////

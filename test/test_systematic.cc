@@ -248,34 +248,27 @@ int main(int argc, char ** argv)
 
   std::remove(test_file_name.c_str());
 
-  pass &= run_tests<double, 10>(verbose, "double_10");
   pass &= run_tests<double, Eigen::Dynamic>(verbose, "double_dynamic");
-  pass &= run_tests<float, 10>(verbose, "float_10");
-  pass &= run_tests<float, Eigen::Dynamic>(verbose, "float_dynamic");
 
-
-  pass &= run_tests_mv<double, 10>(verbose, "mv_double_10");
   pass &= run_tests_mv<double, Eigen::Dynamic>(verbose, "mv_double_dynamic");
-  pass &= run_tests_mv<float, 10>(verbose, "mv_float_10");
-  pass &= run_tests_mv<float, Eigen::Dynamic>(verbose, "mv_float_dynamic");
 
 
-  auto nominal = test::utils::get_simple_nominal_hist<double, 10>();
-  auto up = new test::utils::Ratio<double, 10>(nominal + 1, nominal);
-  auto dw = new test::utils::Ratio<double, 10>(nominal - 1, nominal);
+  auto nominal = test::utils::get_simple_nominal_hist<double, -1>();
+  auto up = new test::utils::Ratio<double, -1>(nominal + 1, nominal);
+  auto dw = new test::utils::Ratio<double, -1>(nominal - 1, nominal);
 
   int nuniverses = 50;
   double maxy =  1;
   double miny = -1;
-  std::vector<test::utils::Ratio<double, 10>* > universes(nuniverses);
+  std::vector<test::utils::Ratio<double, -1>* > universes(nuniverses);
   for(auto i = 0; i < nuniverses; i++) {
-    universes[i] = new test::utils::Ratio<double, 10>(nominal + (-1 + (maxy - miny) / (nuniverses-1) * i),
+    universes[i] = new test::utils::Ratio<double, -1>(nominal + (-1 + (maxy - miny) / (nuniverses-1) * i),
 						      nominal);
   }
   
   // test of polymorphism of objects in the systematics container
-  typedef Hist<double, 10> histtype;
-  auto eff = new SimpleEfficiency<Hist<double, 10>>(nominal + 1, nominal);
+  typedef Hist<double, -1> histtype;
+  auto eff = new SimpleEfficiency<Hist<double, -1>>(nominal + 1, nominal);
   Systematic<IEfficiency<histtype>> syst_eff("eff",
                                                eff);
   ForEachFunction<histtype, IEfficiency<histtype>> eval_efficiency = [](IEfficiency<histtype> * eff) {

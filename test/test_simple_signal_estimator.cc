@@ -14,10 +14,10 @@ int main(int argc, char ** argv)
   bool pass = true;
   bool test;
 
-  auto data = test::utils::get_simple_data<double, 10>();
-  auto expected_signal = test::utils::get_simple_signal<double, 10>();
+  auto data = test::utils::get_simple_data<double, -1>();
+  auto expected_signal = test::utils::get_simple_signal<double, -1>();
 
-  SimpleSignalEstimator signal_estimator(test::utils::get_simple_background<double, 10>());
+  SimpleSignalEstimator signal_estimator(test::utils::get_simple_background<double, -1>());
 
   TEST_HIST_AND_EDGES("signal",
                       signal_estimator.Signal(data),
@@ -32,7 +32,7 @@ int main(int argc, char ** argv)
   delete output;
 
   TFile * input = TFile::Open(test_file_name.c_str());
-  auto loaded = ISignalEstimator<Hist<double, 10> >::LoadFrom(SimpleSignalEstimator<Hist<double, 10>>::LoadFrom,
+  auto loaded = ISignalEstimator<Hist<double, -1> >::LoadFrom(SimpleSignalEstimator<Hist<double, -1>>::LoadFrom,
                                                               input,
                                                               "signal_estimator").release();
 

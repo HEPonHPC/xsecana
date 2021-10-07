@@ -4,7 +4,6 @@
 
 #include "XSecAna/Fit/TemplateFitCalculator.h"
 #include "XSecAna/Fit/Minuit2TemplateFitter.h"
-#include "XSecAna/Hist.h"
 
 #include <Eigen/Dense>
 #include <iostream>
