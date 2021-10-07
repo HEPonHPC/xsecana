@@ -8,48 +8,45 @@
 
 namespace xsec {
 
-    template<class HistType>
-    class SimpleFlux : public IFlux<HistType> {
+    class SimpleFlux : public IFlux {
     public:
         SimpleFlux() = default;
 
-        explicit SimpleFlux(const HistType & flux)
+        explicit SimpleFlux(const Hist & flux)
                 : fFlux(flux) {}
 
-        virtual HistType Eval(const Array & edges_and_uof) const override
-        { return fFlux; }
+        virtual Hist Eval(const Array & edges_and_uof) const override { return fFlux; }
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-        static std::unique_ptr<IFlux<HistType>>
+        static std::unique_ptr<IFlux>
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
-        HistType fFlux;
+        Hist fFlux;
     };
 
-    template<class HistType>
-    class SimpleIntegratedFlux : public IFlux<HistType> {
+    class SimpleIntegratedFlux : public IFlux {
     public:
         SimpleIntegratedFlux() = default;
-        explicit SimpleIntegratedFlux(const Hist & flux)
-                : fFlux(flux)
-        {}
 
-        virtual HistType Eval(const Array & edges_and_uof) const override;
+        explicit SimpleIntegratedFlux(const Hist & flux)
+                : fFlux(flux) {}
+
+        virtual Hist Eval(const Array & edges_and_uof) const override;
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
-        static std::unique_ptr<IFlux<HistType>>
+        static std::unique_ptr<IFlux>
         LoadFrom(TDirectory * dir, const std::string & subdir);
+
     private:
         Hist fFlux;
     };
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
     void
-    SimpleFlux<HistType>::
+    SimpleFlux::
     SaveTo(TDirectory * dir, std::string subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -62,9 +59,8 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    std::unique_ptr<IFlux<HistType> >
-    SimpleFlux<HistType>::
+    std::unique_ptr<IFlux>
+    SimpleFlux::
     LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
@@ -73,27 +69,25 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleFlux" && "Type does not match SimpleFlux");
         delete ptag;
 
-        HistType flux = *HistType::LoadFrom(dir, "fFlux");
-        return std::make_unique<SimpleFlux<HistType>>(flux);
+        Hist flux = *Hist::LoadFrom(dir, "fFlux");
+        return std::make_unique<SimpleFlux>(flux);
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    HistType
-    SimpleIntegratedFlux<HistType>::
+    Hist
+    SimpleIntegratedFlux::
     Eval(const Array & edges_and_uof) const {
         auto N = fFlux.Integrate();
         auto ones = Array::Ones(edges_and_uof.size() - 1);
-        return HistType(ones * N,
+        return Hist(ones * N,
                         edges_and_uof,
                         ones * std::sqrt(N),
                         this->fFlux.Exposure());
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
     void
-    SimpleIntegratedFlux<HistType>::
+    SimpleIntegratedFlux::
     SaveTo(TDirectory * dir, std::string subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -106,9 +100,8 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    template<class HistType>
-    std::unique_ptr<IFlux<HistType> >
-    SimpleIntegratedFlux<HistType>::
+    std::unique_ptr<IFlux>
+    SimpleIntegratedFlux::
     LoadFrom(TDirectory * dir, const std::string & subdir) {
         dir = dir->GetDirectory(subdir.c_str());
 
@@ -118,6 +111,6 @@ namespace xsec {
         delete ptag;
 
         auto flux = *Hist::LoadFrom(dir, "fFlux");
-        return std::make_unique<SimpleIntegratedFlux<HistType>>(flux);
+        return std::make_unique<SimpleIntegratedFlux>(flux);
     }
 }

@@ -31,7 +31,7 @@ int main(int argc, char ** argv) {
     }
 
     SimpleFlux flux(flux_hist);
-    SimpleIntegratedFlux<Hist> integrated_flux(flux_hist);
+    SimpleIntegratedFlux integrated_flux(flux_hist);
 
 
     TEST_HISTS_SAME("flux.Eval()",
@@ -55,10 +55,10 @@ int main(int argc, char ** argv) {
     delete output;
 
     TFile * input = TFile::Open(test_file_name.c_str());
-    auto loaded_flux = IFlux<Hist>::LoadFrom(SimpleFlux<Hist>::LoadFrom,
+    auto loaded_flux = IFlux::LoadFrom(SimpleFlux::LoadFrom,
                                              input,
                                              "flux");
-    auto loaded_integrated_flux = IFlux<Hist>::LoadFrom(SimpleIntegratedFlux<Hist>::LoadFrom,
+    auto loaded_integrated_flux = IFlux::LoadFrom(SimpleIntegratedFlux::LoadFrom,
                                                         input,
                                                         "integrated_flux");
     input->Close();

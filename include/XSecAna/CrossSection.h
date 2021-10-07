@@ -20,7 +20,7 @@ namespace xsec {
 
         CrossSection(IEfficiency<HistType> * efficiency,
                      ISignalEstimator<HistType> * signal_estimator,
-                     IFlux<HistType> * flux,
+                     IFlux * flux,
                      IUnfold * unfold,
                      double ntargets = 0)
                 : fEfficiency(efficiency),
@@ -35,7 +35,7 @@ namespace xsec {
 
         static std::unique_ptr<IMeasurement<HistType>> LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
                                                                 xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
-                                                                xsec::type::LoadFunction<IFlux<HistType>> load_flux,
+                                                                xsec::type::LoadFunction<IFlux> load_flux,
                                                                 xsec::type::LoadFunction<IUnfold> load_unfold,
                                                                 TDirectory * dir,
                                                                 const std::string & subdir);
@@ -49,7 +49,7 @@ namespace xsec {
     private:
         IEfficiency<HistType> * fEfficiency;
         ISignalEstimator<HistType> * fSignalEstimator;
-        IFlux<HistType> * fFlux;
+        IFlux * fFlux;
         IUnfold * fUnfold;
 
         double fNTargets;
@@ -147,7 +147,7 @@ namespace xsec {
                  IsDifferential>::
     LoadFrom(xsec::type::LoadFunction<IEfficiency<HistType>> load_efficiency,
              xsec::type::LoadFunction<ISignalEstimator<HistType>> load_signal,
-             xsec::type::LoadFunction<IFlux<HistType>> load_flux,
+             xsec::type::LoadFunction<IFlux> load_flux,
              xsec::type::LoadFunction<IUnfold> load_unfold,
              TDirectory * dir,
              const std::string & subdir) {
@@ -155,7 +155,7 @@ namespace xsec {
         dir = dir->GetDirectory(subdir.c_str());
 
         IEfficiency<HistType> * eff = 0;
-        IFlux<HistType> * flux = 0;
+        IFlux * flux = 0;
         ISignalEstimator<HistType> * sig = 0;
         IUnfold * unfold = 0;
 
