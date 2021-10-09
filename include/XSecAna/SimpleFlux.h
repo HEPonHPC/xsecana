@@ -2,7 +2,7 @@
 
 #include "TDirectory.h"
 
-#include "XSecAna/Hist.h"
+#include "XSecAna/_Hist.h"
 #include "XSecAna/Type.h"
 #include "XSecAna/IFlux.h"
 
@@ -12,10 +12,10 @@ namespace xsec {
     public:
         SimpleFlux() = default;
 
-        explicit SimpleFlux(const Hist & flux)
+        explicit SimpleFlux(const _hist * flux)
                 : fFlux(flux) {}
 
-        virtual Hist Eval(const Array & edges_and_uof) const override { return fFlux; }
+        virtual const _hist * Eval(const _hist * data) const override { return fFlux; }
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
@@ -23,17 +23,17 @@ namespace xsec {
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
-        Hist fFlux;
+        const _hist * fFlux;
     };
 
     class SimpleIntegratedFlux : public IFlux {
     public:
         SimpleIntegratedFlux() = default;
 
-        explicit SimpleIntegratedFlux(const Hist & flux)
+        explicit SimpleIntegratedFlux(const _hist * flux)
                 : fFlux(flux) {}
 
-        virtual Hist Eval(const Array & edges_and_uof) const override;
+        virtual _hist * Eval(const _hist * data) const override;
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
@@ -41,7 +41,7 @@ namespace xsec {
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     private:
-        Hist fFlux;
+        const _hist * fFlux;
     };
 
     //////////////////////////////////////////////////////////
@@ -53,7 +53,7 @@ namespace xsec {
         dir->cd();
 
         TObjString("SimpleFlux").Write("type");
-        fFlux.SaveTo(dir, "fFlux");
+        fFlux->SaveTo(dir, "fFlux");
 
         tmp->cd();
     }
@@ -69,20 +69,21 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleFlux" && "Type does not match SimpleFlux");
         delete ptag;
 
-        Hist flux = *Hist::LoadFrom(dir, "fFlux");
+        const auto * flux = _hist::LoadFrom(dir, "fFlux").release();
         return std::make_unique<SimpleFlux>(flux);
     }
 
     //////////////////////////////////////////////////////////
-    Hist
+    _hist *
     SimpleIntegratedFlux::
-    Eval(const Array & edges_and_uof) const {
-        auto N = fFlux.Integrate();
-        auto ones = Array::Ones(edges_and_uof.size() - 1);
-        return Hist(ones * N,
-                        edges_and_uof,
-                        ones * std::sqrt(N),
-                        this->fFlux.Exposure());
+    Eval(const _hist * data) const {
+        auto N = fFlux->Integrate();
+        auto ones = Array::Ones(data->GetContentsAndUOF().size());
+        auto ret = data->Clone();
+        ret->SetContentsAndUOF(ones * N);
+        ret->SetContentsAndUOF(ones * std::sqrt(N));
+        ret->SetExposure(fFlux->Exposure());
+        return ret;
     }
 
     //////////////////////////////////////////////////////////
@@ -94,7 +95,7 @@ namespace xsec {
         dir->cd();
 
         TObjString("SimpleIntegratedFlux").Write("type");
-        fFlux.SaveTo(dir, "fFlux");
+        fFlux->SaveTo(dir, "fFlux");
 
         tmp->cd();
     }
@@ -110,7 +111,7 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleIntegratedFlux" && "Type does not match SimpleFlux");
         delete ptag;
 
-        auto flux = *Hist::LoadFrom(dir, "fFlux");
+        const auto flux = _hist::LoadFrom(dir, "fFlux").release();
         return std::make_unique<SimpleIntegratedFlux>(flux);
     }
 }

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "XSecAna/Hist.h"
+#include "XSecAna/_Hist.h"
 #include "XSecAna/Type.h"
 
 namespace xsec {
     class IFlux {
     public:
-        virtual Hist Eval(const Array & edges_and_uof) const = 0;
+        virtual const _hist * Eval(const _hist * data) const = 0;
 
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 

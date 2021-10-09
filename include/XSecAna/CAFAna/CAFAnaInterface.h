@@ -14,4 +14,10 @@ namespace xsec::cafana {
 
   template<class HistType>
   HistType ToHist(const ana::ReweightableSpectrum & spec);
+
+  template<class histtype>
+  histtype * loadspectrumashist(tdirectory * dir, const std::string & subdir, std::string exposure_type="pot") {
+      assert(exposure_type == "pot" || exposure_type == "livetime");
+
+  }
 }

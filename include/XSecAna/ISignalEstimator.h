@@ -7,11 +7,11 @@ namespace xsec {
     /// Defining interface for SignalEstimators
     class ISignalEstimator {
     public:
-        virtual Hist Eval(const Hist & data) = 0;
+        virtual const _hist * Eval(const _hist * data) = 0;
 
-        virtual const Hist & Background(const Hist & data) = 0;
+        virtual const _hist * Background(const _hist * data) = 0;
 
-        virtual const Hist & Signal(const Hist & data) = 0;
+        virtual const _hist * Signal(const _hist * data) = 0;
 
         virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
 

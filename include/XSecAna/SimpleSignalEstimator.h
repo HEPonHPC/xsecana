@@ -1,6 +1,6 @@
 #pragma once
 
-#include "XSecAna/Hist.h"
+#include "XSecAna/_Hist.h"
 #include "XSecAna/ISignalEstimator.h"
 
 namespace xsec {
@@ -8,19 +8,19 @@ namespace xsec {
     public:
         SimpleSignalEstimator() = default;
 
-        explicit SimpleSignalEstimator(const Hist & bkgd)
+        explicit SimpleSignalEstimator(const _hist * bkgd)
                 : fBackground(bkgd) {}
 
         /// \brief An implementation of Eval allows this object to
         /// interact with the systematics framework. This one just forwards a call to Signal
         /// TODO don't really like this
-        Hist Eval(const Hist & data) override { return Signal(data); }
+        const _hist * Eval(const _hist * data) override { return Signal(data); }
 
         /// \brief background could be dependent on data
         /// in this case it isn't
-        const Hist & Background(const Hist & data) override;
+        const _hist * Background(const _hist * data) override;
 
-        const Hist & Signal(const Hist & data) override;
+        const _hist * Signal(const _hist * data) override;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
@@ -28,26 +28,26 @@ namespace xsec {
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     private:
-        Hist fBackground;
+        const _hist * fBackground;
 
-        // cache signal hist
-        Hist * fSignal = 0;
+        // cache signal _hist
+        _hist * fSignal = 0;
 
     };
 
     //////////////////////////////////////////////////////////
-    const Hist &
+    const _hist *
     SimpleSignalEstimator::
-    Background(const Hist & data) {
+    Background(const _hist * data) {
         return fBackground;
     }
 
     //////////////////////////////////////////////////////////
-    const Hist &
+    const _hist *
     SimpleSignalEstimator::
-    Signal(const Hist & data) {
-        if (!fSignal) fSignal = new Hist(data - fBackground);
-        return *fSignal;
+    Signal(const _hist * data) {
+        if (!fSignal) fSignal = data->Subtract(fBackground);
+        return fSignal;
     }
 
     //////////////////////////////////////////////////////////
@@ -59,7 +59,7 @@ namespace xsec {
         dir->cd();
 
         TObjString("SimpleSignalEstimator").Write("type");
-        fBackground.SaveTo(dir, "fBackground");
+        fBackground->SaveTo(dir, "fBackground");
 
         tmp->cd();
     }
@@ -75,7 +75,7 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleSignalEstimator" && "Type does not match SimpleSignalEstimator");
         delete ptag;
 
-        Hist background = *Hist::LoadFrom(dir, "fBackground");
+        _hist * background = _hist::LoadFrom(dir, "fBackground").release();
         return std::make_unique<SimpleSignalEstimator>(background);
     }
 

@@ -2,7 +2,7 @@
 
 #include "TDirectory.h"
 
-#include "XSecAna/Hist.h"
+#include "XSecAna/_Hist.h"
 #include "XSecAna/Type.h"
 
 namespace xsec {
@@ -12,7 +12,7 @@ namespace xsec {
 
     public:
         ///\brief return the calculated efficiency
-        virtual Hist Eval() = 0;
+        virtual _hist * Eval() = 0;
 
         virtual void SaveTo(TDirectory * dir, std::string subdir) const = 0;
 

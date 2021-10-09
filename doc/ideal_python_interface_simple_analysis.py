@@ -49,7 +49,7 @@ def make_cross_sections(loader, weights: List(pandana.Weight)=None):
         for weight in weights
     ]
 
-    flux = NOvAPandAna.DeriveFlux(pdg=-14)
+    flux = NOvAPandAna.DeriveFlux(loader, pdg=-14)
     # fill spectra
     loader.Go()
 
@@ -79,6 +79,8 @@ def make_cross_sections(loader, weights: List(pandana.Weight)=None):
     ]
     return cross_sections[0] if len(weights) == 1 else cross_sections
 
+
+
 nominal_loader = pandana.Loader('nominal_file.h5')
 calibration_loader = pandana.Loader('calibration_file.h5')
 lightyeild_up_loader = pandana.Loader('lightyeild_up_file.h5')
@@ -97,7 +99,7 @@ Can it also propagate binning throughout the entire analysis?
 data_spectrum = pandana.Spectrum(data_loader, kSelection, kVar)
 data_loader.Go()
 
-data = xsecana.Array(data_spectrum._df)
+data = llama.array(data_spectrum._df)
 nominal = make_cross_section(nominal_loader)
 systematics = {
     'calibration_shape': xsecana.Systematic(
@@ -128,9 +130,10 @@ xsecana.SaveAnalysis(
   systematics : dict(str, xsecana.Systematic),
 )->None
 """
-with h5py.File('analysis_file.h5', 'w') as f:
-    xsecana.SaveAnalysis(
-        f.create_group('myanalysis'),
+#with h5py.File('analysis_file.h5', 'w') as f:
+xsecana.SaveAnalysis(
+        'analysis_file.h5',
+        'myanalysis',
         data,
         nominal,
         systematics,

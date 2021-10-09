@@ -1,6 +1,8 @@
 
 set(TESTS test_compile)
 list(APPEND TESTS test_hist)
+list(APPEND TESTS test_hist2d)
+list(APPEND TESTS test_hist3d)
 list(APPEND TESTS test_simple_analysis)
 list(APPEND TESTS test_simple_efficiency)
 list(APPEND TESTS test_simple_flux)
@@ -20,6 +22,7 @@ foreach(TEST ${TESTS})
 	     target_link_libraries("${TEST}" PRIVATE
 				 ${ROOT_LIBRARIES}
 				 ROOT::Minuit2
+				 XSecAna
 	     )
 	     add_test(NAME "${TEST}" COMMAND "${TEST}")
 endforeach(TEST)

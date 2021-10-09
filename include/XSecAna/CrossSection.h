@@ -3,7 +3,7 @@
 #include "TDirectory.h"
 #include "TParameter.h"
 
-#include "Hist.h"
+#include "XSecAna/_Hist.h"
 
 #include "XSecAna/IMeasurement.h"
 #include "XSecAna/IEfficiency.h"
@@ -37,7 +37,7 @@ namespace xsec {
                                                       TDirectory * dir,
                                                       const std::string & subdir);
 
-        virtual Hist Eval(const Hist & data) const override = 0;
+        virtual const _hist * Eval(const _hist * data) const override = 0;
 
 
     protected:
@@ -64,7 +64,7 @@ namespace xsec {
                                    unfold,
                                    ntargets) {}
 
-        virtual Hist Eval(const Hist & data) const override;
+        virtual const _hist * Eval(const _hist * data) const override;
 
         static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
                                                       xsec::type::LoadFunction<ISignalEstimator> load_signal,
@@ -89,7 +89,7 @@ namespace xsec {
                                    unfold,
                                    ntargets) {}
 
-        virtual Hist Eval(const Hist & data) const override;
+        virtual const _hist * Eval(const _hist * data) const override;
 
         static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiency> load_efficiency,
                                                       xsec::type::LoadFunction<ISignalEstimator> load_signal,
@@ -100,52 +100,47 @@ namespace xsec {
     };
 
     ////////////////////////////////////////////////
-    Hist CalculateCrossSection(const Hist & unfolded_selected_signal,
-                               const Hist & efficiency,
-                               const Hist & flux,
-                               const double ntargets,
-                               const bool is_differential) {
-        Hist xsec = unfolded_selected_signal;
+    const _hist * CalculateCrossSection(const _hist * unfolded_selected_signal,
+                                        const _hist * efficiency,
+                                        const _hist * flux,
+                                        const double ntargets,
+                                        const bool is_differential) {
+        auto xsec = unfolded_selected_signal->Clone();
 
         // don't scale efficiency by exposure
         // since exposure cancels in the ratio
-        xsec = xsec.TrueDivide(efficiency);
-        xsec /= flux;
-        xsec *= 1e4 / ntargets; // Convert nu/m^2 to nu/cm^2
-        if (is_differential) xsec = xsec.BinWidthNormalize();
+        xsec = xsec->TrueDivide(efficiency);
+        xsec = xsec->Divide(flux);
+        xsec = xsec->Divide(1e4 / ntargets); // Convert nu/m^2 to nu/cm^2
+        if (is_differential) xsec = xsec->BinWidthNormalize();
         return xsec;
     }
 
     ////////////////////////////////////////////////
-    Hist
+    const _hist *
     CrossSection::
-    Eval(const Hist & data) const {
+    Eval(const _hist * data) const {
         // calculate estimated signal and scale by the exposure of the data
         auto signal = fSignalEstimator->Signal(data);
-        signal = signal.ScaleByExposure(data.Exposure());
-
-        auto flux = fFlux->Eval(data.EdgesAndUOF());
-
+        signal = signal->ScaleByExposure(data->Exposure());
         return CalculateCrossSection(fUnfold->Truth(signal),
                                      fEfficiency->Eval(),
-                                     fFlux->Eval(data.EdgesAndUOF()),
+                                     fFlux->Eval(data),
                                      fNTargets,
                                      false);
     }
 
     ////////////////////////////////////////////////
-    Hist
+    const _hist *
     DifferentialCrossSection::
-    Eval(const Hist & data) const {
+    Eval(const _hist * data) const {
         // calculate estimated signal and scale by the exposure of the data
         auto signal = fSignalEstimator->Signal(data);
-        signal = signal.ScaleByExposure(data.Exposure());
-
-        auto flux = fFlux->Eval(data.EdgesAndUOF());
+        signal = signal->ScaleByExposure(data->Exposure());
 
         return CalculateCrossSection(fUnfold->Truth(signal),
                                      fEfficiency->Eval(),
-                                     fFlux->Eval(data.EdgesAndUOF()),
+                                     fFlux->Eval(data),
                                      fNTargets,
                                      true);
     }

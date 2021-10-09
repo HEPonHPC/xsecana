@@ -9,42 +9,41 @@ namespace xsec {
 
     class SimpleEfficiency : public IEfficiency {
     public:
-        SimpleEfficiency(Hist num,
-                         Hist den)
+        SimpleEfficiency(_hist * num,
+                         _hist * den)
                 : fNumerator(num), fDenominator(den) {}
 
-        Hist Eval() override;
+        _hist * Eval() override;
 
         void SaveTo(TDirectory * dir, std::string subdir) const override;
 
         static std::unique_ptr<IEfficiency> LoadFrom(TDirectory * dir, const std::string & subdir);
 
-        const Hist & GetNumerator() const { return fNumerator; }
+        const _hist * GetNumerator() const { return fNumerator; }
 
-        const Hist & GetDenominator() const { return fDenominator; }
+        const _hist * GetDenominator() const { return fDenominator; }
 
     private:
-        Hist fNumerator;
-        Hist fDenominator;
+        const _hist * fNumerator;
+        const _hist * fDenominator;
 
         // cache the ratio
-        Hist * fRatio = 0;
+        _hist * fRatio = 0;
     };
 
     //////////////////////////////////////////////////////////
-    Hist
+    _hist *
     SimpleEfficiency::
     Eval() {
         if (!fRatio) {
-            fRatio = new Hist(fNumerator);
-            *fRatio /= fDenominator;
+            fRatio = fNumerator->Divide(fDenominator);
 
             // binomial error
-            auto e = fRatio->ContentsAndUOF();
-            auto nsig = fDenominator.ContentsAndUOF();
+            auto e = fRatio->GetContentsAndUOF();
+            auto nsig = fDenominator->GetContentsAndUOF();
             fRatio->SetErrorsAndUOF((e * (1 - e) / nsig).sqrt());
         }
-        return *fRatio;
+        return fRatio;
     }
 
     //////////////////////////////////////////////////////////
@@ -56,8 +55,8 @@ namespace xsec {
         dir->cd();
 
         TObjString("SimpleEfficiency").Write("type");
-        fNumerator.SaveTo(dir, "fNumerator");
-        fDenominator.SaveTo(dir, "fDenominator");
+        fNumerator->SaveTo(dir, "fNumerator");
+        fDenominator->SaveTo(dir, "fDenominator");
 
         tmp->cd();
     }
@@ -73,8 +72,8 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleEfficiency" && "Type does not match SimpleEfficiency");
         delete ptag;
 
-        Hist numerator = *Hist::LoadFrom(dir, "fNumerator").release();
-        Hist denominator = *Hist::LoadFrom(dir, "fDenominator").release();
+        _hist * numerator = _hist::LoadFrom(dir, "fNumerator").release();
+        _hist * denominator = _hist::LoadFrom(dir, "fDenominator").release();
         return std::make_unique<SimpleEfficiency>(numerator,
                                                   denominator);
     }

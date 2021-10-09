@@ -1,6 +1,6 @@
 #pragma once
 
-#include "XSecAna/Hist.h"
+#include "XSecAna/_Hist.h"
 #include "XSecAna/Type.h"
 #include "TParameter.h"
 
@@ -8,7 +8,7 @@
 namespace xsec {
     class IUnfold {
     public:
-        virtual Hist Truth(const Hist & reco) const = 0;
+        virtual const _hist * Truth(const _hist * reco) const = 0;
 
         virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
 
@@ -27,7 +27,7 @@ namespace xsec {
 
         explicit IdentityUnfold(int nbins_and_uof);
 
-        Hist Truth(const Hist & reco) const override;
+        const _hist * Truth(const _hist * reco) const override;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
@@ -45,12 +45,12 @@ namespace xsec {
     }
 
     /////////////////////////////////////////////////////////
-    Hist
+    const _hist *
     IdentityUnfold::
-    Truth(const Hist & reco) const {
-        return Hist(fMat * reco.ContentsAndUOF().matrix(),
-                    reco.EdgesAndUOF(),
-                    reco.Exposure());
+    Truth(const _hist * reco) const {
+        auto ret = reco->Clone();
+        ret->SetContentsAndUOF(fMat * reco->GetContentsAndUOF().matrix());
+        return ret;
     }
 
     /////////////////////////////////////////////////////////
