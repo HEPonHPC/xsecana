@@ -154,6 +154,8 @@ namespace xsec {
             const TH1 * get_simple_data() {
                 auto ret = make_simple_hist();
                 ret->SetContent((Array::LinSpaced(12, 1, 2)+2).eval().data());
+                ret->SetEntries(ret->Integral());
+                ret->Sumw2();
                 return ret;
             }
 
@@ -163,6 +165,8 @@ namespace xsec {
                                     10,
                                     Array::LinSpaced(11, 0, 11).eval().data());
                 ret->SetContent(Array::Ones(12).eval().data());
+                ret->SetEntries(ret->Integral());
+                ret->Sumw2();
                 return ret;
             }
 
@@ -170,6 +174,8 @@ namespace xsec {
             const TH1 * get_simple_background() {
                 auto ret = make_simple_hist();
                 ret->SetContent(Array::LinSpaced(13, 0, 20).eval().data());
+                ret->SetEntries(ret->Integral());
+                ret->Sumw2();
                 return ret;
             }
 
@@ -184,6 +190,8 @@ namespace xsec {
             const TH1 * get_simple_nominal_hist() {
                 auto nominal = make_simple_hist();
                 nominal->SetContent(Array::LinSpaced(13, 0, 20).eval().data());
+                nominal->SetEntries(nominal->Integral());
+                nominal->Sumw2();
                 return nominal;
             }
 
@@ -194,6 +202,8 @@ namespace xsec {
                 step->SetContent(Array::LinSpaced(12, 0, .3).pow(2).reverse().eval().data());
                 auto ret = (TH1*) nominal->Clone();
                 ret->Multiply(step);
+                ret->SetEntries(ret->Integral());
+                ret->Sumw2();
                 return ret;
             }
 
@@ -204,6 +214,8 @@ namespace xsec {
                 step->SetContent(Array::LinSpaced(12, 0, .3).pow(2).eval().data());
                 auto ret = (TH1*) nominal->Clone();
                 ret->Multiply(step);
+                ret->SetEntries(ret->Integral());
+                ret->Sumw2();
                 return ret;
             }
 
