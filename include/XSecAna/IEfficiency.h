@@ -16,6 +16,7 @@ namespace xsec {
                  const std::string & name) {
             return load(dir, name);
         }
+
     protected:
     };
 

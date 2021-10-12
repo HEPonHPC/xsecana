@@ -34,7 +34,8 @@ namespace xsec {
                             h->GetYaxis(),
                             h->GetZaxis()}),
                       dims(h->GetDimension()),
-                      name(_name) {
+                      name(_name),
+                      entries(h->GetEntries()){
                 if (dims == 1) {
                     nbins_and_uof = h->GetNbinsX() + 2;
                 } else if (dims == 2) {
@@ -52,6 +53,7 @@ namespace xsec {
             int dims;
             const char * name;
             unsigned int nbins_and_uof;
+            unsigned int entries;
         };
 
         inline ArrayMap MapContentsToEigen(const TH1 * h) {
@@ -135,6 +137,8 @@ namespace xsec {
                 return 0;
             }
             h->SetContent(data.data());
+            h->SetEntries(props.entries);
+            h->Sumw2();
             return h;
         }
 

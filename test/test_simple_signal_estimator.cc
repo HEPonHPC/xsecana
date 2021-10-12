@@ -1,4 +1,3 @@
-#include "XSecAna/Hist.h"
 #include "XSecAna/SimpleSignalEstimator.h"
 #include "test_utils.h"
 #include <iostream>
@@ -18,11 +17,12 @@ int main(int argc, char ** argv) {
 
     SimpleSignalEstimator signal_estimator(test::utils::get_simple_background());
 
-    TEST_HIST_AND_EDGES("signal",
-                        signal_estimator.Signal(data),
-                        expected_signal.ContentsAndUOF(),
-                        expected_signal.EdgesAndUOF(),
-                        0);
+    double tol = 1e-14;
+    TEST_HIST("signal",
+              signal_estimator.Eval(data),
+              expected_signal,
+              tol,
+              verbose);
 
     std::string test_file_name = test::utils::test_dir() + "test_simple_signal_estimator.root";
     auto output = new TFile(test_file_name.c_str(), "recreate");
@@ -31,14 +31,15 @@ int main(int argc, char ** argv) {
     delete output;
 
     TFile * input = TFile::Open(test_file_name.c_str());
-    auto loaded = ISignalEstimator::LoadFrom(SimpleSignalEstimator::LoadFrom,
-                                             input,
-                                             "signal_estimator").release();
+    auto loaded = IMeasurement::LoadFrom(SimpleSignalEstimator::LoadFrom,
+                                         input,
+                                         "signal_estimator").release();
 
-    TEST_HISTS_SAME("loadfrom",
-                    loaded->Signal(data),
-                    expected_signal,
-                    0);
+    TEST_HIST("loadfrom",
+              loaded->Eval(data),
+              expected_signal,
+              tol,
+              verbose);
 
     return !pass;
 }
