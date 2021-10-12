@@ -10,6 +10,7 @@
 
 
 using namespace xsec;
+
 bool TEST_HIST(std::string test_name,
                const TH1 * HIST,
                const TH1 * target,
@@ -53,13 +54,12 @@ int main(int argc, char ** argv) {
     auto num = new TH1D("", "", 10, 0, 1);
     num->SetContent(Eigen::ArrayXd::Ones(12).eval().data());
     auto den = new TH1D("", "", 10, 0, 1);
-    den->SetContent((10 *Eigen::ArrayXd::Ones(12)).eval().data());
-
+    den->SetContent((10 * Eigen::ArrayXd::Ones(12)).eval().data());
 
 
     SimpleEfficiency eff(num, den);
 
-    auto expected = (TH1*) num->Clone();
+    auto expected = (TH1 *) num->Clone();
     expected->Divide(num, den, 1, 1, "B");
 
     TEST_HIST("ratio calculation",
@@ -76,24 +76,26 @@ int main(int argc, char ** argv) {
 
     TFile * input = TFile::Open(test_file_name.c_str());
     auto loaded = IMeasurement::LoadFrom(SimpleEfficiency::LoadFrom,
-                                        input,
-                                        "simple_efficiency").release();
+                                         input,
+                                         "simple_efficiency").release();
     input->Close();
     delete input;
 
-//TEST_HISTS_SAME("saveto/loadfrom numerator",
-//                ((SimpleEfficiency *) loaded)->GetNumerator(),
-//                num,
-//                0);
-//TEST_HISTS_SAME("saveto/loadfrom denominator",
-//                ((SimpleEfficiency *) loaded)->GetDenominator(),
-//                den,
-//                0);
-//TEST_HISTS_SAME("saveto/loadfrom ratio",
-//                loaded->Eval(),
-//                eff.Eval(),
-//                0);
-//
+    TEST_HIST("saveto/loadfrom numerator",
+              dynamic_cast<SimpleEfficiency*>(loaded)->GetNumerator(),
+              num,
+              0,
+              verbose);
+    TEST_HIST("saveto/loadfrom denominator",
+              dynamic_cast<SimpleEfficiency*>(loaded)->GetDenominator(),
+              den,
+              0,
+              verbose);
+    TEST_HIST("saveto/loadfrom ratio",
+              loaded->Eval(num),
+              eff.Eval(num),
+              0,
+              verbose);
 
 
     return !pass;

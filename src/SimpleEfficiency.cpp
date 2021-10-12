@@ -56,8 +56,8 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleEfficiency" && "Type does not match SimpleEfficiency");
         delete ptag;
 
-        auto numerator = (TH1 *) dir->Get("fNumerator");
-        auto denominator = (TH1 *) dir->Get("fDenominator");
+        auto numerator = root::LoadTH1(dir, "fNumerator").release();
+        auto denominator = root::LoadTH1(dir, "fDenominator").release();
         return std::make_unique<SimpleEfficiency>(numerator, denominator);
     }
 
