@@ -20,12 +20,12 @@ auto test_file_name = test::utils::test_dir() + "test_simple_analysis.root";
 std::unique_ptr<IMeasurement>
 LoadSimpleCrossSection(TDirectory * dir,
                        const std::string & name) {
-    return CrossSection::LoadFrom(SimpleEfficiency::LoadFrom,
-                                  SimpleSignalEstimator::LoadFrom,
-                                  SimpleFlux::LoadFrom,
-                                  IdentityUnfold::LoadFrom,
-                                  dir,
-                                  name);
+    return EigenCrossSectionEstimator::LoadFrom(SimpleEfficiency::LoadFrom,
+                                                SimpleSignalEstimator::LoadFrom,
+                                                SimpleFlux::LoadFrom,
+                                                IdentityUnfolder::LoadFrom,
+                                                dir,
+                                                name);
 }
 
 int main(int argc, char ** argv)

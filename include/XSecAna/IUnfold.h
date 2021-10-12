@@ -1,17 +1,12 @@
 #pragma once
 
-#include "XSecAna/_Hist.h"
-#include "XSecAna/Type.h"
+#include "XSecAna/IMeasurement.h"
 #include "TParameter.h"
-
 
 namespace xsec {
     class IUnfold {
     public:
-        virtual const _hist * Truth(const _hist * reco) const = 0;
-
-        virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
-
+        virtual const TH1 * Truth(const TH1 * reco) const = 0;
         static std::unique_ptr<IUnfold> LoadFrom(xsec::type::LoadFunction<IUnfold> load,
                                                  TDirectory * dir,
                                                  const std::string & name) {
@@ -21,41 +16,50 @@ namespace xsec {
         virtual ~IUnfold() = default;
     };
 
+    class IUnfoldEstimator : public IUnfold, public IMeasurement{};
+    class IEigenUnfoldEstimator : public IUnfold, public virtual IMeasurement, public IEigenEval{};
+
     /////////////////////////////////////////////////////////
-    class IdentityUnfold : public IUnfold {
+    class IdentityUnfolder : public IEigenUnfoldEstimator {
     public:
 
-        explicit IdentityUnfold(int nbins_and_uof);
+        explicit IdentityUnfolder(int nbins_and_uof);
 
-        const _hist * Truth(const _hist * reco) const override;
+        const TH1 * Truth(const TH1 * reco) const override;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
-        static std::unique_ptr<IUnfold> LoadFrom(TDirectory * dir, const std::string & subdir);
+        static std::unique_ptr<IMeasurement> LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
+        void _eval_impl(const Array & data, const Array & error, ArrayRef result, ArrayRef rerror) const override;
         Eigen::MatrixXd fMat;
     };
 
 
+    void
+    IdentityUnfolder::
+    _eval_impl(const Array & data, const Array & error, ArrayRef result, ArrayRef rerror) const {
+        result = fMat * data.matrix();
+        rerror = error;
+    }
+
     /////////////////////////////////////////////////////////
-    IdentityUnfold::
-    IdentityUnfold(int nbins_and_uof) {
+    IdentityUnfolder::
+    IdentityUnfolder(int nbins_and_uof) {
         fMat = Eigen::MatrixXd::Identity(nbins_and_uof, nbins_and_uof);
     }
 
     /////////////////////////////////////////////////////////
-    const _hist *
-    IdentityUnfold::
-    Truth(const _hist * reco) const {
-        auto ret = reco->Clone();
-        ret->SetContentsAndUOF(fMat * reco->GetContentsAndUOF().matrix());
-        return ret;
+    const TH1 *
+    IdentityUnfolder::
+    Truth(const TH1 * reco) const {
+        return this->Eval(reco);
     }
 
     /////////////////////////////////////////////////////////
     void
-    IdentityUnfold::
+    IdentityUnfolder::
     SaveTo(TDirectory * dir, const std::string & subdir) const {
         TDirectory * tmp = gDirectory;
         dir = dir->mkdir(subdir.c_str());
@@ -67,10 +71,9 @@ namespace xsec {
     }
 
     /////////////////////////////////////////////////////////
-    std::unique_ptr<IUnfold>
-    IdentityUnfold::
-    LoadFrom(TDirectory
-             * dir,
+    std::unique_ptr<IMeasurement>
+    IdentityUnfolder::
+    LoadFrom(TDirectory* dir,
              const std::string & subdir) {
         TDirectory * tmp = gDirectory;
         dir = dir->GetDirectory(subdir.c_str());
@@ -79,7 +82,7 @@ namespace xsec {
         auto cols = ((TParameter<double> *) dir->Get("cols"))->GetVal();
         tmp->cd();
 
-        return std::make_unique<IdentityUnfold>(cols);
+        return std::make_unique<IdentityUnfolder>(cols);
     }
 
 }

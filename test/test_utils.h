@@ -1,6 +1,9 @@
 #pragma once
 
 #include <iostream>
+#include "TH1.h"
+#include "XSecAna/Utils.h"
+
 #include "XSecAna/Hist.h"
 #include "XSecAna/IUnfold.h"
 #include "XSecAna/SimpleSignalEstimator.h"
@@ -46,6 +49,40 @@ bool TEST_HIST(std::string test_name,
         std::cerr << __FUNCTION__ << "\t" << test_name + " (errors)" << "\t" << HIST->GetErrorsAndUOF().transpose()
                   << std::endl;
         std::cerr << __FUNCTION__ << "\t" << test_name + " (errors)" << "\t" << target_errors.transpose()
+                  << std::endl;
+        pass &= test;
+    }
+    return pass;
+}
+
+bool TEST_HIST(std::string test_name,
+               const TH1 * HIST,
+               const TH1 * target,
+               double precision,
+               bool verbose) {
+    bool pass = true;
+    xsec::Array _HIST_c = xsec::root::MapContentsToEigen(HIST);
+    xsec::Array _HIST_e = xsec::root::MapErrorsToEigen(HIST);
+    xsec::Array _target_c = xsec::root::MapContentsToEigen(target);
+    xsec::Array _target_e = xsec::root::MapErrorsToEigen(target);
+
+    bool test = (_HIST_c - _target_c).isZero(precision);
+    if (!test || verbose) {
+        std::cerr << __FUNCTION__ << "\t" << test_name + " (contents)" << (test ? ": PASSED" : ": FAILED")
+                  << std::endl;
+        std::cerr << __FUNCTION__ << "\t" << test_name + " (contents)" << "\t"
+                  << _HIST_c.transpose() << std::endl;
+        std::cerr << __FUNCTION__ << "\t" << test_name + " (contents)" << "\t" << _target_c.transpose()
+                  << std::endl;
+        pass &= test;
+    }
+    test = (_HIST_e - _target_e).isZero(precision);
+    if (!test || verbose) {
+        std::cerr << __FUNCTION__ << "\t" << test_name + " (errors)" << (test ? ": PASSED" : ": FAILED")
+                  << std::endl;
+        std::cerr << __FUNCTION__ << "\t" << test_name + " (errors)" << "\t" << _HIST_e.transpose()
+                  << std::endl;
+        std::cerr << __FUNCTION__ << "\t" << test_name + " (errors)" << "\t" << _target_e.transpose()
                   << std::endl;
         pass &= test;
     }
@@ -208,12 +245,12 @@ namespace xsec {
                                                     ones->GetEdgesAndUOF(),
                                                     get_simple_data()->Exposure()));
                 auto signal_estimator = new SimpleSignalEstimator(get_simple_background());
-                auto unfold = new IdentityUnfold(ones->GetContentsAndUOF().size());
-                auto ret = new CrossSection(efficiency,
-                                            signal_estimator,
-                                            flux,
-                                            unfold,
-                                            ntargets);
+                auto unfold = new IdentityUnfolder(ones->GetContentsAndUOF().size());
+                auto ret = new EigenCrossSectionEstimator(efficiency,
+                                                          signal_estimator,
+                                                          flux,
+                                                          unfold,
+                                                          ntargets);
                 return ret;
             }
 

@@ -41,18 +41,18 @@ int main(int argc, char ** argv) {
     auto efficiency = new SimpleEfficiency(eff_num, eff_den); // = 1/4 (no exposure scaling)
     auto flux = new SimpleFlux(flux_hist);                              // = 5/2 (after scaling by data exposure)
     auto signal_estimator = new SimpleSignalEstimator(bkgd);            // = 3 (after scaling by data exposure)
-    auto unfold = new IdentityUnfold(bkgd.ContentsAndUOF().size()); // = 1
+    auto unfold = new IdentityUnfolder(bkgd.ContentsAndUOF().size()); // = 1
 
-    auto xsec_differential = new DifferentialCrossSection(efficiency,
-                                                          signal_estimator,
-                                                          flux,
-                                                          unfold,
-                                                          test::utils::ntargets);
-    auto xsec = new CrossSection(efficiency,
-                                 signal_estimator,
-                                 flux,
-                                 unfold,
-                                 test::utils::ntargets);
+    auto xsec_differential = new EigenDifferentialCrossSectionEstimator(efficiency,
+                                                                        signal_estimator,
+                                                                        flux,
+                                                                        unfold,
+                                                                        test::utils::ntargets);
+    auto xsec = new EigenCrossSectionEstimator(efficiency,
+                                               signal_estimator,
+                                               flux,
+                                               unfold,
+                                               test::utils::ntargets);
 
     TEST_ARRAY_SAME("signal",
                     (signal_estimator->Signal(data).Contents()),
@@ -82,19 +82,19 @@ int main(int argc, char ** argv) {
 
     auto input = TFile::Open(test_file_name.c_str());
     auto loaded_xsec =
-            CrossSection::LoadFrom(SimpleEfficiency::LoadFrom,
-                                   SimpleSignalEstimator::LoadFrom,
-                                   SimpleFlux::LoadFrom,
-                                   IdentityUnfold::LoadFrom,
-                                   input,
-                                   "xsec");
+            EigenCrossSectionEstimator::LoadFrom(SimpleEfficiency::LoadFrom,
+                                                 SimpleSignalEstimator::LoadFrom,
+                                                 SimpleFlux::LoadFrom,
+                                                 IdentityUnfolder::LoadFrom,
+                                                 input,
+                                                 "xsec");
     auto loaded_differential_xsec =
-            DifferentialCrossSection::LoadFrom(SimpleEfficiency::LoadFrom,
-                                               SimpleSignalEstimator::LoadFrom,
-                                               SimpleFlux::LoadFrom,
-                                               IdentityUnfold::LoadFrom,
-                                               input,
-                                               "xsec");
+            EigenDifferentialCrossSectionEstimator::LoadFrom(SimpleEfficiency::LoadFrom,
+                                                             SimpleSignalEstimator::LoadFrom,
+                                                             SimpleFlux::LoadFrom,
+                                                             IdentityUnfolder::LoadFrom,
+                                                             input,
+                                                             "xsec");
     input->Close();
     delete input;
     TEST_HISTS_SAME("loaded xsec",

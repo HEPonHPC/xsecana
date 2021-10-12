@@ -1,13 +1,19 @@
 set(HEADER_FILES
-        ../include/XSecAna/_Hist.h
-        ../include/XSecAna/Array.h
-        ../include/XSecAna/Hist.h
+        ../include/XSecAna/SimpleEfficiency.h
+        ../include/XSecAna/SimpleFlux.h
+        ../include/XSecAna/SimpleSignalEstimator.h
+        ../include/XSecAna/IUnfold.h
+        ../include/XSecAna/CrossSection.h
+        ../include/XSecAna/Systematic.h
+        ../include/XSecAna/SimpleQuadSum.h
 )
 
 set(SOURCES
-        ./Hist.cpp
-        ./_Hist.cpp
-        ./Array.cpp
+        ./SimpleEfficiency.cpp
+        ./SimpleFlux.cpp
+        ./SimpleSignalEstimator.cpp
+        ./CrossSection.cpp
+        ./Systematic.cpp
 )
 
 

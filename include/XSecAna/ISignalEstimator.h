@@ -1,29 +1,31 @@
 #pragma once
 
 #include "TDirectory.h"
+#include "TH1.h"
 #include "XSecAna/Type.h"
+#include "XSecAna/IMeasurement.h"
 
 namespace xsec {
     /// Defining interface for SignalEstimators
-    class ISignalEstimator {
+    class ISignal {
     public:
-        virtual const _hist * Eval(const _hist * data) = 0;
+        virtual const TH1 * Background(const TH1 * data) = 0;
 
-        virtual const _hist * Background(const _hist * data) = 0;
+        virtual const TH1 * Signal(const TH1 * data) = 0;
 
-        virtual const _hist * Signal(const _hist * data) = 0;
-
-        virtual void SaveTo(TDirectory * dir, const std::string & name) const = 0;
-
-        static std::unique_ptr<ISignalEstimator>
-        LoadFrom(xsec::type::LoadFunction<ISignalEstimator> load,
+        static std::unique_ptr<ISignal>
+        LoadFrom(xsec::type::LoadFunction<ISignal> load,
                  TDirectory * dir,
                  const std::string & name) {
             return load(dir, name);
         }
 
-        virtual ~ISignalEstimator() = default;
+        virtual ~ISignal() = default;
 
     protected:
+
     };
+
+    class ISignalEstimator : public ISignal, public IMeasurement{};
+    class IEigenSignalEstimator : public ISignal, public virtual IMeasurement, public IEigenEval{};
 }
