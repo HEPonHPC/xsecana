@@ -45,8 +45,9 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleFlux" && "Type does not match SimpleFlux");
         delete ptag;
 
-        const auto * flux = (TH1*) dir->Get("fFlux");
+        auto flux = root::LoadTH1(dir, "fFlux").release();
         return std::make_unique<SimpleFlux>(flux);
+        flux = 0;
     }
 
     void
@@ -83,8 +84,9 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleIntegratedFlux" && "Type does not match SimpleFlux");
         delete ptag;
 
-        const auto flux = (TH1*) dir->Get("fFlux");
+        auto flux = root::LoadTH1(dir, "fFlux").release();
         return std::make_unique<SimpleIntegratedFlux>(flux);
+        flux = 0;
     }
 }
 

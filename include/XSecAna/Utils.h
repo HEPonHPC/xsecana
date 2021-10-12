@@ -9,14 +9,22 @@
 #include "XSecAna/Type.h"
 namespace xsec {
     typedef Eigen::ArrayXd Array;
-    typedef Eigen::Array2Xd Array2D;
+    typedef Eigen::ArrayXXd Array2D;
     typedef Eigen::Tensor<double, 3> Array3D;
 
     typedef Eigen::Ref<Array> ArrayRef;
     typedef Eigen::Map<const Array> ArrayMap;
     namespace root {
+        inline std::string MakeUnique(const std::string & base) {
+            static int N = 0;
+            return base + std::to_string(N++);
+        }
+
         inline std::unique_ptr<TH1> LoadTH1(TDirectory * dir, const std::string & name ) {
-            return std::unique_ptr<TH1>((TH1*)dir->Get(name.c_str()));
+            auto ret = std::unique_ptr<TH1>((TH1*)dir->Get(name.c_str()));
+            ret->SetDirectory(0); // Tell dir it doesn't own this object anymore
+                                      // or else it gets deleted when the file is closed...
+            return ret;
         };
 
         struct TH1Props {
