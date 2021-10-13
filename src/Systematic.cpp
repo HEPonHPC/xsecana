@@ -50,6 +50,11 @@ namespace xsec {
     GetType() const { return fType; }
 
     template<class T>
+    std::string
+    Systematic<T>::
+    GetName() const { return fName; }
+
+    template<class T>
     const std::vector<const T *> &
     Systematic<T>::
     GetShifts() const { return fContainer; }
