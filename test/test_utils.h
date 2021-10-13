@@ -120,8 +120,9 @@ namespace xsec {
                 auto ret = new TH1D("", "",
                                     bins.size() - 1,
                                     bins.data());
-                ret->SetContent((one_a + c).eval().data());
+                ret->SetContent((one_a * c).eval().data());
                 ret->SetEntries(ret->Integral());
+                ret->Sumw2();
 
                 assert(std::sqrt(ret->GetBinContent(1)) == ret->GetBinError(1));
                 return ret;
