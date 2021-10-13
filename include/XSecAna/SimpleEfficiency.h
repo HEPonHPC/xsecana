@@ -9,8 +9,8 @@ namespace xsec {
 
     class SimpleEfficiency : public IEigenEfficiencyEstimator {
     public:
-        SimpleEfficiency(TH1 * num,
-                         TH1 * den);
+        SimpleEfficiency(const TH1 * num,
+                         const TH1 * den);
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 

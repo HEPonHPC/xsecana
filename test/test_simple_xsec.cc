@@ -13,70 +13,134 @@
 
 using namespace xsec;
 
+const static double ntargets = 1e4;
+
+/////////////////////////////////////////////////////////
+// make a cross section object that evaluates out to
+//  the input array when folded
+IMeasurement * make_simple_xsec(const TH1 * val) {
+    auto ones = root::ToROOTLike(val, Array::Ones(val->GetNbinsX() + 2));
+
+    auto signal = (TH1 *) test::utils::get_simple_signal()->Clone();
+    signal->Divide(val);
+    auto efficiency = new SimpleEfficiency(signal,
+                                           ones);
+    auto flux = new SimpleFlux(ones);
+    auto signal_estimator = new SimpleSignalEstimator(test::utils::get_simple_background());
+    auto unfold = new IdentityUnfolder(ones->GetNbinsX() + 2);
+    auto ret = new EigenCrossSectionEstimator(efficiency,
+                                              signal_estimator,
+                                              flux,
+                                              unfold,
+                                              ntargets);
+    return ret;
+}
+
+/////////////////////////////////////////////////////////
+std::vector<IMeasurement *>
+make_simple_xsec_multiverse(const TH1 * hnominal, int nuniverses) {
+    std::vector<IMeasurement *> xsec_universes(nuniverses);
+    auto hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
+
+    for (auto i = 0; i < nuniverses; i++) {
+        xsec_universes[i] = make_simple_xsec(hist_universes[i]);
+    }
+    return xsec_universes;
+}
+
+
 int main(int argc, char ** argv) {
     bool verbose = false;
     if (argc > 1 && std::strcmp(argv[1], "-v") == 0) verbose = true;
     bool pass = true;
     bool test;
 
-    auto nbins_and_uof = 12;
-    Array bins = Array::Zero(nbins_and_uof + 1);
-    for (auto i = 0u; i < nbins_and_uof + 1; i++) {
+    auto nbins = 12;
+    Array bins = Array::Zero(nbins + 1);
+    for (auto i = 0u; i < nbins + 1; i++) {
         bins(i) = 2 * i;
     }
 
-    Hist ones(Eigen::Array<double, 1, 12>::Ones(nbins_and_uof), bins);
-    Hist bkgd = ones * 2;
-    Hist data(ones.ContentsAndUOF() * 4,
-              ones.EdgesAndUOF(),
-              test::utils::data_exposure);
+    auto ones = test::utils::make_constant_hist(bins, 1);
 
-    Hist flux_hist = ones * 5;
+    auto bkgd = test::utils::make_constant_hist(bins, 2);
 
-    Hist eff_num = ones / 4.;
+    auto data = test::utils::make_constant_hist(bins, 4);
 
-    Hist eff_den = ones;
+    auto flux_hist = test::utils::make_constant_hist(bins, 5);
 
-    // why is this template deduction failing??
-    auto efficiency = new SimpleEfficiency(eff_num, eff_den); // = 1/4 (no exposure scaling)
-    auto flux = new SimpleFlux(flux_hist);                              // = 5/2 (after scaling by data exposure)
-    auto signal_estimator = new SimpleSignalEstimator(bkgd);            // = 3 (after scaling by data exposure)
-    auto unfold = new IdentityUnfolder(bkgd.ContentsAndUOF().size()); // = 1
+    auto eff_num = test::utils::make_constant_hist(bins, 1);
+    auto eff_den = test::utils::make_constant_hist(bins, 4);
+    auto eff = (TH1 *) eff_num->Clone();
+    eff->Divide(eff_num, eff_den, 1, 1, "B");
+
+
+    auto efficiency = new SimpleEfficiency(eff_num, eff_den);         // = 1/4
+    auto flux = new SimpleFlux(flux_hist);                            // = 5
+    auto flux_integrated = new SimpleIntegratedFlux(flux_hist);       // = 70
+    auto signal_estimator = new SimpleSignalEstimator(bkgd);          // = 2
+    auto unfold = new IdentityUnfolder(bkgd->GetNbinsX() + 2); // = 1
 
     auto xsec_differential = new EigenDifferentialCrossSectionEstimator(efficiency,
                                                                         signal_estimator,
-                                                                        flux,
+                                                                        flux_integrated,
                                                                         unfold,
-                                                                        test::utils::ntargets);
+                                                                        ntargets);
     auto xsec = new EigenCrossSectionEstimator(efficiency,
                                                signal_estimator,
                                                flux,
                                                unfold,
-                                               test::utils::ntargets);
+                                               ntargets);
 
-    TEST_ARRAY_SAME("signal",
-                    (signal_estimator->Signal(data).Contents()),
-                    (Array::Ones(data.Contents().size()) * 3),
-                    0);
-    TEST_ARRAY_SAME("efficiency",
-                    (efficiency->Eval().Contents()),
-                    (Array::Ones(data.Contents().size()) / 4.),
-                    0);
+    auto expected_signal = (TH1 * ) data->Clone();
+    expected_signal->Add(bkgd, -1);
 
-    TEST_ARRAY_SAME("xsec",
-                    xsec->Eval(data).Contents(),
-                    (Array::Ones(data.Contents().size()) * 24. / 5.),
-                    0);
+    auto expected_xsec = (TH1 *) data->Clone();
+    expected_xsec->Add(bkgd, -1);
+    expected_xsec->Divide(flux_hist);
+    expected_xsec->Divide(eff);
 
-    auto xsec_differential_result = xsec_differential->Eval(data);
-    TEST_ARRAY_SAME("xsec_differential",
-                    xsec_differential->Eval(data).Contents(),
-                    (Array::Ones(data.Contents().size()) / 2. * 24. / 5.),
-                    0);
+    TEST_HIST("xsec",
+              xsec->Eval(data),
+              expected_xsec,
+              0,
+              verbose);
+
+    auto bin_width = test::utils::make_constant_hist_like(expected_xsec, 1);
+    for (auto i = 1; i <= bin_width->GetNbinsX(); i++) {
+        bin_width->SetBinContent(i, bin_width->GetBinWidth(i));
+        bin_width->SetBinError(i, 0);
+    }
+    bin_width->SetBinError(0, 0);
+    bin_width->SetBinError(bin_width->GetNbinsX()+1, 0);
+
+
+    auto expected_xsec_differential = (TH1 *) data->Clone();
+    expected_xsec_differential->Add(bkgd, -1);
+    expected_xsec_differential->Divide(eff);
+    expected_xsec_differential->Divide(bin_width);
+
+    double flux_integral_error;
+    auto flux_integral = flux_hist->IntegralAndError(0, flux_hist->GetNbinsX() + 1,
+                                                     flux_integral_error);
+    auto integrated_flux_hist = test::utils::make_constant_hist_like(data, flux_integral);
+
+    for (auto i = 0u; i <= integrated_flux_hist->GetNbinsX() + 1; i++) {
+        integrated_flux_hist->SetBinError(i, flux_integral_error);
+    }
+    integrated_flux_hist->GetBinContent(0);
+    expected_xsec_differential->Divide(integrated_flux_hist);
+    auto result_xsec_differential = xsec_differential->Eval(data);
+    TEST_HIST("xsec_differential",
+              result_xsec_differential,
+              expected_xsec_differential,
+              1e-11,
+              verbose);
 
     std::string test_file_name = test::utils::test_dir() + "test_simple_xsec.root";
     auto output = new TFile(test_file_name.c_str(), "recreate");
     xsec->SaveTo(output, "xsec");
+    xsec_differential->SaveTo(output, "xsec_differential");
     output->Close();
     delete output;
 
@@ -91,30 +155,32 @@ int main(int argc, char ** argv) {
     auto loaded_differential_xsec =
             EigenDifferentialCrossSectionEstimator::LoadFrom(SimpleEfficiency::LoadFrom,
                                                              SimpleSignalEstimator::LoadFrom,
-                                                             SimpleFlux::LoadFrom,
+                                                             SimpleIntegratedFlux::LoadFrom,
                                                              IdentityUnfolder::LoadFrom,
                                                              input,
-                                                             "xsec");
+                                                             "xsec_differential");
     input->Close();
     delete input;
-    TEST_HISTS_SAME("loaded xsec",
-                    loaded_xsec->Eval(data),
-                    xsec->Eval(data),
-                    0);
 
-    TEST_HISTS_SAME("loaded differential xsec",
-                    loaded_differential_xsec->Eval(data),
-                    xsec_differential->Eval(data),
-                    0);
+    TEST_HIST("loaded xsec",
+              loaded_xsec->Eval(data),
+              xsec->Eval(data),
+              0,
+              verbose);
+
+    TEST_HIST("loaded differential xsec",
+              loaded_differential_xsec->Eval(data),
+              xsec_differential->Eval(data),
+              0,
+              verbose);
 
     auto simple_data = test::utils::get_simple_data();
-
-    auto simple_ones = simple_data / simple_data;
-    auto result = test::utils::make_simple_xsec(simple_ones)->Eval(test::utils::get_simple_data());
-    TEST_HISTS_SAME("test_utils::make_simple_xsec",
-                    simple_ones,
-                    result,
-                    0);
+    auto simple_ones = (TH1 *) simple_data->Clone();
+    simple_ones->Divide(simple_data);
+    assert((root::MapContentsToEigen(simple_ones) -
+            root::MapContentsToEigen(make_simple_xsec(simple_ones)->Eval(test::utils::get_simple_data()))
+           ).isZero(0));
 
     return !pass;
+
 }

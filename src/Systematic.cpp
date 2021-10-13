@@ -3,13 +3,16 @@
 //
 
 #include "XSecAna/Systematic.h"
+#include "XSecAna/IMeasurement.h"
 #include "XSecAna/Utils.h"
+
+#include <stdexcept>
 
 namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               T * shift)
+               const T * shift)
             : fContainer({shift}),
               fType(kOneSided),
 
@@ -18,8 +21,8 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               T * up,
-               T * down)
+               const T * up,
+               const T * down)
             : fContainer({up, down}),
               fType(kTwoSided),
               fName(std::move(name)) { fContainer.shrink_to_fit(); }
@@ -27,7 +30,7 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               std::vector<T *> & universes)
+               std::vector<const T *> & universes)
             : fContainer(universes),
               fType(kMultiverse),
               fName(std::move(name)) { fContainer.shrink_to_fit(); }
@@ -35,7 +38,7 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               std::vector<T *> & container,
+               std::vector<const T *> & container,
                SystType_t type)
             : fContainer(container),
               fType(type),
@@ -47,7 +50,7 @@ namespace xsec {
     GetType() const { return fType; }
 
     template<class T>
-    const std::vector<T *> &
+    const std::vector<const T *> &
     Systematic<T>::
     GetShifts() const { return fContainer; }
 
@@ -58,15 +61,32 @@ namespace xsec {
     Systematic<T>::
     ForEach(ForEachFunction<U, T> for_each, std::string new_name) {
         if (new_name == "") new_name = this->fName;
-        std::vector<U *> container(this->fContainer.size());
+        std::vector<const U *> container(this->fContainer.size());
         for (auto i = 0u; i < this->fContainer.size(); i++) {
             container[i] = for_each(this->fContainer[i]);
         }
-        return Systematic<U>(
-                new_name, container,
-                fType);
+        return Systematic<U>(new_name, container, fType);
 
     }
+
+    template<class T>
+    Systematic<TH1>
+    Systematic<T>::
+    Eval(const TH1 * data, std::string new_name) const {
+        if constexpr (!std::is_base_of<IMeasurement, T>::value) {
+            throw std::runtime_error("Type " +
+                                     std::string(typeid(T).name()) +
+                                     " does not implement Eval. Use ForEach instead");
+        } else {
+            if (new_name == "") new_name = this->fName;
+            std::vector<const TH1 *> container(this->fContainer.size());
+            for (auto i = 0u; i < this->fContainer.size(); i++) {
+                container[i] = this->fContainer[i]->Eval(data);
+            }
+            return Systematic<TH1>(new_name, container, fType);
+        }
+    }
+
 
     /////////////////////////////////////////////////////////////////////////
     template<class T>
@@ -108,8 +128,7 @@ namespace xsec {
             for (auto i = 0u; i < fContainer.size(); i++) {
                 fContainer[i]->Write(std::to_string(i).c_str());
             }
-        }
-        else {
+        } else {
             for (auto i = 0u; i < fContainer.size(); i++) {
                 fContainer[i]->SaveTo(mv_dir, std::to_string(i));
             }
@@ -138,7 +157,7 @@ namespace xsec {
         int ftype = std::atoi(((TObjString *) dir->Get("fType"))->GetString().Data());
 
         auto container_dir = dir->GetDirectory("fContainer");
-        std::vector<T *> container(nshifts);
+        std::vector<const T *> container(nshifts);
         for (auto ishift = 0; ishift < nshifts; ishift++) {
             container[ishift] = load(container_dir, std::to_string(ishift)).release();
         }
@@ -187,16 +206,34 @@ namespace xsec {
                                                   kMultiverse,
                                                   multiverse.GetType());
         }
-
-        Array shift_arr(root::TH1Props(nominal).nbins_and_uof);
+        root::TH1Props props(nominal);
+        Array shift_arr(props.nbins_and_uof);
         for (auto ibin = 0u; ibin < shift_arr.size(); ibin++) {
-            std::vector<double> vals_c;
+            std::vector<double> vals_c(multiverse.GetShifts().size());
             for (auto iuniv = 0u; iuniv < multiverse.GetShifts().size(); iuniv++) {
-                vals_c.push_back(multiverse.GetShifts()[iuniv]->GetBinContent(ibin));
+                vals_c[iuniv] = multiverse.GetShifts()[iuniv]->GetBinContent(ibin);
             }
-            shift_arr(ibin) = BinSigma(nsigma, vals_c, shift_arr(ibin));
+            shift_arr(ibin) = BinSigma(nsigma, vals_c, nominal->GetBinContent(ibin));
         }
-        return root::ToROOTLike(nominal, shift_arr);
+        return root::ToROOTLike(nominal, shift_arr, Array::Zero(props.nbins_and_uof));
     }
+
+
+    template
+    class Systematic<TH1>;
+
+    template
+    class Systematic<IMeasurement>;
+
+    template
+    Systematic<TH1>
+    Systematic<TH1>::
+    ForEach(ForEachFunction<TH1, TH1>, std::string);
+
+    template
+    Systematic<TH1>
+    Systematic<IMeasurement>::
+    ForEach(ForEachFunction<TH1, IMeasurement>, std::string);
+
 }
 

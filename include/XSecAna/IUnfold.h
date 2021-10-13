@@ -40,8 +40,8 @@ namespace xsec {
     void
     IdentityUnfolder::
     _eval_impl(const Array & data, const Array & error, ArrayRef result, ArrayRef rerror) const {
-        result = fMat * data.matrix();
-        rerror = error;
+         result = fMat * data.matrix();
+         rerror = error;
     }
 
     /////////////////////////////////////////////////////////

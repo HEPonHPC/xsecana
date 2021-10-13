@@ -1,7 +1,6 @@
 #include <iostream>
 #include <stdio.h>
 
-#include "XSecAna/Hist.h"
 #include "XSecAna/Systematic.h"
 #include "XSecAna/SimpleEfficiency.h"
 #include "XSecAna/SimpleFlux.h"
@@ -15,75 +14,103 @@ using namespace xsec;
 
 std::string test_file_name = test::utils::test_dir() + "test_systematic.root";
 
+
 bool run_tests(bool verbose, std::string dir) {
 
     bool pass = true;
     bool test;
 
-    auto nominal = new Hist(test::utils::get_simple_nominal_hist());
-    auto up = new Hist(test::utils::get_simple_up_hist());
-    auto down = new Hist(test::utils::get_simple_down_hist());
+    auto nominal = test::utils::get_simple_nominal_hist();
+    auto up = test::utils::get_simple_up_hist();
+    auto down = test::utils::get_simple_down_hist();
 
-    ForEachFunction<Hist, Hist> subtract = [&nominal](Hist * h) {
-        return new Hist(*h - *nominal);
+    ForEachFunction<TH1, TH1> subtract = [&nominal](const TH1 * h) {
+        auto ret = (TH1 *) h->Clone();
+        ret->Add(nominal, -1);
+        return ret;
     };
 
-    ForEachFunction<Hist, Hist> divide = [&nominal](const Hist * h) {
-        return new Hist((*h - *nominal) / *nominal);
+    ForEachFunction<TH1, TH1> divide = [&nominal](const TH1 * h) {
+        auto ret = (TH1 *) h->Clone();
+        ret->Add(nominal, -1);
+        ret->Divide(nominal);
+        return ret;
     };
 
 
     // two sided sytematic construction
-    Systematic<Hist> syst_2("syst", up, down);
-    TEST_HISTS_SAME("2-sided construction (up)",
-                    *(syst_2.Up()),
-                    *(up),
-                    0);
-    TEST_HISTS_SAME("2-sided construction (down)",
-                    *(syst_2.Down()),
-                    *(down),
-                    0);
+    Systematic<TH1> syst_2("syst", up, down);
+    pass &= TEST_HIST("2-sided construction (up)",
+                      syst_2.Up(),
+                      up,
+                      0,
+                      verbose);
+    pass &= TEST_HIST("2-sided construction (down)",
+                      syst_2.Down(),
+                      down,
+                      0,
+                      verbose);
 
     auto syst_diff_2 = syst_2.ForEach(subtract);
-    TEST_HISTS_SAME("two sided subtraction (up)",
-                    *(syst_diff_2.Up()),
-                    (*up - *nominal),
-                    0);
-    TEST_HISTS_SAME("two sided subtraction (down)",
-                    *(syst_diff_2.Down()),
-                    (*down - *nominal),
-                    0);
+    auto _sub_up = (TH1 *) up->Clone();
+    _sub_up->Add(nominal, -1);
+    auto _sub_dw = (TH1 *) down->Clone();
+    _sub_dw->Add(nominal, -1);
+    
+    pass &= TEST_HIST("two sided subtraction (up)",
+                      syst_diff_2.Up(),
+                      _sub_up,
+                      0,
+                      verbose);
+    pass &= TEST_HIST("two sided subtraction (down)",
+                      syst_diff_2.Down(),
+                      _sub_dw,
+                      0,
+                      verbose);
 
     auto syst_div_2 = syst_2.ForEach(divide);
-    TEST_HISTS_SAME("two sided division (up)",
-                    *(syst_div_2.Up()),
-                    ((*up - *nominal) / *nominal),
-                    0);
-    TEST_HISTS_SAME("two sided division (down)",
-                    *(syst_div_2.Down()),
-                    ((*down - *nominal) / *nominal),
-                    0);
+    auto _div_up = (TH1 *) up->Clone();
+    _div_up->Add(nominal, -1);
+    _div_up->Divide(nominal);
+
+    auto _div_dw = (TH1 *) down->Clone();
+    _div_dw->Add(nominal, -1);
+    _div_dw->Divide(nominal);
+
+    pass &= TEST_HIST("two sided division (up)",
+                      syst_div_2.Up(),
+                      _div_up,
+                      0,
+                      verbose);
+    pass &= TEST_HIST("two sided division (down)",
+                      syst_div_2.Down(),
+                      _div_dw,
+                      0,
+                      verbose);
 
     // one sided systematic construction
-    Systematic<Hist> syst_1("syst", up);
-    TEST_HISTS_SAME("construction",
-                    *(syst_1.Up()),
-                    *(up),
-                    0);
+    Systematic<TH1> syst_1("syst", up);
+    pass &= TEST_HIST("construction",
+                      syst_1.Up(),
+                      up,
+                      0,
+                      verbose);
 
 
     auto syst_diff_1 = syst_1.ForEach(subtract);
-    TEST_HISTS_SAME("one sided subtraction (up)",
-                    *(syst_diff_1.Up()),
-                    (*up - *nominal),
-                    0);
+    pass &= TEST_HIST("one sided subtraction (up)",
+                      syst_diff_1.Up(),
+                      _sub_up,
+                      0,
+                      verbose);
 
     // one sided systematic division via invoke
     auto syst_div_1 = syst_1.ForEach(divide);
-    TEST_HISTS_SAME("one sided division",
-                    *(syst_div_1.Up()),
-                    ((*up - *nominal) / *nominal),
-                    0);
+    pass &= TEST_HIST("one sided division",
+                      syst_div_1.Up(),
+                      _div_up,
+                      0,
+                      verbose);
 
     auto output = new TFile(test_file_name.c_str(), "update");
     TDirectory * to = output->mkdir(dir.c_str());
@@ -93,28 +120,31 @@ bool run_tests(bool verbose, std::string dir) {
     delete output;
 
     TFile * input = TFile::Open(test_file_name.c_str());
-    auto loaded_2 = Systematic<Hist>::LoadFrom(Hist::LoadFrom,
-                                               input->GetDirectory(dir.c_str()),
-                                               "syst_2");
-    auto loaded_1 = Systematic<Hist>::LoadFrom(Hist::LoadFrom,
-                                               input->GetDirectory(dir.c_str()),
-                                               "syst_1");
+    auto loaded_2 = Systematic<TH1>::LoadFrom(root::LoadTH1,
+                                              input->GetDirectory(dir.c_str()),
+                                              "syst_2");
+    auto loaded_1 = Systematic<TH1>::LoadFrom(root::LoadTH1,
+                                              input->GetDirectory(dir.c_str()),
+                                              "syst_1");
     input->Close();
     delete input;
 
-    TEST_HISTS_SAME("load 2-sided (up)",
-                    *(loaded_2->Up()),
-                    *(up),
-                    0);
-    TEST_HISTS_SAME("load 2-sided (down)",
-                    *(loaded_2->Down()),
-                    *(down),
-                    0);
+    pass &= TEST_HIST("load 2-sided (up)",
+                      loaded_2->Up(),
+                      up,
+                      0,
+                      verbose);
+    pass &= TEST_HIST("load 2-sided (down)",
+                      loaded_2->Down(),
+                      down,
+                      0,
+                      verbose);
 
-    TEST_HISTS_SAME("load 1-sided (up)",
-                    *(loaded_1->Up()),
-                    *(up),
-                    0);
+    pass &= TEST_HIST("load 1-sided (up)",
+                      loaded_1->Up(),
+                      up,
+                      0,
+                      verbose);
 
     // test runtime exceptions
     try {
@@ -126,7 +156,7 @@ bool run_tests(bool verbose, std::string dir) {
     }
 
     try {
-        MultiverseShift(syst_1, *nominal, 1);
+        MultiverseShift(syst_1, nominal, 1);
         pass &= false;
     }
     catch (exceptions::SystematicTypeError & e) {
@@ -134,7 +164,7 @@ bool run_tests(bool verbose, std::string dir) {
     }
 
     try {
-        MultiverseShift(syst_2, *nominal, 1);
+        MultiverseShift(syst_2, nominal, 1);
         pass &= false;
     }
     catch (exceptions::SystematicTypeError & e) {
@@ -153,11 +183,13 @@ bool run_tests_mv(bool verbose, std::string dir) {
 
     auto nominal = test::utils::get_simple_nominal_hist();
     int nuniverses = 50;
-    std::vector<Hist *> universes = test::utils::make_simple_hist_multiverse(nominal, nuniverses);
+    std::vector<const TH1 *> universes = test::utils::make_simple_hist_multiverse(nominal, nuniverses);
 
     Systematic syst("test_mv", universes);
 
     auto plus_1sigma = MultiverseShift(syst, nominal, 1);
+
+
     auto minus_1sigma = MultiverseShift(syst, nominal, -1);
 
     // Systematic::NSigmaShift returns a
@@ -169,47 +201,35 @@ bool run_tests_mv(bool verbose, std::string dir) {
     // For a maximum spread of +/- 1, the shift that gets reconstructed
     // represents the universe corresponding to the 15th and 85th percentile index, for -/+ 1sigma,
     // respectively, in a sorted array of these universes.
-    // This
     int p1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses - 1) + 1;
-    TEST_HISTS_SAME("minus 1 sigma",
-                    minus_1sigma,
-                    *(universes[p1_idx]),
-                    0);
+    pass &= TEST_HIST("minus 1 sigma",
+                      minus_1sigma,
+                      universes[p1_idx],
+                      0,
+                      verbose);
 
-    // Test ForEach
-    // No need to get too fancy here. If it compiles assume it passes
-    std::vector<test::utils::Ratio *> vratio_mv;
-    for (auto i = 0u; i < syst.GetShifts().size(); i++) {
-        vratio_mv.push_back(new test::utils::Ratio(*syst.GetShifts()[i], nominal));
-    }
-
-    Systematic ratio_mv("ratio_mv", vratio_mv);
-    ForEachFunction<Hist, test::utils::Ratio> eval = [](
-            test::utils::Ratio * ratio) {
-        return new Hist(ratio->Eval());
-    };
-    auto ratio_mv_hists = ratio_mv.ForEach(eval);
 
     // save everything for later inspection
     TFile * output = new TFile(test_file_name.c_str(), "update");
+    nominal->Write("nominal");
+    plus_1sigma->Write("plus_1sigma");
+    minus_1sigma->Write("minus_1sigma");
     syst.SaveTo(output->mkdir(dir.c_str()), "test_mv");
-    nominal.SaveTo(output->GetDirectory(dir.c_str()), "nominal");
-
-    ratio_mv_hists.SaveTo(output->GetDirectory(dir.c_str()), "ratio_mv");
-    plus_1sigma.SaveTo(output->GetDirectory(dir.c_str()), "plus_1sigma");
-    minus_1sigma.SaveTo(output->GetDirectory(dir.c_str()), "minus_1sigma");
-
     output->Close();
     delete output;
 
     // serialization closure
     TFile * input = TFile::Open(test_file_name.c_str());
-    auto loaded = Systematic<Hist>::LoadFrom(Hist::LoadFrom,
-                                             input->GetDirectory(dir.c_str()),
-                                             "test_mv");
+    auto loaded = Systematic<TH1>::LoadFrom(root::LoadTH1,
+                                            input->GetDirectory(dir.c_str()),
+                                            "test_mv");
     input->Close();
     delete input;
-    TEST_MULTIVERSE("loadfrom/saveto", syst, *loaded, 0);
+    pass &= TEST_MULTIVERSE("loadfrom/saveto",
+                            syst,
+                            *loaded,
+                            0,
+                            verbose);
 
     // test runtime exceptions
     try {
@@ -246,50 +266,32 @@ int main(int argc, char ** argv) {
 
     pass &= run_tests_mv<double, Eigen::Dynamic>(verbose, "mv_double_dynamic");
 
-    auto nominal = test::utils::get_simple_nominal_hist();
-
-    auto up = new test::utils::Ratio(nominal + 1, nominal);
-    auto dw = new test::utils::Ratio(nominal - 1, nominal);
-
-    int nuniverses = 50;
-    double maxy = 1;
-    double miny = -1;
-    std::vector<test::utils::Ratio *> universes(nuniverses);
-    for (auto i = 0; i < nuniverses; i++) {
-        universes[i] = new test::utils::Ratio(nominal + (-1 + (maxy - miny) / (nuniverses - 1) * i),
-                                              nominal);
-    }
+    auto den = test::utils::get_simple_nominal_hist();
+    auto num = test::utils::get_simple_down_hist();
 
     // test of polymorphism of objects in the systematics container
-    auto eff = new SimpleEfficiency(nominal + 1, nominal);
+    auto eff = new SimpleEfficiency(num, den);
 
-    Systematic<IEfficiency> syst_eff("eff",
-                                     eff);
-    ForEachFunction<Hist, IEfficiency> eval_efficiency = [](IEfficiency * eff) {
-        return new Hist(eff->Eval());
-    };
-    Systematic<Hist> eff_res = syst_eff.ForEach(eval_efficiency);
+    Systematic<IMeasurement> syst_eff("eff",
+                                      eff);
 
-    TEST_HISTS_SAME("polymorphism IEfficiency",
-                    *(eff_res.Up()),
-                    ((nominal + 1) / nominal),
-                    0);
+    Systematic<TH1> eff_res = syst_eff.Eval(num);
 
-    auto signal = new SimpleSignalEstimator(nominal);
-    auto data = nominal + 1;
-    Systematic<ISignalEstimator> syst_signal("signal",
-                                             signal);
-    ForEachFunction<Hist,
-                    ISignalEstimator>
-            eval_signal =
-            [&data](ISignalEstimator * sig) {
-                return new Hist(sig->Eval(data));
-            };
-    Systematic<Hist> signal_res = syst_signal.ForEach(eval_signal);
-    TEST_HISTS_SAME("polymorphism ISignalEstimator",
-                    *(signal_res.Up()),
-                    (data - nominal),
-                    0);
+    pass &= TEST_HIST("polymorphism IEfficiency",
+                      eff_res.Up(),
+                      eff->Eval(num),
+                      0,
+                      verbose);
+
+    auto signal = new SimpleSignalEstimator(num);
+    Systematic<IMeasurement> syst_signal("signal",
+                                         signal);
+    Systematic<TH1> signal_res = syst_signal.Eval(den);
+    pass &= TEST_HIST("polymorphism ISignalEstimator",
+                      signal_res.Up(),
+                      signal->Eval(den),
+                      0,
+                      verbose);
 
     return !pass;
 }

@@ -7,6 +7,7 @@
 #include "TAxis.h"
 #include <unsupported/Eigen/CXX11/Tensor>
 #include "XSecAna/Type.h"
+
 namespace xsec {
     typedef Eigen::ArrayXd Array;
     typedef Eigen::ArrayXXd Array2D;
@@ -20,22 +21,23 @@ namespace xsec {
             return base + std::to_string(N++);
         }
 
-        inline std::unique_ptr<TH1> LoadTH1(TDirectory * dir, const std::string & name ) {
-            auto ret = std::unique_ptr<TH1>((TH1*)dir->Get(name.c_str()));
+        inline std::unique_ptr<TH1> LoadTH1(TDirectory * dir, const std::string & name) {
+            auto ret = std::unique_ptr<TH1>((TH1 *) dir->Get(name.c_str()));
             ret->SetDirectory(0); // Tell dir it doesn't own this object anymore
-                                      // or else it gets deleted when the file is closed...
+            // or else it gets deleted when the file is closed...
             return ret;
         };
 
         struct TH1Props {
             TH1Props() = default;
-            TH1Props(const TH1 * h, const char * _name="")
+
+            TH1Props(const TH1 * h, const char * _name = "")
                     : axes({h->GetXaxis(),
                             h->GetYaxis(),
                             h->GetZaxis()}),
                       dims(h->GetDimension()),
                       name(_name),
-                      entries(h->GetEntries()){
+                      entries(h->GetEntries()) {
                 if (dims == 1) {
                     nbins_and_uof = h->GetNbinsX() + 2;
                 } else if (dims == 2) {
@@ -172,14 +174,15 @@ namespace xsec {
 
         inline Array MapBinWidthsToEigen(const TH1Props & props) {
             if (props.dims == 1) {
-                Array _bw(props.axes[0]->GetNbins());
+                Array _bw = Array::Ones(props.axes[0]->GetNbins()+2);
                 for (auto i = 1u; i <= props.axes[0]->GetNbins(); i++) {
                     _bw(i) = props.axes[0]->GetBinWidth(i);
                 }
+
                 return _bw;
             } else if (props.dims == 2) {
-                Array2D _bw(props.axes[0]->GetNbins(),
-                            props.axes[1]->GetNbins());
+                Array2D _bw = Array2D::Ones(props.axes[0]->GetNbins()+2,
+                                            props.axes[1]->GetNbins()+2);
                 for (auto i = 1u; i <= props.axes[0]->GetNbins(); i++) {
                     for (auto j = 1u; j <= props.axes[1]->GetNbins(); j++) {
                         _bw(i, j) = props.axes[0]->GetBinWidth(i) *
@@ -188,22 +191,24 @@ namespace xsec {
                 }
                 return ArrayMap(_bw.data(), _bw.size());
             } else {
-                Array3D _bw(props.axes[0]->GetNbins(),
-                            props.axes[1]->GetNbins(),
-                            props.axes[2]->GetNbins());
+                Array3D _bw = Eigen::TensorMap<const Array3D>(Array::Ones(props.nbins_and_uof).eval().data(),
+                                                              props.axes[0]->GetNbins() + 2,
+                                                              props.axes[1]->GetNbins() + 2,
+                                                              props.axes[2]->GetNbins() + 2);
+
                 for (auto i = 1u; i <= props.axes[0]->GetNbins(); i++) {
                     for (auto j = 1u; j <= props.axes[1]->GetNbins(); j++) {
                         for (auto k = 1u; k <= props.axes[2]->GetNbins(); k++) {
-                            _bw(i, j, k) = props.axes[0]->GetBinWidth(i) *
-                                           props.axes[1]->GetBinWidth(j) *
-                                           props.axes[2]->GetBinWidth(k);
+                            _bw(i - 1, j - 1, k - 1) = props.axes[0]->GetBinWidth(i) *
+                                                       props.axes[1]->GetBinWidth(j) *
+                                                       props.axes[2]->GetBinWidth(k);
                         }
                     }
                 }
                 return ArrayMap(_bw.data(), _bw.size());
             }
         }
-        
+
         inline Array MapBinWidthsToEigen(const TH1 * h) {
             return MapBinWidthsToEigen(TH1Props(h, ""));
         }

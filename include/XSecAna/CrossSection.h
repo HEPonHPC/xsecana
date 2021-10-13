@@ -17,27 +17,27 @@ namespace xsec {
     public:
         ICrossSection() = default;
 
-        ICrossSection(IEfficiencyEstimator * efficiency,
-                      ISignalEstimator * signal_estimator,
-                      IFluxEstimator * flux,
-                      IUnfoldEstimator * unfold,
+        ICrossSection(IMeasurement * efficiency,
+                      IMeasurement * signal_estimator,
+                      IMeasurement * flux,
+                      IMeasurement * unfold,
                       double ntargets = 0);
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
         template<class DerivedCrossSection>
-        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiencyEstimator> load_efficiency,
-                                                      xsec::type::LoadFunction<ISignalEstimator> load_signal,
-                                                      xsec::type::LoadFunction<IFluxEstimator> load_flux,
-                                                      xsec::type::LoadFunction<IUnfoldEstimator> load_unfold,
+        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IMeasurement> load_efficiency,
+                                                      xsec::type::LoadFunction<IMeasurement> load_signal,
+                                                      xsec::type::LoadFunction<IMeasurement> load_flux,
+                                                      xsec::type::LoadFunction<IMeasurement> load_unfold,
                                                       TDirectory * dir,
                                                       const std::string & subdir);
 
     protected:
-        IEfficiencyEstimator * fEfficiency;
-        ISignalEstimator * fSignalEstimator;
-        IFluxEstimator * fFlux;
-        IUnfoldEstimator * fUnfold;
+        IMeasurement * fEfficiency;
+        IMeasurement * fSignalEstimator;
+        IMeasurement * fFlux;
+        IMeasurement * fUnfold;
 
         double fNTargets;
     };
@@ -48,16 +48,16 @@ namespace xsec {
     public:
         EigenDifferentialCrossSectionEstimator() = default;
 
-        EigenDifferentialCrossSectionEstimator(IEfficiencyEstimator * efficiency,
-                                               ISignalEstimator * signal_estimator,
-                                               IFluxEstimator * flux,
-                                               IUnfoldEstimator * unfold,
+        EigenDifferentialCrossSectionEstimator(IMeasurement * efficiency,
+                                               IMeasurement * signal_estimator,
+                                               IMeasurement * flux,
+                                               IMeasurement * unfold,
                                                double ntargets = 0);
 
-        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiencyEstimator> load_efficiency,
-                                                      xsec::type::LoadFunction<ISignalEstimator> load_signal,
-                                                      xsec::type::LoadFunction<IFluxEstimator> load_flux,
-                                                      xsec::type::LoadFunction<IUnfoldEstimator> load_unfold,
+        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IMeasurement> load_efficiency,
+                                                      xsec::type::LoadFunction<IMeasurement> load_signal,
+                                                      xsec::type::LoadFunction<IMeasurement> load_flux,
+                                                      xsec::type::LoadFunction<IMeasurement> load_unfold,
                                                       TDirectory * dir,
                                                       const std::string & subdir);
 
@@ -72,16 +72,16 @@ namespace xsec {
     public:
         EigenCrossSectionEstimator() = default;
 
-        EigenCrossSectionEstimator(IEfficiencyEstimator * efficiency,
-                                   ISignalEstimator * signal_estimator,
-                                   IFluxEstimator * flux,
-                                   IUnfoldEstimator * unfold,
+        EigenCrossSectionEstimator(IMeasurement * efficiency,
+                                   IMeasurement * signal_estimator,
+                                   IMeasurement * flux,
+                                   IMeasurement * unfold,
                                    double ntargets = 0);
 
-        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IEfficiencyEstimator> load_efficiency,
-                                                      xsec::type::LoadFunction<ISignalEstimator> load_signal,
-                                                      xsec::type::LoadFunction<IFluxEstimator> load_flux,
-                                                      xsec::type::LoadFunction<IUnfoldEstimator> load_unfold,
+        static std::unique_ptr<IMeasurement> LoadFrom(xsec::type::LoadFunction<IMeasurement> load_efficiency,
+                                                      xsec::type::LoadFunction<IMeasurement> load_signal,
+                                                      xsec::type::LoadFunction<IMeasurement> load_flux,
+                                                      xsec::type::LoadFunction<IMeasurement> load_unfold,
                                                       TDirectory * dir,
                                                       const std::string & subdir);
 

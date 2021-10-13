@@ -9,13 +9,11 @@
 
 namespace xsec {
 
-    class SimpleFlux : public IFluxEstimator {
+    class SimpleFlux : public IEigenFluxEstimator {
     public:
         SimpleFlux() = default;
 
         explicit SimpleFlux(const TH1 * flux);
-
-        virtual const TH1 * Eval(const TH1 * data) const override;
 
         virtual void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
@@ -23,6 +21,8 @@ namespace xsec {
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
     protected:
+        virtual void _eval_impl(const Array & data, const Array & error,
+                                ArrayRef result, ArrayRef rerror) const override;
         const TH1 * fFlux;
     };
 
@@ -41,5 +41,7 @@ namespace xsec {
         virtual void _eval_impl(const Array & data, const Array & error,
                                 ArrayRef result, ArrayRef rerror) const override;
         const TH1 * fFlux;
+        const double fN=1;
+        const double fdN=1;
     };
 }

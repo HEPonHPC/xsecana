@@ -19,7 +19,7 @@ namespace xsec {
     };
 
     template<class U, class T>
-    using ForEachFunction = std::function<U *(T *)>;
+    using ForEachFunction = std::function<U *(const T *)>;
 
 
     namespace exceptions {
@@ -60,21 +60,23 @@ namespace xsec {
         Systematic() = default;
 
         Systematic(std::string name,
-                   T * shift);
+                   const T * shift);
 
         Systematic(std::string name,
-                   T * up,
-                   T * down);
+                   const T * up,
+                   const T * down);
 
         Systematic(std::string name,
-                   std::vector<T *> & universes);
+                   std::vector<const T *> & universes);
 
         Systematic(std::string name,
-                   std::vector<T *> & container,
+                   std::vector<const T *> & container,
                    SystType_t type);
 
         template<class U>
         Systematic<U> ForEach(ForEachFunction<U, T> for_each, std::string new_name = "");
+
+        Systematic<TH1> Eval(const TH1 * data, std::string new_name="") const;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const;
 
@@ -82,7 +84,7 @@ namespace xsec {
                                                         TDirectory * dir,
                                                         const std::string & subdir);
 
-        const std::vector<T *> & GetShifts() const;
+        const std::vector<const T *> & GetShifts() const;
 
         const T * Up() const;
 
@@ -93,7 +95,7 @@ namespace xsec {
         [[nodiscard]] std::string GetName() const;
 
     private:
-        std::vector<T *> fContainer;
+        std::vector<const T *> fContainer;
         SystType_t fType;
         std::string fName;
     };

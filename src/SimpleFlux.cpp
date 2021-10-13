@@ -12,13 +12,9 @@ namespace xsec {
 
     SimpleIntegratedFlux::
     SimpleIntegratedFlux(const TH1 * flux)
-            : fFlux(flux) {}
-
-    const TH1 *
-    SimpleFlux::
-    Eval(const TH1* data) const {
-        return fFlux;
-    }
+            : fFlux(flux),
+              fN(root::MapContentsToEigen(fFlux).sum()),
+              fdN(std::sqrt(fN)) {}
 
     //////////////////////////////////////////////////////////
     void
@@ -53,9 +49,14 @@ namespace xsec {
     void
     SimpleIntegratedFlux::
     _eval_impl(const Array & data, const Array & error, ArrayRef result, ArrayRef rerror) const {
-        auto N = fFlux->Integral();
-        result = Array::Ones(result.size()) * N;
-        rerror = Array::Ones(result.size()) * sqrt(N);
+        result = Array::Ones(result.size()) * fN;
+        rerror = Array::Ones(result.size()) * fdN;
+    }
+
+    void
+    SimpleFlux::
+    _eval_impl(const Array & data, const Array & error, ArrayRef result, ArrayRef rerror) const {
+        root::MapToEigen(this->fFlux, result, rerror);
     }
 
 

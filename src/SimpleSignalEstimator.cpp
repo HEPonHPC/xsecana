@@ -25,6 +25,9 @@ namespace xsec {
     SimpleSignalEstimator::
     _eval_impl(const Array & data, const Array & error, ArrayRef result, ArrayRef rerror) const {
         result = data - root::MapContentsToEigen(fBackground);
+        rerror = ((error / data).pow(2) +
+                  (root::MapErrorsToEigen(fBackground) /
+                   root::MapContentsToEigen(fBackground)).pow(2)).sqrt() * result;
         rerror = QuadSum(error, root::MapErrorsToEigen(fBackground));
     }
 
@@ -60,7 +63,7 @@ namespace xsec {
         assert(ptag->GetString() == "SimpleSignalEstimator" && "Type does not match SimpleSignalEstimator");
         delete ptag;
 
-        auto background = (TH1*) dir->Get("fBackground");
+        auto background = root::LoadTH1(dir, "fBackground").release();
         return std::make_unique<SimpleSignalEstimator>(background);
     }
 

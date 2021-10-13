@@ -21,6 +21,6 @@ namespace xsec {
     };
 
     class IEfficiencyEstimator : public IEfficiency, public IMeasurement{};
-    class IEigenEfficiencyEstimator : public IEfficiency, public virtual IMeasurement, public IEigenEval{};
+    class IEigenEfficiencyEstimator : public virtual IEfficiency, public virtual IMeasurement, public IEigenEval{};
 
 }

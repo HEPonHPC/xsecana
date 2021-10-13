@@ -34,7 +34,6 @@ inline void AreEqual(const TH1 * h1,
             }
         }
     }
-
 }
 
 int main(int argc, char ** argv) {
@@ -87,6 +86,13 @@ int main(int argc, char ** argv) {
     bool equal_error3 = true;
     AreEqual(th3, root::ToROOTLike(th3, arr3d_c, arr3d_e), equal_content3, equal_error3);
     assert(equal_content3 && equal_error3);
+
+    auto bin_width = test::utils::make_constant_hist_like(th1, 1);
+    for (auto i = 1; i <= bin_width->GetNbinsX(); i++) {
+        bin_width->SetBinContent(i, bin_width->GetBinWidth(i));
+        bin_width->SetBinError(i, 0);
+    }
+    assert((root::MapContentsToEigen(bin_width) - root::MapBinWidthsToEigen(th1)).isZero(0));
 
     auto output = new TFile("test_hist.root", "recreate");
     th1->Write("th1");

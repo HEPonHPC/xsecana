@@ -8,8 +8,8 @@
 
 namespace xsec {
     SimpleEfficiency::
-    SimpleEfficiency(TH1 * num,
-                     TH1 * den)
+    SimpleEfficiency(const TH1 * num,
+                     const TH1 * den)
             : fNumerator(num), fDenominator(den) {}
 
     const TH1 *
