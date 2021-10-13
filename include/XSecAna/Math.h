@@ -30,7 +30,7 @@ namespace xsec {
         return root::ToROOT(QuadSum(_deltas_c),
                             QuadSum(_deltas_e),
                             root::TH1Props(deltas[0],
-                                           __FUNCTION__));
+                                           root::MakeUnique(std::string(__FUNCTION__)).c_str()));
     }
 
     inline Array
