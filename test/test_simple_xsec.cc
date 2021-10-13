@@ -92,7 +92,7 @@ int main(int argc, char ** argv) {
                                                unfold,
                                                ntargets);
 
-    auto expected_signal = (TH1 * ) data->Clone();
+    auto expected_signal = (TH1 *) data->Clone();
     expected_signal->Add(bkgd, -1);
 
     auto expected_xsec = (TH1 *) data->Clone();
@@ -100,11 +100,11 @@ int main(int argc, char ** argv) {
     expected_xsec->Divide(flux_hist);
     expected_xsec->Divide(eff);
 
-    TEST_HIST("xsec",
-              xsec->Eval(data),
-              expected_xsec,
-              0,
-              verbose);
+    pass &= TEST_HIST("xsec",
+                      xsec->Eval(data),
+                      expected_xsec,
+                      0,
+                      verbose);
 
     auto bin_width = test::utils::make_constant_hist_like(expected_xsec, 1);
     for (auto i = 1; i <= bin_width->GetNbinsX(); i++) {
@@ -112,7 +112,7 @@ int main(int argc, char ** argv) {
         bin_width->SetBinError(i, 0);
     }
     bin_width->SetBinError(0, 0);
-    bin_width->SetBinError(bin_width->GetNbinsX()+1, 0);
+    bin_width->SetBinError(bin_width->GetNbinsX() + 1, 0);
 
 
     auto expected_xsec_differential = (TH1 *) data->Clone();
@@ -131,11 +131,11 @@ int main(int argc, char ** argv) {
     integrated_flux_hist->GetBinContent(0);
     expected_xsec_differential->Divide(integrated_flux_hist);
     auto result_xsec_differential = xsec_differential->Eval(data);
-    TEST_HIST("xsec_differential",
-              result_xsec_differential,
-              expected_xsec_differential,
-              1e-11,
-              verbose);
+    pass &= TEST_HIST("xsec_differential",
+                      result_xsec_differential,
+                      expected_xsec_differential,
+                      1e-11,
+                      verbose);
 
     std::string test_file_name = test::utils::test_dir() + "test_simple_xsec.root";
     auto output = new TFile(test_file_name.c_str(), "recreate");
@@ -162,17 +162,17 @@ int main(int argc, char ** argv) {
     input->Close();
     delete input;
 
-    TEST_HIST("loaded xsec",
-              loaded_xsec->Eval(data),
-              xsec->Eval(data),
-              0,
-              verbose);
+    pass &= TEST_HIST("loaded xsec",
+                      loaded_xsec->Eval(data),
+                      xsec->Eval(data),
+                      0,
+                      verbose);
 
-    TEST_HIST("loaded differential xsec",
-              loaded_differential_xsec->Eval(data),
-              xsec_differential->Eval(data),
-              0,
-              verbose);
+    pass &= TEST_HIST("loaded differential xsec",
+                      loaded_differential_xsec->Eval(data),
+                      xsec_differential->Eval(data),
+                      0,
+                      verbose);
 
     auto simple_data = test::utils::get_simple_data();
     auto simple_ones = (TH1 *) simple_data->Clone();
