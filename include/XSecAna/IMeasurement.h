@@ -31,7 +31,7 @@ namespace xsec {
     public:
         const TH1 * Eval(const TH1 * data) const final {
             fHistProps = root::TH1Props(data,
-                                        root::MakeUnique(typeid(this).name()).c_str());
+                                        root::MakeUnique("UniqueEval").c_str());
 
             Array _data(fHistProps.nbins_and_uof);
             Array _error(fHistProps.nbins_and_uof);
