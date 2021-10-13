@@ -26,7 +26,7 @@ namespace xsec {
             Systematic<TH1>
             EvalSystematic(const xsec::Systematic<T> & shifted_obj,
                            Args && ...  args) {
-                std::vector<TH1 *> shifts(shifted_obj.GetShifts().size());
+                std::vector<const TH1 *> shifts(shifted_obj.GetShifts().size());
                 for (auto i = 0u; i < shifted_obj.GetShifts().size(); i++) {
                     shifts[i] = shifted_obj.GetShifts()[i]->Eval(std::forward<Args>(args)...);
                 }
@@ -43,24 +43,26 @@ namespace xsec {
                                  const xsec::Systematic<TH1> & shifted_obj) {
                 std::vector<TH1 *> shifts(shifted_obj.GetShifts().size());
                 root::TH1Props props(nominal);
-                Array up(props.nbins_and_uof);
-                Array down(props.nbins_and_uof);
+                Array up_c(props.nbins_and_uof);
+                Array down_c(props.nbins_and_uof);
 
-                auto nom_array = root::MapContentsToEigen(nominal);
+                Array nom_c = root::MapContentsToEigen(nominal);
                 // convert multiverse systematic to two-sided by finding 1sigma
                 if (shifted_obj.GetType() == kMultiverse) {
-                    up = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, 1));
-                    down = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, -1));
+                    up_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, 1));
+                    down_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, -1));
                 } else if (shifted_obj.GetType() == kTwoSided) {
-                    up = root::MapContentsToEigen(shifted_obj.GetShifts()[0]) - nom_array;
-                    down = root::MapContentsToEigen(shifted_obj.GetShifts()[1]) - nom_array;
+                    up_c = root::MapContentsToEigen(shifted_obj.GetShifts()[0]);
+                    down_c = root::MapContentsToEigen(shifted_obj.GetShifts()[1]);
+                    up_c = up_c - nom_c;
+                    down_c = down_c - nom_c;
                 } else {
-                    up = root::MapContentsToEigen(shifted_obj.GetShifts()[0]) - nom_array;
-                    down = up;
+                    up_c = root::MapContentsToEigen(shifted_obj.GetShifts()[0]);
+                    up_c = up_c - nom_c;
+                    down_c = up_c;
                 }
-
-                auto diff = root::ToROOTLike(nominal, MaxShift(up.abs(), down.abs()));
-
+                auto max_c = MaxShift(up_c.abs(), down_c.abs());
+                auto diff = root::ToROOTLike(nominal, max_c, Array::Zero(props.nbins_and_uof));
                 return {nominal,
                         Systematic<TH1>(shifted_obj.GetName(),
                                         diff,
@@ -72,8 +74,12 @@ namespace xsec {
             std::pair<const TH1 *, Systematic<TH1>>
             _FractionalUncertainty(const TH1 * nominal,
                                    const xsec::Systematic<TH1> & shifted_obj) {
-                auto frac = (TH1 *) nominal->Clone();
-                frac->Divide(std::get<1>(_AbsoluteUncertainty(nominal, shifted_obj)).Up());
+                auto frac = (TH1*) std::get<1>(_AbsoluteUncertainty(nominal, shifted_obj)).Up()->Clone();
+                frac->Divide(nominal);
+                // root assumes all histograms are independent when calculating errors.
+                // In this case, nominal is in numerator and denominator, and error simplifies
+                // to equal the error on the absolute uncertainty
+                frac->SetError(Array::Zero(root::TH1Props(nominal).nbins_and_uof).eval().data());
                 return {nominal, Systematic<TH1>(shifted_obj.GetName(), frac, frac)};
             }
 
@@ -89,6 +95,7 @@ namespace xsec {
                                                                       syst_it->second)).Up());
                 }
                 auto result = QuadSum(shifts);
+                result->SetError(Array::Zero(root::TH1Props(nominal).nbins_and_uof).eval().data());
                 return {nominal, Systematic<TH1>("Total Absolute Uncertainty",
                                                  result,
                                                  result)};
@@ -107,6 +114,7 @@ namespace xsec {
                 }
                 auto result = QuadSum(shifts);
                 result->Divide(nominal);
+                result->SetError(Array::Zero(root::TH1Props(nominal).nbins_and_uof).eval().data());
                 return {nominal, Systematic<TH1>("Total Fractional Uncertainty",
                                                  result,
                                                  result)};
@@ -236,7 +244,7 @@ namespace xsec {
         template<class T,
                  class ... Args>
         inline
-        std::pair<TH1, Systematic<TH1>>
+        std::pair<const TH1 *, Systematic<TH1>>
         TotalFractionalUncertainty(const T * nominal_obj,
                                    const std::map<std::string,
                                                   xsec::Systematic<T> > & shifted_objs,
