@@ -3,7 +3,6 @@
 #include <map>
 
 #include "XSecAna/Systematic.h"
-#include "XSecAna/Hist.h"
 #include "XSecAna/IMeasurement.h"
 
 // root includes
@@ -13,7 +12,7 @@ namespace xsec {
     inline
     void SaveAnalysis(xsec::IMeasurement * nominal,
                       std::vector<xsec::Systematic<xsec::IMeasurement>> systematics,
-                      Hist & data,
+                      const TH1 * data,
                       TDirectory * dir,
                       const std::string & subdir) {
         TDirectory * tmp = gDirectory;
@@ -23,7 +22,7 @@ namespace xsec {
         TObjString("Analysis").Write("type");
 
         nominal->SaveTo(dir, "Nominal");
-        data.SaveTo(dir, "Data");
+        data->Write("Data");
 
         TObjString(std::to_string(systematics.size()).c_str()).Write("NSystematics");
         auto syst_dir = dir->mkdir("Systematics");
@@ -36,7 +35,7 @@ namespace xsec {
     inline
     std::tuple<xsec::IMeasurement *,
                std::vector<xsec::Systematic<xsec::IMeasurement>>,
-               Hist>
+               const TH1*>
     LoadAnalysis(xsec::type::LoadFunction<xsec::IMeasurement> load,
                  TDirectory * dir,
                  const std::string & subdir) {
@@ -47,7 +46,7 @@ namespace xsec {
         assert(ptag->GetString() == "Analysis" && "Type does not match Analysis");
         delete ptag;
 
-        auto data = *Hist::LoadFrom(dir, "Data");
+        auto data = root::LoadTH1(dir, "Data").release();
         auto nominal = load(dir, "Nominal").release();
 
         auto syst_dir = dir->GetDirectory("Systematics");
