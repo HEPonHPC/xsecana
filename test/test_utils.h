@@ -108,6 +108,7 @@ namespace xsec {
                     for (auto j = 0; j <= h->GetNbinsX() + 1; j++) {
                         for (auto k = 0; k <= h->GetNbinsX() + 1; k++) {
                             ret->SetBinContent(i, j, k, c);
+                            ret->SetBinError(i, j, k, std::sqrt(c));
                         }
                     }
                 }
