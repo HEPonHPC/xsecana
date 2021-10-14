@@ -18,11 +18,11 @@ int main(int argc, char ** argv) {
     SimpleSignalEstimator signal_estimator(test::utils::get_simple_background());
 
     double tol = 1e-14;
-    TEST_HIST("signal",
-              signal_estimator.Eval(data),
-              expected_signal,
-              tol,
-              verbose);
+    pass &= TEST_HIST("signal",
+                      signal_estimator.Eval(data),
+                      expected_signal,
+                      tol,
+                      verbose);
 
     std::string test_file_name = test::utils::test_dir() + "test_simple_signal_estimator.root";
     auto output = new TFile(test_file_name.c_str(), "recreate");
@@ -35,11 +35,11 @@ int main(int argc, char ** argv) {
                                          input,
                                          "signal_estimator").release();
 
-    TEST_HIST("loadfrom",
-              loaded->Eval(data),
-              expected_signal,
-              tol,
-              verbose);
+    pass &= TEST_HIST("loadfrom",
+                      loaded->Eval(data),
+                      expected_signal,
+                      tol,
+                      verbose);
 
     return !pass;
 }
