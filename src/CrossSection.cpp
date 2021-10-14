@@ -11,7 +11,6 @@
 #include "XSecAna/IEfficiency.h"
 #include "XSecAna/IFlux.h"
 #include "XSecAna/IUnfold.h"
-#include "XSecAna/Math.h"
 
 namespace xsec {
     ICrossSection::
