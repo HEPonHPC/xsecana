@@ -74,11 +74,11 @@ namespace xsec {
             }
         }
 
-        inline ArrayMap MapErrorsToEigen(const TH1 * h) {
+        inline Array MapErrorsToEigen(const TH1 * h) {
             if (h->GetDimension() == 1) {
-                std::vector<double> errors(h->GetNbinsX() + 2);
+                Array errors(h->GetNbinsX() + 2);
                 for (auto i = 0u; i < errors.size(); i++) {
-                    errors[i] = h->GetBinError(i);
+ 		     errors(i) = h->GetBinError(i);
                 }
                 return ArrayMap(errors.data(),
                                 errors.size());
