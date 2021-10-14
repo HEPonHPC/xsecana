@@ -16,11 +16,11 @@ int main(int argc, char ** argv) {
 
     // arbitrary binning
     int nana_bins = 8;
-    Array analysis_binning = Array::LinSpaced(nana_bins+1, 0, nana_bins);
+    Array analysis_binning = Array::LinSpaced(nana_bins + 1, 0, nana_bins);
     auto ones_analysis_binning = new TH1D("", "",
                                           nana_bins,
                                           analysis_binning.data());
-    ones_analysis_binning->SetContent(Array::Ones(nana_bins+2).eval().data());
+    ones_analysis_binning->SetContent(Array::Ones(nana_bins + 2).eval().data());
 
     SimpleFlux flux(flux_hist);
     SimpleIntegratedFlux integrated_flux(flux_hist);
@@ -32,16 +32,18 @@ int main(int argc, char ** argv) {
                       0,
                       verbose);
 
+    double nerr;
+    auto n = flux_hist->IntegralAndError(0, flux_hist->GetNbinsX()+1, nerr);
     auto target_integrated_flux = root::ToROOTLike(ones_analysis_binning,
                                                    Array::Ones(ones_analysis_binning->GetNbinsX() + 2) *
-                                                   flux_hist->Integral(),
+                                                   n,
                                                    Array::Ones(ones_analysis_binning->GetNbinsX() + 2) *
-                                                   std::sqrt(flux_hist->Integral()));
-    TEST_HIST("integrated_flux.Eval()",
-              integrated_flux.Eval(ones_analysis_binning),
-              target_integrated_flux,
-              0,
-              verbose);
+                                                   nerr);
+    pass &= TEST_HIST("integrated_flux.Eval()",
+                      integrated_flux.Eval(ones_analysis_binning),
+                      target_integrated_flux,
+                      0,
+                      verbose);
 
 
     std::string test_file_name = test::utils::test_dir() + "test_simple_flux.root";
@@ -61,16 +63,16 @@ int main(int argc, char ** argv) {
     input->Close();
     delete input;
 
-    TEST_HIST("loaded_flux",
-              loaded_flux->Eval(flux_hist),
-              flux_hist,
-              0,
-              verbose);
-    TEST_HIST("loaded_integrated_flux",
-              loaded_integrated_flux->Eval(ones_analysis_binning),
-              target_integrated_flux,
-              0,
-              verbose);
+    pass &= TEST_HIST("loaded_flux",
+                      loaded_flux->Eval(flux_hist),
+                      flux_hist,
+                      0,
+                      verbose);
+    pass &= TEST_HIST("loaded_integrated_flux",
+                      loaded_integrated_flux->Eval(ones_analysis_binning),
+                      target_integrated_flux,
+                      0,
+                      verbose);
 
     return !pass;
 }
