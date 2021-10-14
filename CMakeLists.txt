@@ -6,7 +6,7 @@ include(CTest)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-find_package(ROOT "6.22.00" REQUIRED)
+find_package(ROOT "6.18.00" REQUIRED)
 if(NOT EIGEN3_INCLUDE_DIR)
        find_package(Eigen3 "3.4.0" REQUIRED)
 endif()
@@ -30,4 +30,3 @@ include_directories(
 
 add_subdirectory(test)
 add_subdirectory(src)
-#add_subdirectory(src/ROOT)
