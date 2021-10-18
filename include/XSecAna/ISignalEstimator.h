@@ -9,9 +9,9 @@ namespace xsec {
     /// Defining interface for SignalEstimators
     class ISignal {
     public:
-        virtual const TH1 * Background(const TH1 * data) = 0;
+        virtual TH1 * Background(const TH1 * data) const = 0;
 
-        virtual const TH1 * Signal(const TH1 * data) = 0;
+        virtual TH1 * Signal(const TH1 * data) const = 0;
 
         static std::unique_ptr<ISignal>
         LoadFrom(xsec::type::LoadFunction<ISignal> load,

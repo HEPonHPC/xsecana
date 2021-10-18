@@ -14,10 +14,10 @@ namespace xsec {
 
 
     //////////////////////////////////////////////////////////
-    const TH1 *
+    TH1 *
     SimpleSignalEstimator::
-    Background(const TH1 * data) {
-        return fBackground;
+    Background(const TH1 * data) const {
+        return (TH1*) fBackground->Clone();
     }
 
     //////////////////////////////////////////////////////////
@@ -32,10 +32,10 @@ namespace xsec {
     }
 
     //////////////////////////////////////////////////////////
-    const TH1 *
+    TH1 *
     SimpleSignalEstimator::
-    Signal(const TH1 * data) {
-        return this->Eval(data);
+    Signal(const TH1 * data) const {
+        return (TH1*) this->Eval(data)->Clone();
     }
 
     //////////////////////////////////////////////////////////

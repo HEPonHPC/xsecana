@@ -12,9 +12,9 @@ namespace xsec {
 
         /// \brief background could be dependent on data
         /// in this case it isn't
-        const TH1 * Background(const TH1 * data) override;
+        TH1 * Background(const TH1 * data) const override;
 
-        const TH1 * Signal(const TH1 * data) override;
+        TH1 * Signal(const TH1 * data) const override;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
