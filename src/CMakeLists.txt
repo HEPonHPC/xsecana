@@ -6,6 +6,10 @@ set(HEADER_FILES
         ../include/XSecAna/CrossSection.h
         ../include/XSecAna/Systematic.h
         ../include/XSecAna/SimpleQuadSum.h
+        ../include/XSecAna/Fit/IFitter.h
+        ../include/XSecAna/Fit/TemplateFitCalculator.h
+        ../include/XSecAna/Fit/Minuit2TemplateFitter.h
+        ../include/XSecAna/TemplateFitSignalEstimator.h
 )
 
 set(SOURCES
@@ -14,6 +18,9 @@ set(SOURCES
         ./SimpleSignalEstimator.cpp
         ./CrossSection.cpp
         ./Systematic.cpp
+        ./Fit/TemplateFitCalculator.cpp
+        ./Fit/Minuit2TemplateFitter.cpp
+        ./TemplateFitSignalEstimator.cpp
 )
 
 
@@ -24,4 +31,5 @@ add_library(XSecAna SHARED
 
 target_link_libraries(XSecAna PRIVATE
         ${ROOT_LIBRARIES}
+        ROOT::Minuit2
 )
