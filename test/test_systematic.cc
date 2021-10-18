@@ -111,6 +111,23 @@ bool run_tests(bool verbose, std::string dir) {
                       _div_up,
                       0,
                       verbose);
+    auto expected_covariance_matrix = new TH2D("", "",
+                                               nominal->GetNbinsX(), 0, nominal->GetNbinsX(),
+                                               nominal->GetNbinsX(), 0, nominal->GetNbinsX());
+    for(auto i = 0u; i < nominal->GetNbinsX()+2; i++) {
+        for(auto j = 0u; j < nominal->GetNbinsX()+2; j++) {
+            auto c_i = nominal->GetBinContent(i) - up->GetBinContent(i);
+            auto c_j = nominal->GetBinContent(j) - up->GetBinContent(j);
+            expected_covariance_matrix->SetBinContent(i,j, c_i * c_j);
+        }
+    }
+
+    Array cov = syst_1.CovarianceMatrix(nominal).array().reshaped();
+    pass &= TEST_HIST("covariance matrix",
+                      root::ToROOTLike(expected_covariance_matrix, cov),
+                      expected_covariance_matrix,
+                      0,
+                      verbose);
 
     auto output = new TFile(test_file_name.c_str(), "update");
     TDirectory * to = output->mkdir(dir.c_str());

@@ -4,6 +4,7 @@
 #include "TObjString.h"
 
 #include "XSecAna/Type.h"
+#include "XSecAna/Utils.h"
 
 #include <exception>
 #include <cstdio>
@@ -83,6 +84,8 @@ namespace xsec {
         static std::unique_ptr<Systematic<T> > LoadFrom(xsec::type::LoadFunction<T> load,
                                                         TDirectory * dir,
                                                         const std::string & subdir);
+
+        Matrix CovarianceMatrix(const T * nominal) const;
 
         const std::vector<const T *> & GetShifts() const;
 

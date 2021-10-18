@@ -75,6 +75,55 @@ namespace xsec {
     }
 
     template<class T>
+    Matrix
+    Systematic<T>::
+    CovarianceMatrix(const T * nominal) const {
+        if constexpr (!std::is_base_of<TH1, T>::value) {
+            throw std::runtime_error("Type " +
+                                     std::string(typeid(T).name()) +
+                                     " does not implement CovarianceMatrix. Must be of type Systematic<TH1>.");
+        } else {
+            Array nom_a = root::MapContentsToEigen(nominal);
+            std::vector<Array> shifts_a(fContainer.size());
+            for(auto i = 0u; i < fContainer.size(); i++) {
+                shifts_a[i] = root::MapContentsToEigen(fContainer[i]);
+            }
+
+            Matrix cov(nom_a.size(), nom_a.size());
+            if(fType == kOneSided) {
+                for (auto i = 0; i < nom_a.size(); i++) {
+                    for (auto j = 0; j < nom_a.size(); j++) {
+                        cov(i, j) = (nom_a(i) - shifts_a[0](i)) *
+                                    (nom_a(j) - shifts_a[0](j));
+                    }
+                }
+            }
+            else if(fType == kTwoSided) {
+                for (auto i = 0; i < nom_a.size(); i++) {
+                    for (auto j = 0; j < nom_a.size(); j++) {
+                        auto di = nom_a(i) - std::max(shifts_a[0](i), shifts_a[1](i));
+                        auto dj = nom_a(j) - std::max(shifts_a[0](j), shifts_a[1](j));
+                        cov(i, j) = di * dj;
+                    }
+                }
+            }
+            else { // multiverse
+                 for (auto i = 0; i < nom_a.size(); i++) {
+                    for (auto j = 0; j < nom_a.size(); j++) {
+                        double v = 0;
+                        for(auto u = 0u; u < shifts_a.size(); u++) {
+                            v += (shifts_a[u](i) - nom_a(i)) *
+                                 (shifts_a[u](j) - nom_a(j));
+                        }
+                        cov(i, j) = v / shifts_a.size();
+                    }
+                }
+            }
+            return cov;
+        }
+    }
+
+    template<class T>
     Systematic<TH1>
     Systematic<T>::
     Eval(const TH1 * data, std::string new_name) const {
@@ -132,6 +181,14 @@ namespace xsec {
             mv_dir->cd();
             for (auto i = 0u; i < fContainer.size(); i++) {
                 fContainer[i]->Write(std::to_string(i).c_str());
+            }
+        } else if constexpr(std::is_same<T, Array>::value) {
+            auto tmp = new TH1D("", "",
+                                fContainer[0]->size(),
+                                0, fContainer[0]->size());
+            root::TH1Props props(tmp);
+            for (auto i = 0u; i < fContainer.size(); i++) {
+                root::ToROOT(*fContainer[i], props)->Write(std::to_string(i).c_str());
             }
         } else {
             for (auto i = 0u; i < fContainer.size(); i++) {
@@ -223,6 +280,8 @@ namespace xsec {
         return root::ToROOTLike(nominal, shift_arr, Array::Zero(props.nbins_and_uof));
     }
 
+    template
+    class Systematic<Array>;
 
     template
     class Systematic<TH1>;
