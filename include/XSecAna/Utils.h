@@ -12,6 +12,8 @@ namespace xsec {
     typedef Eigen::ArrayXd Array;
     typedef Eigen::ArrayXXd Array2D;
     typedef Eigen::Tensor<double, 3> Array3D;
+    typedef Eigen::MatrixXd Matrix;
+    typedef Eigen::VectorXd Vector;
 
     typedef Eigen::Ref<Array> ArrayRef;
     typedef Eigen::Map<const Array> ArrayMap;
@@ -60,56 +62,143 @@ namespace xsec {
 
         inline ArrayMap MapContentsToEigen(const TH1 * h) {
             if (h->GetDimension() == 1) {
-                return ArrayMap(dynamic_cast<const TH1D *>(h)->GetArray(),
-                                h->GetNbinsX() + 2);
-            } else if (h->GetDimension() == 2) {
-                return ArrayMap(dynamic_cast<const TH2D *>(h)->GetArray(),
+                return ArrayMap(((const TH1D *) h)->GetArray(),
+                                    h->GetNbinsX() + 2);
+            }
+            else if (h->GetDimension() == 2) {
+                return ArrayMap(((const TH2D *) h)->GetArray(),
                                 (h->GetNbinsX() + 2) *
                                 (h->GetNbinsY() + 2));
-            } else {
-                return ArrayMap(dynamic_cast<const TH3D *>(h)->GetArray(),
+            }
+            else {
+                return ArrayMap(((const TH3D *) h)->GetArray(),
                                 (h->GetNbinsX() + 2) *
                                 (h->GetNbinsY() + 2) *
                                 (h->GetNbinsZ() + 2));
             }
         }
 
-        inline Array MapErrorsToEigen(const TH1 * h) {
+        inline Array MapContentsToEigenInner(const TH1 * h) {
             if (h->GetDimension() == 1) {
-                Array errors(h->GetNbinsX() + 2);
-                for (auto i = 0u; i < errors.size(); i++) {
- 		     errors(i) = h->GetBinError(i);
-                }
-                return ArrayMap(errors.data(),
-                                errors.size());
+                auto arr = ArrayMap(((const TH1D *) h)->GetArray(),
+                                    h->GetNbinsX() + 2);
+                return arr(Eigen::seqN(1, arr.size()-2));
+            }
+            else if (h->GetDimension() == 2) {
+                auto arr = Eigen::Map<const Array2D>(((const TH2D*)h)->GetArray(),
+                                                     h->GetNbinsX()+2,
+                                                     h->GetNbinsY()+2);
+                return arr.block(1, 1, h->GetNbinsX(), h->GetNbinsY()).reshaped();
 
-
-            } else if (h->GetDimension() == 2) {
-                Array2D errors((h->GetNbinsX() + 2),
-                               (h->GetNbinsY() + 2));
-                for (auto i = 0u; i < errors.rows(); i++) {
-                    for (auto j = 0u; j < errors.cols(); j++) {
-                        errors(i, j) = h->GetBinError(i, j);
-                    }
-                }
-                return ArrayMap(errors.data(), errors.size());
-
-
-            } else {
-                Array3D errors(h->GetNbinsX() + 2,
-                               h->GetNbinsY() + 2,
-                               h->GetNbinsZ() + 2);
-                for (auto i = 0u; i <= h->GetNbinsX() + 1; i++) {
-                    for (auto j = 0u; j <= h->GetNbinsY() + 1; j++) {
-                        for (auto k = 0u; k < h->GetNbinsZ() + 1; k++) {
-                            errors(i, j, k) = h->GetBinError(i, j, k);
+            }
+            else {
+                Array3D arr(h->GetNbinsX(), h->GetNbinsY(), h->GetNbinsZ());
+                for(auto i = 0; i < h->GetNbinsX(); i++) {
+                    for(auto j = 0; j < h->GetNbinsY(); j++) {
+                        for(auto k = 0; k < h->GetNbinsZ(); k++) {
+                            arr(i,j,k) = h->GetBinContent(i,j,k);
                         }
                     }
                 }
-                return ArrayMap(errors.data(),
-                                errors.size());
+
+                return ArrayMap(arr.data(), arr.size());
             }
         }
+
+
+        inline Array MapErrorsToEigen(const TH1 * h, bool overflow=true) {
+            if (h->GetDimension() == 1) {
+                if(overflow) {
+                    Array errors(h->GetNbinsX()+2);
+                    for (auto i = 0; i < errors.size(); i++) {
+                        errors(i) = h->GetBinError(i);
+                    }
+                    return ArrayMap(errors.data(),
+                                    errors.size());
+                }
+                else {
+                    Array errors(h->GetNbinsX());
+                    for (auto i = 0; i < errors.size(); i++) {
+                        errors(i) = h->GetBinError(i+1);
+                    }
+                    return ArrayMap(errors.data(),
+                                    errors.size());
+                }
+
+            } else if (h->GetDimension() == 2) {
+                if(overflow) {
+                    Array2D errors((h->GetNbinsX() + 2),
+                                   (h->GetNbinsY() + 2));
+                    for (auto i = 0; i < errors.rows(); i++) {
+                        for (auto j = 0; j < errors.cols(); j++) {
+                            errors(i, j) = h->GetBinError(i, j);
+                        }
+                    }
+                    return ArrayMap(errors.data(), errors.size());
+                } else {
+                    Array2D errors(h->GetNbinsX(), h->GetNbinsY());
+                    for (auto i = 0; i < errors.rows(); i++) {
+                        for (auto j = 0; j < errors.cols(); j++) {
+                            errors(i, j) = h->GetBinError(i+1, j+1);
+                        }
+                    }
+                    return ArrayMap(errors.data(), errors.size());
+                }
+
+
+            } else {
+                if(overflow) {
+                    Array3D errors(h->GetNbinsX() + 2,
+                                   h->GetNbinsY() + 2,
+                                   h->GetNbinsZ() + 2);
+                    for (auto i = 0; i <= h->GetNbinsX() + 1; i++) {
+                        for (auto j = 0; j <= h->GetNbinsY() + 1; j++) {
+                            for (auto k = 0; k < h->GetNbinsZ() + 1; k++) {
+                                errors(i, j, k) = h->GetBinError(i, j, k);
+                            }
+                        }
+                    }
+                    return ArrayMap(errors.data(),
+                                    errors.size());
+                }
+                else {
+                    Array3D errors(h->GetNbinsX(),
+                                   h->GetNbinsY(),
+                                   h->GetNbinsZ());
+                    for (auto i = 0; i < h->GetNbinsX(); i++) {
+                        for (auto j = 0; j < h->GetNbinsY(); j++) {
+                            for (auto k = 0; k < h->GetNbinsZ(); k++) {
+                                errors(i, j, k) = h->GetBinError(i+1, j+1, k+1);
+                            }
+                        }
+                    }
+                    return ArrayMap(errors.data(),
+                                    errors.size());
+                }
+            }
+        }
+
+        inline void FillTH2Contents(TH2 * h, const Matrix & arr) {
+            auto nrows = arr.rows();
+            auto ncols = arr.cols();
+            Matrix zero = Matrix::Zero(nrows+2, ncols+2);
+            zero.block(1, 1, nrows, ncols) = arr;
+            h->SetContent(zero.eval().data());
+        }
+
+        //inline void FillTH2Contents(TH2 * h, const Array2D & arr) {
+        //    FillTH2Contents(h, arr.matrix());
+        //}
+
+        inline void FillTH1Contents(TH1 * h, const Vector & arr) {
+            Vector zero = Vector::Zero(arr.size()+2);
+            zero(Eigen::seqN(1,  arr.size())) = arr;
+            h->SetContent(zero.eval().data());
+        }
+        //inline void FillTH1Contents(TH1 * h, const Array & arr) {
+//            FillTH1Contents(h, arr.matrix());
+        //}
+
 
         inline TH1 * ToROOT(const Array & data,
                             TH1Props props) {
@@ -167,15 +256,16 @@ namespace xsec {
         }
 
 
-        inline void MapToEigen(const TH1 * h, ArrayRef contents, ArrayRef errors) {
-            contents = MapContentsToEigen(h);
-            errors = MapErrorsToEigen(h);
+        inline void MapToEigen(const TH1 * h, ArrayRef contents, ArrayRef errors, bool overflow=true) {
+            if(overflow) contents = MapContentsToEigen(h);
+            else contents = MapContentsToEigenInner(h);
+            errors = MapErrorsToEigen(h, overflow);
         }
 
         inline Array MapBinWidthsToEigen(const TH1Props & props) {
             if (props.dims == 1) {
                 Array _bw = Array::Ones(props.axes[0]->GetNbins()+2);
-                for (auto i = 1u; i <= props.axes[0]->GetNbins(); i++) {
+                for (auto i = 1; i <= props.axes[0]->GetNbins(); i++) {
                     _bw(i) = props.axes[0]->GetBinWidth(i);
                 }
 
@@ -183,8 +273,8 @@ namespace xsec {
             } else if (props.dims == 2) {
                 Array2D _bw = Array2D::Ones(props.axes[0]->GetNbins()+2,
                                             props.axes[1]->GetNbins()+2);
-                for (auto i = 1u; i <= props.axes[0]->GetNbins(); i++) {
-                    for (auto j = 1u; j <= props.axes[1]->GetNbins(); j++) {
+                for (auto i = 1; i <= props.axes[0]->GetNbins(); i++) {
+                    for (auto j = 1; j <= props.axes[1]->GetNbins(); j++) {
                         _bw(i, j) = props.axes[0]->GetBinWidth(i) *
                                     props.axes[1]->GetBinWidth(j);
                     }
@@ -196,9 +286,9 @@ namespace xsec {
                                                               props.axes[1]->GetNbins() + 2,
                                                               props.axes[2]->GetNbins() + 2);
 
-                for (auto i = 1u; i <= props.axes[0]->GetNbins(); i++) {
-                    for (auto j = 1u; j <= props.axes[1]->GetNbins(); j++) {
-                        for (auto k = 1u; k <= props.axes[2]->GetNbins(); k++) {
+                for (auto i = 1; i <= props.axes[0]->GetNbins(); i++) {
+                    for (auto j = 1; j <= props.axes[1]->GetNbins(); j++) {
+                        for (auto k = 1; k <= props.axes[2]->GetNbins(); k++) {
                             _bw(i - 1, j - 1, k - 1) = props.axes[0]->GetBinWidth(i) *
                                                        props.axes[1]->GetBinWidth(j) *
                                                        props.axes[2]->GetBinWidth(k);
