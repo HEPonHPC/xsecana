@@ -20,7 +20,9 @@ message(STATUS "ROOT_INCLUDE_DIRS ${ROOT_INCLUDE_DIRS}")
 message(STATUS "CAFANA_INCLUDE_DIR ${CAFANA_INCLUDE_DIR}")
 message(STATUS "EIGEN3_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR}")
 
-add_compile_options("-Wno-unknown-warning-option")
+set(CMAKE_CXX_FLAGS "-Wno-unknown-warning-option")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 include_directories(
         ./include/
