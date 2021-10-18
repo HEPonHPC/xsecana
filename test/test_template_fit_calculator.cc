@@ -2,26 +2,27 @@
 // Created by Derek Doyle on 9/23/21.
 //
 
+
 #include "XSecAna/Fit/TemplateFitCalculator.h"
 #include "XSecAna/Fit/Minuit2TemplateFitter.h"
-
+#
 #include <Eigen/Dense>
 #include <iostream>
 
 #include "TFile.h"
 
 using namespace xsec;
-
+using namespace xsec::fit;
 int main(int argc, char ** argv) {
     auto nparams = 5;
     auto mask_param = 3;
 
-    Eigen::VectorXd user_params(nparams);
+    Vector user_params(nparams);
     user_params << 1, 2, 3, 4, 5;
-    Eigen::VectorXd minimizer_params(nparams);
+    Vector minimizer_params(nparams);
     minimizer_params << 1, 2, 3, 4, 5;
-    Eigen::VectorXd reduced_user_params(nparams);
-    Eigen::VectorXd reduced_minimizer_params(nparams - 1);
+    Vector reduced_user_params(nparams);
+    Vector reduced_minimizer_params(nparams - 1);
 
     auto reduced_idx = 0;
     for (auto i = 0u; i < nparams; i++) {
@@ -69,49 +70,49 @@ int main(int argc, char ** argv) {
 
     std::vector<double> std_vector;
     for(auto i = 0u; i < 10; i++) std_vector.push_back(i);
-    Eigen::VectorXd from_std = fit::detail::STDToEigen(std_vector);
+    Vector from_std = fit::detail::STDToEigen(std_vector);
     for(auto i = 0u; i < std_vector.size(); i++) {
         assert(from_std[i] == std_vector[i]);
     }
 
     std::vector<int> dims = {4, 10};
-    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> signal_templates(dims[0], dims[1]);
-    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> background1_templates(dims[0], dims[1]);
-    Eigen::Matrix<double, -1, -1, Eigen::RowMajor> background2_templates(dims[0], dims[1]);
+    Matrix signal_templates(dims[0], dims[1]);
+    Matrix background1_templates(dims[0], dims[1]);
+    Matrix background2_templates(dims[0], dims[1]);
 
-    auto x = Eigen::Array<double, 1, -1>::LinSpaced(dims[1], 0, dims[1]);
+    auto x = Array::LinSpaced(dims[1], 0, dims[1]);
     for (auto i = 0u; i < signal_templates.rows(); i++) {
         signal_templates.row(i) = (i + 1) * x + 0.5;
         background1_templates.row(i) = (i + 1) * x.reverse() + 0.5;
-        background2_templates.row(i) = (i + 1) * Eigen::Matrix<double, 1, -1>::Ones(dims[1]);
+        background2_templates.row(i) = (i + 1) * Vector::Ones(dims[1]);
     }
 
-    std::vector<Eigen::Array<double, 1, -1>> templates{
-            signal_templates.reshaped<Eigen::RowMajor>().transpose(),
-            background1_templates.reshaped<Eigen::RowMajor>().transpose(),
-            background2_templates.reshaped<Eigen::RowMajor>().transpose(),
+    std::vector<Array> templates{
+            signal_templates.reshaped().transpose(),
+            background1_templates.reshaped().transpose(),
+            background2_templates.reshaped().transpose(),
     };
-    Eigen::VectorXd total = templates[0] + templates[1] + templates[2];
+    Vector total = templates[0] + templates[1] + templates[2];
 
-    Eigen::MatrixXd inverse_covariance = Eigen::MatrixXd::Identity(dims[0] * dims[1],
-                                                                   dims[0] * dims[1]);
+    Matrix inverse_covariance = Matrix::Identity(dims[0] * dims[1],
+                                                 dims[0] * dims[1]);
 
     inverse_covariance *= (1 / total.array()).matrix().asDiagonal();
 
-    auto fit_calc = new fit::TemplateFitCalculator<double, -1>(templates, dims, inverse_covariance);
+    auto fit_calc = new TemplateFitCalculator(templates, dims, inverse_covariance);
 
-    user_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0]);
+    user_params = Vector::Ones(templates.size() * dims[0]);
 
     assert((total - fit_calc->Predict(user_params)).isZero(0));
 
     // now release a template
     fit_calc->ReleaseTemplate(fit_calc->GetNTemplates() - 1);
-    user_params = Eigen::RowVectorXd::Ones(templates.size() * dims[0]);
+    user_params = Vector::Ones(templates.size() * dims[0]);
     assert((total - fit_calc->Predict(user_params)).isZero(0));
 
     user_params(4) = 1.5;
 
-    fit::Minuit2TemplateFitter<double, -1> fitter(fit_calc, 3);
+    fit::Minuit2TemplateFitter fitter(fit_calc, 3);
 
     fitter.SetPrintLevel(0);
     auto result = fitter.Fit(fit_calc->Predict(user_params));
