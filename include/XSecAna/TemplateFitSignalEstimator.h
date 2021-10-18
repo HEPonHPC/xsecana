@@ -1,62 +1,83 @@
 #pragma once
-
+#include "XSecAna/Systematic.h"
 #include "XSecAna/Fit/TemplateFitCalculator.h"
-#include "XSecAna/Hist.h"
 #include "XSecAna/ISignalEstimator.h"
+#include "XSecAna/Fit/IFitter.h"
 
 namespace xsec {
-    template<class HistType = HistXd>
-    class TemplateFitSignalEstimator : public ISignalEstimator<HistType> {
+    class TemplateFitSignalEstimator : public IEigenSignalEstimator {
     public:
-        TemplateFitSignalEstimator(HistType signal_template,
-                                   std::map<std::string, HistType> background_templates,
-                                   std::vector<int> dims,
-                                   fit::TemplateFitCalculator<HistType::scalar_type, HistType::cols_type> * fit_calc)
-                : fTemplates(templates), fDims(dims), fFitCalc(fit_calc)
-        {
-            for(auto temp_it : fTemplates) {
-                fIsFreeTemplate[temp_it->first] = true;
-            }
-        }
+        TemplateFitSignalEstimator(const TH1 * signal_template,
+                                   const std::map<std::string, const TH1*> & background_templates,
+                                   const std::map<std::string, Systematic<TH1>> & systematics,
+                                   const TH1 * mask = 0,
+                                   fit::TemplateFitCalculator * fit_calc = 0);
+        virtual TH1 * Background(const TH1 * data) const override;
 
-        virtual HistXd Eval(const HistType & data);
+        virtual TH1 * Signal(const TH1 * data) const override;
 
-        virtual const HistXd & Background(const HistType & data);
+        virtual void SaveTo(TDirectory * dir, const std::string & name) const override;
 
-        virtual const HistXd & Signal(const HistType & data) ;
-
-        virtual void SaveTo(TDirectory * dir, const std::string & name) const;
-
-        void FixTemplate(std::string template_name)
-        { fTemplates.at(template_name).second = true;}
+        void FixTemplate(const std::string & template_name);
 
         /// \brief given params, predict the number of signal events
-        /// by weighing templates and integrating over the last dimension
-        HistXd & Predict(const std::vector<double> & params, const HistType & data) const;
+        /// in each template bin by weighing templates
+        TH1 * Predict(const TH1* signal_params,
+                      const std::map<std::string, TH1*> & bkgd_params) const;
+
+        /// \brief given params, predict the number of signal events
+        /// in each analysis bin by weighing templates and integrated template bins
+        TH1 * PredictProjected(const TH1* signal_params,
+                               const std::map<std::string, TH1*> & bkgd_params) const;
+
+        //std::pair<TH1*, std::map<std::string, TH1*>>
+        //PredictComponents(const Matrix & signal_params,
+        //                  const std::map<std::string, Matrix> & bkgd_params) const;
+        void SetMask(const Array & mask);
+
+        TH2D * GetTotalCovariance() const;
+        TH2D * GetCovariance(const std::string & systematic_name) const;
+        TH2D * GetInverseCovariance() const;
+        TH2D * GetReducedSignalTemplate() const;
+        TH2D * GetReducedBackgroundTemplate(const std::string & bkgd_label) const;
+        const Systematic<TH1> & GetReducedSystematic(const std::string & systematic_label) const;
+
 
     private:
+        TH1 * _mask_and_flatten(const TH1 * mask, const TH1 * templ) const;
+        const TH1 * _transpose(const TH1 * h) const;
+        virtual void _eval_impl(const Array & data, const Array & error,
+                                ArrayRef result, ArrayRef rerror) const override;
+
+        fit::Vector ToCalculatorParams(const TH1 * signal_params,
+                                       const std::map<std::string, TH1*> & bkgd_params) const;
+
+        void ToUserParams(const fit::Vector & calc_params,
+                          TH1 * signal_params,
+                          std::map<std::string, TH1*> & bkgd_params) const;
 
         std::vector<int> GetSignalTemplateIdxs();
 
 
-        HistType fSignalTemplate;
-        std::map<std::string, HistType> fBackgroundTemplates;
+        TH1 * fSignalTemplate;
+        std::map<std::string, TH1*> fBackgroundTemplates;
+        std::map<std::string, Systematic<TH1>> fSystematics;
+
         std::vector<int> fDims;
+
         std::map<std::string, bool> fIsFreeTemplate;
 
-        TemplateFitCalculator<HistType> * fFitCalc;
+        fit::TemplateFitCalculator * fFitCalc;
+        std::map<std::string, Matrix> fCovarianceMatrices;
+        Matrix fTotalCovariance;
+        Matrix fInverseCovariance;
 
+        std::map<int, std::string> fComponentLabelIdxMap;
+
+
+        const TH1 * fMask;
+
+        root::TH1Props fProjectPredictionProps;
+        fit::detail::ParamMap fParamMap;
     };
-
-    template<class HistType>
-    HistType
-    TemplateFitSignalEstimator<HistType>::
-    Eval(const HistType & data) {
-        auto [params, errors] = fFitCalc->Fit(this, data);
-        auto prediction = this->Predict(params, data);
-
-
-
-
-    }
 }
