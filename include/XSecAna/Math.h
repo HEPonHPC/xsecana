@@ -3,6 +3,21 @@
 #include "XSecAna/Utils.h"
 
 namespace xsec {
+
+    inline TH2D *
+    CorrelationFromCovariance(const TH2D * cov) {
+        auto cor = (TH2D*) cov->Clone();
+        for (auto i = 1u; i <= cov->GetNbinsX(); i++) {
+            for (auto j = 1u; j <= cov->GetNbinsY(); j++) {
+                auto cov_ij = cov->GetBinContent(i,j);
+                auto cov_ii = cov->GetBinContent(i,i);
+                auto cov_jj = cov->GetBinContent(j,j);
+                cor->SetBinContent(i,j,cov_ij / std::sqrt(cov_ii * cov_jj));
+            }
+        }
+        return cor;
+    }
+
     inline void
     _QuadSum(ArrayRef a, const Array & b) {
         a = (a.pow(2) + b.pow(2)).sqrt();
@@ -50,24 +65,25 @@ namespace xsec {
 
     inline TH1 *
     QuadSum(const TH1 * d1, const TH1 * d2) {
-        return QuadSum(std::vector<const TH1*>{d1, d2});
+        return QuadSum(std::vector<const TH1 *>{d1, d2});
     }
 
     inline TH1 *
     QuadSum(const TH1 * d1, const TH1 * d2, const TH1 * d3) {
-        return QuadSum(std::vector<const TH1*>{d1, d2, d3});
+        return QuadSum(std::vector<const TH1 *>{d1, d2, d3});
     }
 
     // inline some common functions
     inline Array
-    MaxShift(const Array& arr1,
-             const Array& arr2) {
+    MaxShift(const Array & arr1,
+             const Array & arr2) {
         // stack then take max value in each column
         Eigen::Matrix<double, 2, Eigen::Dynamic> stack(2, arr1.size());
         stack.row(0) = arr1;
         stack.row(1) = arr2;
         return stack.colwise().maxCoeff();
     }
+
     inline TH1 *
     MaxShift(const TH1 * h1,
              const TH1 * h2) {
