@@ -49,8 +49,8 @@ namespace xsec {
                 Array nom_c = root::MapContentsToEigen(nominal);
                 // convert multiverse systematic to two-sided by finding 1sigma
                 if (shifted_obj.GetType() == kMultiverse) {
-                    up_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, 1));
-                    down_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, -1));
+                    up_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, 1)) - nom_c;
+                    down_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, -1)) - nom_c;
                 } else if (shifted_obj.GetType() == kTwoSided) {
                     up_c = root::MapContentsToEigen(shifted_obj.GetShifts()[0]);
                     down_c = root::MapContentsToEigen(shifted_obj.GetShifts()[1]);
