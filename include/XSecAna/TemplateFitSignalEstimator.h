@@ -38,10 +38,9 @@ namespace xsec {
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;
-        TH2D * GetReducedSignalTemplate() const;
-        TH2D * GetReducedBackgroundTemplate(const std::string & bkgd_label) const;
-        TH2D * GetReducedTotalTemplate() const;
-        const Systematic<TH1> & GetReducedSystematic(const std::string & systematic_label) const;
+        TH1D * GetReducedSignalTemplate() const;
+        TH1D * GetReducedBackgroundTemplate(const std::string & bkgd_label) const;
+        TH1D * GetReducedTotalTemplate() const;
 
 
     private:

@@ -58,6 +58,8 @@ namespace xsec {
 
             // using under/overflow bins here in the flattened histogram
             // for easy un-packing into 1D eigen array that we'll hand to the fitter
+            // We do this instead of converting to Eigen because of limitations imposed by
+            // the current implementation of Systematic
             auto ret = new TH2D("", "",
                                 templ->GetNbinsZ()-2, 1, templ->GetNbinsZ(),
                                 nunmasked-2, 1, nunmasked-1);
@@ -179,28 +181,53 @@ namespace xsec {
         throw std::runtime_error(__PRETTY_FUNCTION__);
     }
 
-    TH2D *
+    TH1D *
     TemplateFitSignalEstimator::
     GetReducedSignalTemplate() const {
-        return (TH2D*) fSignalTemplate;
+        auto n = (fSignalTemplate->GetNbinsX()+2) *
+                 (fSignalTemplate->GetNbinsY()+2);
+        auto ret = new TH1D("", "",
+                            n, 0, n);
+        Array arr(n+2);
+        arr(Eigen::seqN(1, n)) = root::MapContentsToEigen(fSignalTemplate);
+        ret->SetContent(arr.data());
+        ret->SetEntries(1);
+        ret->GetXaxis()->SetTitle("Template Bins");
+        ret->GetYaxis()->SetTitle("Events");
+        return ret;
     }
 
-    TH2D *
+    TH1D *
     TemplateFitSignalEstimator::
     GetReducedTotalTemplate() const {
-        return (TH2D*) fTotalTemplate;
+        auto n = (fTotalTemplate->GetNbinsX()+2) *
+                 (fTotalTemplate->GetNbinsY()+2);
+        auto ret = new TH1D("", "",
+                            n, 0, n);
+        Array arr(n+2);
+        arr(Eigen::seqN(1, n)) = root::MapContentsToEigen(fTotalTemplate);
+        ret->SetContent(arr.data());
+        ret->SetEntries(1);
+        ret->GetXaxis()->SetTitle("Template Bins");
+        ret->GetYaxis()->SetTitle("Events");
+        return ret;
     }
 
-    TH2D *
+    TH1D *
     TemplateFitSignalEstimator::
     GetReducedBackgroundTemplate(const std::string & bkgd_label) const {
-        return (TH2D*) fBackgroundTemplates.at(bkgd_label);
-    }
-
-    const Systematic<TH1> &
-    TemplateFitSignalEstimator::
-    GetReducedSystematic(const std::string & systematic_label) const {
-        return fSystematics.at(systematic_label);
+        auto n = (fBackgroundTemplates.at(bkgd_label)->GetNbinsX()+2) *
+                 (fBackgroundTemplates.at(bkgd_label)->GetNbinsY()+2);
+        auto ret = new TH1D("", "",
+                            n, 0, n);
+        Array arr(n+2);
+        arr(Eigen::seqN(1, n)) =
+                root::MapContentsToEigen(fBackgroundTemplates.at(bkgd_label));
+        ret->SetContent(arr.data());
+        ret->SetEntries(1);
+        ret->GetXaxis()->SetTitle("Template Bins");
+        ret->GetYaxis()->SetTitle("Events");
+        return ret;
     }
 
     TH2D *
