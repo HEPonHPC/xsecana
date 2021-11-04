@@ -101,8 +101,13 @@ namespace xsec {
             else if(fType == kTwoSided) {
                 for (auto i = 0; i < nom_a.size(); i++) {
                     for (auto j = 0; j < nom_a.size(); j++) {
-                        auto di = nom_a(i) - std::max(shifts_a[0](i), shifts_a[1](i));
-                        auto dj = nom_a(j) - std::max(shifts_a[0](j), shifts_a[1](j));
+                        auto di_0 = nom_a(i) - shifts_a[0](i);
+                        auto di_1 = nom_a(i) - shifts_a[1](i);
+                        auto dj_0 = nom_a(j) - shifts_a[0](j);
+                        auto dj_1 = nom_a(j) - shifts_a[1](j);
+                        auto di = (std::abs(di_0) > std::abs(di_1)) ? di_0 : di_1;
+                        auto dj = (std::abs(dj_0) > std::abs(dj_1)) ? dj_0 : dj_1;
+
                         cov(i, j) = di * dj;
                     }
                 }
