@@ -204,26 +204,60 @@ namespace xsec {
                             TH1Props props) {
             TH1 * h;
             if (props.dims == 1) {
-                h = new TH1D(props.name,
-                             "",
-                             props.axes[0]->GetNbins(),
-                             props.axes[0]->GetXbins()->GetArray());
+                if(props.axes[0]->IsVariableBinSize()) {
+                    h = new TH1D(props.name,
+                                 "",
+                                 props.axes[0]->GetNbins(),
+                                 props.axes[0]->GetXbins()->GetArray());
+                }
+                else {
+                    h = new TH1D(props.name,
+                                 "",
+                                 props.axes[0]->GetNbins(),
+                                 props.axes[0]->GetXmin(),
+                                 props.axes[0]->GetXmax());
+                }
             } else if (props.dims == 2) {
-                h = new TH2D(props.name,
-                             "",
-                             props.axes[0]->GetNbins(),
-                             props.axes[0]->GetXbins()->GetArray(),
-                             props.axes[1]->GetNbins(),
-                             props.axes[1]->GetXbins()->GetArray());
+                if(props.axes[0]->IsVariableBinSize() ||
+                   props.axes[1]->IsVariableBinSize()) {
+                    h = new TH2D(props.name,
+                                 "",
+                                 props.axes[0]->GetNbins(),
+                                 props.axes[0]->GetXbins()->GetArray(),
+                                 props.axes[1]->GetNbins(),
+                                 props.axes[1]->GetXbins()->GetArray());
+                }
+                else {
+                    h = new TH2D(props.name,
+                                 "",
+                                 props.axes[0]->GetNbins(),
+                                 props.axes[0]->GetXmin(), props.axes[0]->GetXmax(),
+                                 props.axes[1]->GetNbins(),
+                                 props.axes[1]->GetXmin(), props.axes[1]->GetXmax());
+                }
             } else if (props.dims == 3) {
-                h = new TH3D(props.name,
-                             "",
-                             props.axes[0]->GetNbins(),
-                             props.axes[0]->GetXbins()->GetArray(),
-                             props.axes[1]->GetNbins(),
-                             props.axes[1]->GetXbins()->GetArray(),
-                             props.axes[2]->GetNbins(),
-                             props.axes[2]->GetXbins()->GetArray());
+                if(props.axes[0]->IsVariableBinSize() ||
+                   props.axes[1]->IsVariableBinSize() ||
+                   props.axes[2]->IsVariableBinSize()) {
+                    h = new TH3D(props.name,
+                                 "",
+                                 props.axes[0]->GetNbins(),
+                                 props.axes[0]->GetXbins()->GetArray(),
+                                 props.axes[1]->GetNbins(),
+                                 props.axes[1]->GetXbins()->GetArray(),
+                                 props.axes[2]->GetNbins(),
+                                 props.axes[2]->GetXbins()->GetArray());
+                }
+                else {
+                    h = new TH3D(props.name,
+                                 "",
+                                 props.axes[0]->GetNbins(),
+                                 props.axes[0]->GetXmin(), props.axes[0]->GetXmax(),
+                                 props.axes[1]->GetNbins(),
+                                 props.axes[1]->GetXmin(), props.axes[1]->GetXmax(),
+                                 props.axes[2]->GetNbins(),
+                                 props.axes[2]->GetXmin(), props.axes[2]->GetXmax());
+                }
             } else {
                 return 0;
             }
