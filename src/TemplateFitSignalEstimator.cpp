@@ -4,26 +4,6 @@
 #include "XSecAna/TemplateFitSignalEstimator.h"
 
 namespace xsec {
-    const TH1 *
-    TemplateFitSignalEstimator::
-    _transpose(const TH1 * h) const {
-        if(h->GetDimension()==1) return h;
-        else {
-            auto ret = new TH2D("", "",
-                                h->GetNbinsY(),
-                                h->GetYaxis()->GetXbins()->GetArray(),
-                                h->GetNbinsX(),
-                                h->GetXaxis()->GetXbins()->GetArray());
-            for(auto i = 0; i < h->GetNbinsX()+2; i++) {
-                for(auto j = 0; j < h->GetNbinsY()+2; j++) {
-                    ret->SetBinContent(j, i, h->GetBinContent(i,j));
-                    ret->SetBinError(j, i, h->GetBinError(i,j));
-                }
-            }
-            return ret;
-        }
-    }
-
     TH1 *
     TemplateFitSignalEstimator::
     _mask_and_flatten(const TH1 * mask, const TH1 * templ) const {

@@ -33,7 +33,6 @@ namespace xsec {
         //std::pair<TH1*, std::map<std::string, TH1*>>
         //PredictComponents(const Matrix & signal_params,
         //                  const std::map<std::string, Matrix> & bkgd_params) const;
-        void SetMask(const Array & mask);
 
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;
@@ -45,7 +44,6 @@ namespace xsec {
 
     private:
         TH1 * _mask_and_flatten(const TH1 * mask, const TH1 * templ) const;
-        const TH1 * _transpose(const TH1 * h) const;
         virtual void _eval_impl(const Array & data, const Array & error,
                                 ArrayRef result, ArrayRef rerror) const override;
 
