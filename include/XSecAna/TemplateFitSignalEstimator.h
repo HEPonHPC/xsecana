@@ -40,6 +40,7 @@ namespace xsec {
         TH2D * GetInverseCovariance() const;
         TH2D * GetReducedSignalTemplate() const;
         TH2D * GetReducedBackgroundTemplate(const std::string & bkgd_label) const;
+        TH2D * GetReducedTotalTemplate() const;
         const Systematic<TH1> & GetReducedSystematic(const std::string & systematic_label) const;
 
 
@@ -62,6 +63,7 @@ namespace xsec {
         TH1 * fSignalTemplate;
         std::map<std::string, TH1*> fBackgroundTemplates;
         std::map<std::string, Systematic<TH1>> fSystematics;
+        TH1 * fTotalTemplate;
 
         std::vector<int> fDims;
 

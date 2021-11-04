@@ -47,12 +47,17 @@ namespace xsec {
                     ii++;
                 }
             }
+            ret->GetXaxis()->SetTitle("Outer Bins");
+            ret->GetYaxis()->SetTitle("Template Bins");
             return ret;
         }
         else {
             assert(mask->GetDimension()==2);
             auto nunmasked = ((TH2*)mask)->Integral(0, mask->GetNbinsX()+1,
                                                     0, mask->GetNbinsY()+1);
+
+            // using under/overflow bins here in the flattened histogram
+            // for easy un-packing into 1D eigen array that we'll hand to the fitter
             auto ret = new TH2D("", "",
                                 templ->GetNbinsZ()-2, 1, templ->GetNbinsZ(),
                                 nunmasked-2, 1, nunmasked-1);
@@ -70,6 +75,8 @@ namespace xsec {
                     }
                 }
             }
+            ret->GetXaxis()->SetTitle("Template Bins");
+            ret->GetYaxis()->SetTitle("Outer Bins");
             return ret;
         }
     }
@@ -128,7 +135,9 @@ namespace xsec {
             for(auto ishift = 0u; ishift < syst.second.GetShifts().size(); ishift++) {
                 masked_shifts[ishift] = _mask_and_flatten(mask, syst.second.GetShifts()[ishift]);
             }
-            fSystematics[syst.first] = Systematic<TH1>(syst.second.GetName(), masked_shifts);
+            fSystematics[syst.first] = Systematic<TH1>(syst.second.GetName(),
+                                                       masked_shifts,
+                                                       syst.second.GetType());
         }
 
         // initialize all templates as free
@@ -140,19 +149,19 @@ namespace xsec {
         templates_1d[0] = root::MapContentsToEigen(fSignalTemplate); // flatten
 
         // calculate total in this loop for later covariance matrix calculations
-        auto total = (TH1*) fSignalTemplate->Clone();
+        fTotalTemplate = (TH1*) fSignalTemplate->Clone();
         auto itemplate = 1u;
         for(auto background_template : background_templates) {
             fComponentLabelIdxMap[itemplate] = background_template.first;
             templates_1d[itemplate] = root::MapContentsToEigen(fBackgroundTemplates.at(background_template.first));
-            total->Add(fBackgroundTemplates.at(background_template.first));
+            fTotalTemplate->Add(fBackgroundTemplates.at(background_template.first));
             itemplate++;
         }
 
         // calculate and store covariance matrices
         fTotalCovariance = Matrix::Zero(fDims[0]*fDims[1], fDims[0]*fDims[1]);
         for(auto systematic : fSystematics) {
-            fCovarianceMatrices[systematic.first] = systematic.second.CovarianceMatrix(total);
+            fCovarianceMatrices[systematic.first] = systematic.second.CovarianceMatrix(fTotalTemplate);
             fTotalCovariance += fCovarianceMatrices.at(systematic.first);
         }
         fInverseCovariance = fTotalCovariance.inverse();
@@ -174,6 +183,12 @@ namespace xsec {
     TemplateFitSignalEstimator::
     GetReducedSignalTemplate() const {
         return (TH2D*) fSignalTemplate;
+    }
+
+    TH2D *
+    TemplateFitSignalEstimator::
+    GetReducedTotalTemplate() const {
+        return (TH2D*) fTotalTemplate;
     }
 
     TH2D *
