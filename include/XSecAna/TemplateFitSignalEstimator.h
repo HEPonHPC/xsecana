@@ -5,6 +5,18 @@
 #include "XSecAna/Fit/IFitter.h"
 
 namespace xsec {
+    struct TemplateFitResult {
+        double fun_val;
+        TH1 * signal_params;
+        TH1 * signal_params_error_up;
+        TH1 * signal_params_error_down;
+        std::map<std::string, TH1*> background_params;
+        std::map<std::string, TH1*> background_params_error_up;
+        std::map<std::string, TH1*> background_params_error_down;
+        Array2D covariance;
+        unsigned int fun_calls;
+    };
+
     class TemplateFitSignalEstimator : public IEigenSignalEstimator {
     public:
         TemplateFitSignalEstimator(const TH1 * signal_template,
@@ -12,23 +24,37 @@ namespace xsec {
                                    const std::map<std::string, Systematic<TH1>> & systematics,
                                    const TH1 * mask = 0,
                                    fit::TemplateFitCalculator * fit_calc = 0);
+
+        void SetFitter(fit::IFitter * fitter);
+        fit::IFitter * GetFitter() const;
+
+        TemplateFitResult Fit(const TH1 * data) const;
+        TemplateFitResult Fit(const TH1 * data, fit::IFitter * fitter);
+
         virtual TH1 * Background(const TH1 * data) const override;
 
         virtual TH1 * Signal(const TH1 * data) const override;
 
         virtual void SaveTo(TDirectory * dir, const std::string & name) const override;
 
-        void FixTemplate(const std::string & template_name);
+        void FixComponent(const std::string & template_name, const double & val=1);
+        void ReleaseComponent(const std::string & template_name);
 
         /// \brief given params, predict the number of signal events
         /// in each template bin by weighing templates
-        TH1 * Predict(const TH1* signal_params,
-                      const std::map<std::string, TH1*> & bkgd_params) const;
+        TH1 * PredictTotal(const TH1* signal_params,
+                           const std::map<std::string, TH1*> & bkgd_params) const;
+        TH1 * PredictSignal(const TH1 * signal_params) const;
+        TH1 * PredictBackground(const std::string & background_label,
+                                const TH1 * bkgd_params) const;
 
         /// \brief given params, predict the number of signal events
         /// in each analysis bin by weighing templates and integrated template bins
-        TH1 * PredictProjected(const TH1* signal_params,
-                               const std::map<std::string, TH1*> & bkgd_params) const;
+        TH1 * PredictProjectedTotal(const TH1* signal_params,
+                                    const std::map<std::string, TH1*> & bkgd_params) const;
+        TH1 * PredictProjectedSignal(const TH1 * signal_params) const;
+        TH1 * PredictProjectedBackground(const std::string & background_label,
+                                         const TH1 * bkgd_params) const;
 
         //std::pair<TH1*, std::map<std::string, TH1*>>
         //PredictComponents(const Matrix & signal_params,
@@ -44,6 +70,8 @@ namespace xsec {
 
     private:
         TH1 * _mask_and_flatten(const TH1 * mask, const TH1 * templ) const;
+        TH1 * _to_template_binning(const Array & reduced_templates) const;
+        Array _predict_component(const TH1 * component_templates, const TH1 * params) const;
         virtual void _eval_impl(const Array & data, const Array & error,
                                 ArrayRef result, ArrayRef rerror) const override;
 
@@ -71,12 +99,15 @@ namespace xsec {
         Matrix fTotalCovariance;
         Matrix fInverseCovariance;
 
-        std::map<int, std::string> fComponentLabelIdxMap;
-
+        std::map<std::string, int> fComponentLabelIdxMap;
 
         const TH1 * fMask;
 
         root::TH1Props fProjectPredictionProps;
-        fit::detail::ParamMap fParamMap;
+        root::TH1Props fPredictionProps;
+        fit::detail::ParamMap fOuterBinMap;
+        fit::detail::ParamMap fInnerBinMap;
+
+        fit::IFitter * fFitter = 0;
     };
 }

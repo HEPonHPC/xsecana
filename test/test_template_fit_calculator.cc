@@ -112,10 +112,10 @@ int main(int argc, char ** argv) {
 
     user_params(4) = 1.5;
 
-    fit::Minuit2TemplateFitter fitter(fit_calc, 3);
+    fit::Minuit2TemplateFitter fitter(3);
 
     fitter.SetPrintLevel(0);
-    auto result = fitter.Fit(fit_calc->Predict(user_params));
+    auto result = fitter.Fit(fit_calc, fit_calc->Predict(user_params));
 
     assert(result.fun_val == fit_calc->Chi2(fit_calc->ToUserParams(result.params),
                                             fit_calc->Predict(user_params)));

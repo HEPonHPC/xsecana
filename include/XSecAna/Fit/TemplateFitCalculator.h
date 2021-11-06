@@ -47,11 +47,12 @@ namespace xsec {
             virtual unsigned int GetNMinimizerParams() const override { return fParamMap.GetNMinimizerParams(); }
 
             Vector Predict(const Vector & user_params) const;
+            Vector PredictComponent(const int & component_idx, const Vector & user_params) const;
 
             double Chi2(const Vector & user_params,
                         const Array & data) const;
 
-            Vector ToUserParams(const Vector & minimizer_coords) const;
+            Vector ToUserParams(const Vector & minimizer_coords) const override;
 
             virtual double fun(const Vector & minimizer_params,
                                const Array & data) const override;

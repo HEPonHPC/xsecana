@@ -152,6 +152,16 @@ namespace xsec {
                     .rowwise().sum();
         }
 
+        Vector
+        TemplateFitCalculator::
+        PredictComponent(const int & component_idx, const Vector & user_params) const {
+            auto component_block = fTemplates.block(0,
+                                                    fNOuterBins * component_idx,
+                                                    fTemplates.rows(),
+                                                    fNOuterBins);
+            return (component_block * user_params.asDiagonal()).reshaped();
+        }
+
         void
         TemplateFitCalculator::
         ReleaseTemplate(const int & template_idx) {
@@ -200,7 +210,7 @@ namespace xsec {
             // This number may differ from number of parameters
             // used in the minimization if the user wants to hold any
             // templates fixed.
-            auto fNOuterBins = 1;
+            fNOuterBins = 1;
             for (auto i = 0u; i < dims.size() - 1; i++) {
                 fNOuterBins *= dims[i];
             }

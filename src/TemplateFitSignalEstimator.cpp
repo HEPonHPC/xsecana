@@ -84,12 +84,15 @@ namespace xsec {
             project_predictions_like = new TH1D("", "",
                                                 signal_template->GetNbinsX(),
                                                 signal_template->GetXaxis()->GetXbins()->GetArray());
+            project_predictions_like->GetXaxis()->SetTitle(signal_template->GetXaxis()->GetTitle());
         } else if (signal_template->GetDimension() == 3) {
             project_predictions_like = new TH2D("", "",
                                                 signal_template->GetNbinsX(),
                                                 signal_template->GetXaxis()->GetXbins()->GetArray(),
                                                 signal_template->GetNbinsY(),
                                                 signal_template->GetYaxis()->GetXbins()->GetArray());
+            project_predictions_like->GetXaxis()->SetTitle(signal_template->GetXaxis()->GetTitle());
+            project_predictions_like->GetYaxis()->SetTitle(signal_template->GetYaxis()->GetTitle());
         }
         else {
             throw std::runtime_error("Template fits with greater than 2 outer dimensions not supported");
@@ -97,20 +100,17 @@ namespace xsec {
         // root won't draw histogram unless there are entries
         project_predictions_like->SetEntries(1);
         fProjectPredictionProps = root::TH1Props(project_predictions_like);
-
-        // masked parameter map
-        auto _map = root::MapContentsToEigen(mask);
-        fParamMap = fit::detail::ParamMap(_map);
+        fPredictionProps = root::TH1Props(signal_template);
 
         // construct templates with masked bins removed
         fSignalTemplate = _mask_and_flatten(mask, signal_template);
+        // root stores as row-major. The calculator assumes column major, so we transpose dimensions
+        // outer bins x inner bins
+        fDims = {fSignalTemplate->GetNbinsY()+2, fSignalTemplate->GetNbinsX()+2};
         for(auto bkgd_template : background_templates) {
             fBackgroundTemplates[bkgd_template.first] = _mask_and_flatten(mask,
                                                                           bkgd_template.second);
         }
-        // root stores as row-major. The calculator assumes column major
-        // outer bins x inner bins
-        fDims = {fSignalTemplate->GetNbinsY()+2, fSignalTemplate->GetNbinsX()+2};
         // create masked systematics
         for(auto syst : systematics) {
             std::vector<const TH1*> masked_shifts(syst.second.GetShifts().size());
@@ -121,6 +121,16 @@ namespace xsec {
                                                        masked_shifts,
                                                        syst.second.GetType());
         }
+
+        // masked parameter map
+        auto outer_map = root::MapContentsToEigen(mask);
+        fOuterBinMap = fit::detail::ParamMap(outer_map);
+        Array2D inner_map = Array2D::Zero(fDims[1]+2, outer_map.size());
+        for(auto i = 0; i < outer_map.size(); i++) {
+            if(outer_map(i)) inner_map.col(i)(Eigen::seqN(1, fDims[1])) = Array::Ones(fDims[1]);
+        }
+        fInnerBinMap = fit::detail::ParamMap(inner_map.reshaped());
+
 
         // initialize all templates as free
         for (auto temp_it: fBackgroundTemplates) {
@@ -134,7 +144,7 @@ namespace xsec {
         fTotalTemplate = (TH1*) fSignalTemplate->Clone();
         auto itemplate = 1u;
         for(auto background_template : background_templates) {
-            fComponentLabelIdxMap[itemplate] = background_template.first;
+            fComponentLabelIdxMap[background_template.first] = itemplate;
             templates_1d[itemplate] = root::MapContentsToEigen(fBackgroundTemplates.at(background_template.first));
             fTotalTemplate->Add(fBackgroundTemplates.at(background_template.first));
             itemplate++;
@@ -255,8 +265,43 @@ namespace xsec {
 
     void
     TemplateFitSignalEstimator::
-    FixTemplate(const std::string & template_name) {
-        fIsFreeTemplate.at(template_name) = true;
+    FixComponent(const std::string & component_label, const double & val) {
+        //int idx = -1;
+        //for(auto comp : fComponentLabelIdxMap) {
+        //    if(comp.second == template_name) {
+        //        idx = comp.first;
+        //    }
+        //}
+        //if(idx < 0) {
+        //    throw std::runtime_error(("No component named " + template_name).c_str());
+        //}
+        // fix this component in each outer bin
+        auto idx = fComponentLabelIdxMap.at(component_label);
+        for(auto o = 0u; o < fDims[0]; o++) {
+            fFitCalc->FixTemplate(idx*fDims[0] + o, val);
+            //fFitCalc->FixTemplate(idx * fDims[0] + o, val);
+        }
+        fIsFreeTemplate.at(component_label) = false;
+    }
+
+    void
+    TemplateFitSignalEstimator::
+    ReleaseComponent(const std::string & component_label) {
+        //int idx = -1;
+        //for(auto comp : fComponentLabelIdxMap) {
+        //    if(comp.second == template_name) {
+        //        idx = comp.first;
+        //    }
+        //}
+        //if(idx < 0) {
+        //    throw std::runtime_error(("No component named " + template_name).c_str());
+        //}
+        auto idx = fComponentLabelIdxMap.at(component_label);
+        for(auto o = 0u; o < fDims[0]; o++) {
+            fFitCalc->ReleaseTemplate(idx*fDims[0] + o);
+            //fFitCalc->ReleaseTemplate(idx * fDims[0] + o);
+        }
+        fIsFreeTemplate.at(component_label) = true;
     }
 
     TH1 *
@@ -282,10 +327,17 @@ namespace xsec {
                        const std::map<std::string, TH1*> & bkgd_params) const {
 
         Matrix calc_params(fDims[0], bkgd_params.size()+1);
-        calc_params.col(0) = fParamMap.ToMinimizerParams(root::MapContentsToEigen(signal_params));
-        for(auto i = 1u; i < calc_params.cols(); i++) {
-            calc_params.col(i) = fParamMap.ToMinimizerParams(root::MapContentsToEigen(bkgd_params.at(fComponentLabelIdxMap.at(i))));
+        calc_params.col(0) = fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(signal_params));
+        for(auto label_idx : fComponentLabelIdxMap) {
+            calc_params.col(label_idx.second) = fOuterBinMap.ToMinimizerParams(
+                    root::MapContentsToEigen(bkgd_params.at(label_idx.first))
+            );
         }
+        //for(auto i = 1u; i < calc_params.cols(); i++) {
+        //    calc_params.col(i) = fOuterBinMap.ToMinimizerParams(
+        //            root::MapContentsToEigen(bkgd_params.at(fComponentLabelIdxMap.at(i)))
+        //    );
+        //}
         return calc_params.reshaped();
     }
 
@@ -298,32 +350,82 @@ namespace xsec {
         Matrix calc_param_m = calc_params.reshaped(fDims[0],
                                                    fBackgroundTemplates.size()+1);
 
-        signal_params->SetContent(fParamMap.ToUserParams(calc_param_m.col(0)).data());
-        for(auto i = 1u; calc_param_m.cols(); i++) {
-            bkgd_params[fComponentLabelIdxMap.at(i)]->SetContent(fParamMap.ToUserParams(calc_param_m.col(i)).data());
+        signal_params->SetContent(fOuterBinMap.ToUserParams(calc_param_m.col(0)).data());
+        for(auto label_idx : fComponentLabelIdxMap) {
+            bkgd_params.at(label_idx.first)->SetContent(
+                    fOuterBinMap.ToUserParams(
+                            calc_param_m.col(label_idx.second)
+                    ).data()
+            );
         }
+        //for(auto i = 1u; i < calc_param_m.cols(); i++) {
+        //    bkgd_params[fComponentLabelIdxMap.at(i)]->SetContent(fOuterBinMap.ToUserParams(calc_param_m.col(i)).data());
+        //}
     }
 
     TH1 *
     TemplateFitSignalEstimator::
-    Predict(const TH1 * signal_params,
-            const std::map<std::string, TH1*> & bkgd_params) const {
-        auto prediction = fFitCalc->Predict(ToCalculatorParams(signal_params, bkgd_params));
-        return root::ToROOT(prediction,
-                            fSignalTemplate);
+    _to_template_binning(const Array & reduced_templates) const {
+        return root::ToROOT(
+                fInnerBinMap.ToUserParams(reduced_templates)
+                        .reshaped(fDims[1] + 2, fInnerBinMap.GetMatrix().rows() / (fDims[1] + 2))
+                        .transpose().reshaped(),
+                fPredictionProps
+        );
+    }
+
+    Array
+    TemplateFitSignalEstimator::
+    _predict_component(const TH1 * component_templates, const TH1 * params) const {
+        return (root::MapContentsToEigen(component_templates)
+                         .reshaped(fDims[1], fDims[0]) // TODO row-major
+                         .matrix() *
+               fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(params))
+                       .asDiagonal()).reshaped();
     }
 
     TH1 *
     TemplateFitSignalEstimator::
-    PredictProjected(const TH1 * signal_params,
-                     const std::map<std::string, TH1*> & bkgd_params) const {
+    PredictTotal(const TH1 * signal_params,
+                 const std::map<std::string, TH1*> & bkgd_params) const {
+        return _to_template_binning(fFitCalc->Predict(ToCalculatorParams(signal_params, bkgd_params)));
+    }
+
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    PredictSignal(const TH1 * signal_params) const {
+        return _to_template_binning(
+                fFitCalc->PredictComponent(
+                        0,
+                        fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(signal_params))
+                )
+        );
+    }
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    PredictBackground(const std::string & background_label,
+                      const TH1 * bkgd_params) const {
+        return _to_template_binning(
+                fFitCalc->PredictComponent(
+                        fComponentLabelIdxMap.at(background_label),
+                        fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(bkgd_params))
+                )
+        );
+    }
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    PredictProjectedTotal(const TH1 * signal_params,
+                          const std::map<std::string, TH1*> & bkgd_params) const {
         Array padded_projection = Array::Zero(fProjectPredictionProps.nbins_and_uof);
         auto prediction = fFitCalc->Predict(ToCalculatorParams(signal_params, bkgd_params));
         if(fDims[0]==1) { // single analysis bin
             padded_projection(1) = prediction.sum();
         }
         else { // two-dimensional analysis binning
-            padded_projection = fParamMap.ToUserParams(prediction.reshaped(fDims[1], fDims[0])
+            padded_projection = fOuterBinMap.ToUserParams(prediction.reshaped(fDims[1], fDims[0])
                                                                .colwise()
                                                                .sum());
         }
@@ -331,30 +433,111 @@ namespace xsec {
                             fProjectPredictionProps);
     }
 
-    /*
-    std::pair<TH1*, std::map<std::string, TH1*>>
+    TH1 *
     TemplateFitSignalEstimator::
-    PredictComponents(const TH1 * signal_params,
-                      const std::map<std::string, TH1*> & bkgd_params) const {
-
-        int nrows = fFitCalc->GetNMinimizerParams() / fFitCalc->GetNComponents();
-        int ncols = fFitCalc->GetNComponents();
-        Matrix calc_param_m = Matrix::Zero(nrows, ncols);
-        calc_param_m.col(0) = signal_params.reshaped();
-        auto signal_prediction = root::ToROOT(fFitCalc->Predict(calc_param_m.reshaped()).array(),
-                                              fPredictionProps);
-
-        std::map<std::string, TH1*> bkgd_predictions;
-        for(auto i = 1u; i < ncols; i++) {
-            calc_param_m = Matrix::Zero(nrows, ncols);
-            calc_param_m.col(i) = bkgd_params.at(fComponentLabelIdxMap.at(i)).reshaped();
-            bkgd_predictions[fComponentLabelIdxMap.at(i)] =
-                    root::ToROOT(fFitCalc->Predict(calc_param_m.reshaped()).array(),
-                                 fPredictionProps);
+    PredictProjectedSignal(const TH1 * signal_params) const {
+        Array padded_projection = Array::Zero(fProjectPredictionProps.nbins_and_uof);
+        auto prediction = fFitCalc->PredictComponent(
+                0, fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(signal_params))
+        );
+        if(fDims[0]==1) {
+            padded_projection(0) = prediction.sum();
         }
-        return {signal_prediction, bkgd_predictions};
-
+        else {
+            padded_projection = fOuterBinMap.ToUserParams(prediction.reshaped(fDims[1], fDims[0])
+                                                                  .colwise()
+                                                                  .sum());
+        }
+        return root::ToROOT(padded_projection,
+                            fProjectPredictionProps);
     }
-     */
 
+    TH1 *
+    TemplateFitSignalEstimator::
+    PredictProjectedBackground(const std::string & background_label, const TH1 * bkgd_params) const {
+        Array padded_projection = Array::Zero(fProjectPredictionProps.nbins_and_uof);
+        auto prediction = fFitCalc->PredictComponent(
+                fComponentLabelIdxMap.at(background_label),
+                fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(bkgd_params))
+        );
+        if(fDims[0]==1) {
+            padded_projection(0) = prediction.sum();
+        }
+        else {
+            padded_projection = fOuterBinMap.ToUserParams(prediction.reshaped(fDims[1], fDims[0])
+                                                                  .colwise()
+                                                                  .sum());
+        }
+        return root::ToROOT(padded_projection,
+                            fProjectPredictionProps);
+    }
+
+    void
+    TemplateFitSignalEstimator::
+    SetFitter(fit::IFitter * fitter) {
+        fFitter = fitter;
+    }
+
+    fit::IFitter *
+    TemplateFitSignalEstimator::
+    GetFitter() const {
+        return fFitter;
+    }
+
+    TemplateFitResult
+    TemplateFitSignalEstimator::
+    Fit(const TH1 * data) const {
+        if(!fFitter) {
+            throw std::runtime_error("This TemplateFitSignalEstimator does not have an active IFitter");
+        }
+        Array data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
+        auto result = fFitter->Fit(fFitCalc, data_arr);
+
+        auto signal_params = (TH1*) fMask->Clone();
+        auto signal_params_error_up = (TH1*) fMask->Clone();
+        auto signal_params_error_down = (TH1*) fMask->Clone();
+        root::CopyAxisLabels(fProjectPredictionProps, signal_params);
+        root::CopyAxisLabels(fProjectPredictionProps, signal_params_error_up);
+        root::CopyAxisLabels(fProjectPredictionProps, signal_params_error_down);
+
+        signal_params->SetTitle("Normalization Parameters: Signal");
+        signal_params_error_up->SetTitle("Parameters Error Up: Signal");
+        signal_params_error_down->SetTitle("Parameters Error Down: Signal");
+
+        std::map<std::string, TH1*> background_params;
+        std::map<std::string, TH1*> background_params_error_up;
+        std::map<std::string, TH1*> background_params_error_down;
+        for(auto bkgd : fBackgroundTemplates) {
+            background_params[bkgd.first] = (TH1*) fMask->Clone();
+            background_params_error_up[bkgd.first] = (TH1*) fMask->Clone();
+            background_params_error_down[bkgd.first] = (TH1*) fMask->Clone();
+
+            root::CopyAxisLabels(fProjectPredictionProps, background_params.at(bkgd.first));
+            root::CopyAxisLabels(fProjectPredictionProps, background_params_error_up.at(bkgd.first));
+            root::CopyAxisLabels(fProjectPredictionProps, background_params_error_down.at(bkgd.first));
+            background_params.at(bkgd.first)->SetTitle(("Normalization Parameters: " + bkgd.first).c_str());
+            background_params_error_up.at(bkgd.first)->SetTitle(("Parameters Error Up: " + bkgd.first).c_str());
+            background_params_error_down.at(bkgd.first)->SetTitle(("Parameters Error Down: " + bkgd.first).c_str());
+        }
+        ToUserParams(result.params, signal_params, background_params);
+        ToUserParams(result.params_error_up, signal_params_error_up, background_params_error_up);
+        ToUserParams(result.params_error_down, signal_params_error_down, background_params_error_down);
+
+        return {result.fun_val,
+                signal_params,
+                signal_params_error_up,
+                signal_params_error_down,
+                background_params,
+                background_params_error_up,
+                background_params_error_down,
+                result.covariance,
+                result.fun_calls};
+    }
+
+    TemplateFitResult
+    TemplateFitSignalEstimator::
+    Fit(const TH1 * data, fit::IFitter * fitter) {
+        SetFitter(fitter);
+        return Fit(data);
+    }
 }
