@@ -23,16 +23,15 @@ namespace xsec {
         }
         class Minuit2TemplateFitter : public IFitter, public ROOT::Minuit2::FCNBase {
         public:
-            Minuit2TemplateFitter(IFitCalculator * fFitCalc,
-                                  int strategy = 2,
+            Minuit2TemplateFitter(int strategy = 2,
                                   double up = 1)
-                          : fFitCalc(fFitCalc),
-                            fMnStrategy(strategy),
+                          : fMnStrategy(strategy),
                             fUp(up)
             {}
 
             // IFitter overrides
-            virtual FitResult Fit(const Array & data,
+            virtual FitResult Fit(IFitCalculator * fit_calc,
+                                  const Array & data,
                                   std::vector<Vector> seeds = {}) override;
 
             // FCNBase overrides

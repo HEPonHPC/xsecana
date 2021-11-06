@@ -13,11 +13,12 @@ namespace xsec {
         typedef Eigen::Map<Eigen::MatrixXd> MatrixMap;
 
         struct FitResult {
+            bool is_valid;
             double fun_val;
             Vector params;
             Array2D covariance;
-            Array plus_one_sigma_errors;
-            Array minus_one_sigma_errors;
+            Array params_error_up;
+            Array params_error_down;
             unsigned int fun_calls;
         };
 
@@ -27,12 +28,14 @@ namespace xsec {
                                const Array & data) const = 0;
             virtual unsigned int GetNMinimizerParams() const = 0;
             virtual unsigned int GetNFunCalls() const = 0;
+            virtual Vector ToUserParams(const Vector & minimizer_coords) const = 0;
         };
 
         class IFitter {
         public:
-            virtual FitResult Fit(const Array & data,
-                                  const std::vector<Vector> seeds) = 0;
+            virtual FitResult Fit(IFitCalculator * fit_calc,
+                                  const Array & data,
+                                  const std::vector<Vector> seeds={}) = 0;
         };
 
 

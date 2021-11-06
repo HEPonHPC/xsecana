@@ -19,7 +19,7 @@ namespace xsec {
         SetPrintLevel(const int & level) const {
 #if ROOT_VERSION_CODE >= ROOT_VERSION(6, 24, 0)
             ROOT::Minuit2::MnPrint::SetGlobalLevel(level);
-#elif ROOT_VERSION_CODE >= ROOT_VERSION(6, 22, 00)
+#elif ROOT_VERSION_CODE >= ROOT_VERSION(6, 18, 00)
             ROOT::Minuit2::MnPrint::SetLevel(level);
 #else
             std::cerr << "Attempting to set Minuit2 print level for ROOT version ";
@@ -31,9 +31,13 @@ namespace xsec {
 
         FitResult
         Minuit2TemplateFitter::
-        Fit(const Array & data,
+        Fit(IFitCalculator * fit_calc,
+            const Array & data,
             std::vector<Vector> seeds) {
+            // maintain internal copies in order to implement ROOT::FcnBase::operator()
             fData = data;
+            fFitCalc = fit_calc;
+
             // setup minuit fitter
             fFitCalc->GetNMinimizerParams();
 
@@ -75,32 +79,45 @@ namespace xsec {
 
             // get errors
             ROOT::Minuit2::MnMinos minos(*this, mins[global_min_idx], fMnStrategy);
-            Vector plus_one_sigma_errors(fFitCalc->GetNMinimizerParams());
-            Vector minus_one_sigma_errors(fFitCalc->GetNMinimizerParams());
+            Vector params_error_up(fFitCalc->GetNMinimizerParams());
+            Vector params_error_down(fFitCalc->GetNMinimizerParams());
             Vector best_fit_params(fFitCalc->GetNMinimizerParams());
             for (auto i = 0u; i < fFitCalc->GetNMinimizerParams(); i++) {
                 // each call to minos does a fit so this part will take some time
                 auto e = minos(i);
-                minus_one_sigma_errors(i) = std::get<0>(e);
-                plus_one_sigma_errors(i) = std::get<1>(e);
+                params_error_down(i) = std::get<0>(e);
+                params_error_up(i) = std::get<1>(e);
                 best_fit_params(i) = mins[global_min_idx].UserState().Params()[i];
             }
 
             // return as FitResult
             FitResult result;
-            result.plus_one_sigma_errors = plus_one_sigma_errors;
-            result.minus_one_sigma_errors = minus_one_sigma_errors;
-            result.fun_val = mins[global_min_idx].Fval();
-            result.params = best_fit_params;
-            result.fun_calls = fFitCalc->GetNFunCalls();
-            result.covariance = Eigen::MatrixXd::Zero(fFitCalc->GetNMinimizerParams(),
-                                                      fFitCalc->GetNMinimizerParams());
-            for (auto irow = 0u; irow < fFitCalc->GetNMinimizerParams(); irow++) {
-                for (auto icol = 0u; icol < fFitCalc->GetNMinimizerParams(); icol++) {
-                    result.covariance(irow, icol) = mins[global_min_idx].UserCovariance()(irow, icol);
+            result.is_valid = mins[global_min_idx].IsValid();
+            if (result.is_valid) {
+                result.params_error_up = fFitCalc->ToUserParams(params_error_up);
+                result.params_error_down = fFitCalc->ToUserParams(params_error_down);
+                result.fun_val = mins[global_min_idx].Fval();
+                result.params = fFitCalc->ToUserParams(best_fit_params);
+                result.fun_calls = fFitCalc->GetNFunCalls();
+                result.covariance = Eigen::MatrixXd::Zero(fFitCalc->GetNMinimizerParams(),
+                                                          fFitCalc->GetNMinimizerParams());
+                if(mins[global_min_idx].HasCovariance() && mins[global_min_idx].HasValidCovariance()) {
+                    for (auto irow = 0u; irow < fFitCalc->GetNMinimizerParams(); irow++) {
+                        for (auto icol = 0u; icol < fFitCalc->GetNMinimizerParams(); icol++) {
+                            result.covariance(irow, icol) = mins[global_min_idx].UserCovariance()(irow, icol);
+                        }
+                    }
+                }
+                else {
+                    std::cout << "Warning: Invalid fit parameter covariance" << std::endl;
                 }
             }
+            else {
+                std::cout << "Warning: Invalid Global Minimum" << std::endl;
+            }
 
+            // disown fit calc
+            fFitCalc = 0;
             return result;
         }
 
