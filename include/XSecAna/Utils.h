@@ -60,6 +60,21 @@ namespace xsec {
             unsigned int entries;
         };
 
+        inline void CopyAxisLabels(const TH1Props & props, TH1 * h) {
+            if(h->GetDimension()==1) {
+                h->GetXaxis()->SetTitle(props.axes[0]->GetTitle());
+            }
+            else if(h->GetDimension()==2) {
+                h->GetXaxis()->SetTitle(props.axes[0]->GetTitle());
+                h->GetYaxis()->SetTitle(props.axes[1]->GetTitle());
+            }
+            else {
+                h->GetXaxis()->SetTitle(props.axes[0]->GetTitle());
+                h->GetYaxis()->SetTitle(props.axes[1]->GetTitle());
+                h->GetZaxis()->SetTitle(props.axes[2]->GetTitle());
+            }
+        }
+
         inline ArrayMap MapContentsToEigen(const TH1 * h) {
             if (h->GetDimension() == 1) {
                 return ArrayMap(((const TH1D *) h)->GetArray(),
@@ -217,6 +232,7 @@ namespace xsec {
                                  props.axes[0]->GetXmin(),
                                  props.axes[0]->GetXmax());
                 }
+                h->GetXaxis()->SetTitle(props.axes[0]->GetTitle());
             } else if (props.dims == 2) {
                 if(props.axes[0]->IsVariableBinSize() ||
                    props.axes[1]->IsVariableBinSize()) {
@@ -235,6 +251,8 @@ namespace xsec {
                                  props.axes[1]->GetNbins(),
                                  props.axes[1]->GetXmin(), props.axes[1]->GetXmax());
                 }
+                h->GetXaxis()->SetTitle(props.axes[0]->GetTitle());
+                h->GetYaxis()->SetTitle(props.axes[1]->GetTitle());
             } else if (props.dims == 3) {
                 if(props.axes[0]->IsVariableBinSize() ||
                    props.axes[1]->IsVariableBinSize() ||
@@ -257,10 +275,15 @@ namespace xsec {
                                  props.axes[1]->GetXmin(), props.axes[1]->GetXmax(),
                                  props.axes[2]->GetNbins(),
                                  props.axes[2]->GetXmin(), props.axes[2]->GetXmax());
+
                 }
+                h->GetXaxis()->SetTitle(props.axes[0]->GetTitle());
+                h->GetYaxis()->SetTitle(props.axes[1]->GetTitle());
+                h->GetZaxis()->SetTitle(props.axes[2]->GetTitle());
             } else {
                 return 0;
             }
+
             h->SetContent(data.data());
             h->SetEntries(props.entries);
             h->Sumw2();
