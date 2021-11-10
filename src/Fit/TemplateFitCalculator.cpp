@@ -41,6 +41,12 @@ namespace xsec {
                 return fM.cols();
             }
 
+            unsigned int
+            ParamMap::
+            GetNUserParams() const {
+                return fM.rows();
+            }
+
             Vector
             ParamMap::
             ToUserParams(const Vector & minimizer_params) const {
@@ -127,9 +133,12 @@ namespace xsec {
         TemplateFitCalculator::
         Chi2(const Vector & user_params,
              const Array & data) const {
-            return (data.matrix() - this->Predict(user_params)).transpose() *
-                   fInvCov *
-                   (data.matrix() - this->Predict(user_params));
+            auto u = this->Predict(user_params);
+            auto v = data.matrix() - u;
+            Matrix total_covariance = fSystematicCovariance;
+            total_covariance += u.asDiagonal();
+            return v.transpose() *
+                    total_covariance.llt().solve(v);
         }
 
         double
@@ -148,7 +157,7 @@ namespace xsec {
         TemplateFitCalculator::
         Predict(const Vector & user_params) const {
             return (fTemplates * user_params.asDiagonal())
-                    .reshaped(fInvCov.rows(), fNComponents)
+                    .reshaped(fSystematicCovariance.rows(), fNComponents)
                     .rowwise().sum();
         }
 
@@ -191,9 +200,9 @@ namespace xsec {
         TemplateFitCalculator::
         TemplateFitCalculator(const std::vector<Array> & templates,
                               const std::vector<int> & dims,
-                              const Matrix & inverse_covariance)
+                              const Matrix & systematic_covariance)
                 : fDims(dims),
-                  fInvCov(inverse_covariance),
+                  fSystematicCovariance(systematic_covariance),
                   fNFunCalls(0) {
             // check all templates are consistent with one another
             bool consistent_templates = true;
@@ -203,8 +212,8 @@ namespace xsec {
             assert(consistent_templates);
 
             // check we have an appropriate inverse covariance matrix
-            assert(inverse_covariance.rows() == templates[0].size() &&
-                   inverse_covariance.cols() == templates[0].size());
+            assert(systematic_covariance.rows() == templates[0].size() &&
+                   systematic_covariance.cols() == templates[0].size());
 
             // Determine number of user parameters
             // This number may differ from number of parameters
