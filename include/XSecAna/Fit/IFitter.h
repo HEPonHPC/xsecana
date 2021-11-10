@@ -27,6 +27,7 @@ namespace xsec {
             virtual double fun(const Vector & params,
                                const Array & data) const = 0;
             virtual unsigned int GetNMinimizerParams() const = 0;
+            virtual unsigned int GetNUserParams() const = 0;
             virtual unsigned int GetNFunCalls() const = 0;
             virtual Vector ToUserParams(const Vector & minimizer_coords) const = 0;
         };
