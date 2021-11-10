@@ -2,6 +2,7 @@
 // Created by Derek Doyle on 10/9/21.
 //
 #include "XSecAna/TemplateFitSignalEstimator.h"
+#include "TGaxis.h"
 
 namespace xsec {
     TH1 *
@@ -156,10 +157,9 @@ namespace xsec {
             fCovarianceMatrices[systematic.first] = systematic.second.CovarianceMatrix(fTotalTemplate);
             fTotalCovariance += fCovarianceMatrices.at(systematic.first);
         }
-        fInverseCovariance = fTotalCovariance.inverse();
         fFitCalc = new fit::TemplateFitCalculator(templates_1d,
                                                   fDims,
-                                                  fInverseCovariance);
+                                                  fTotalCovariance);
 
     }
 
@@ -333,11 +333,6 @@ namespace xsec {
                     root::MapContentsToEigen(bkgd_params.at(label_idx.first))
             );
         }
-        //for(auto i = 1u; i < calc_params.cols(); i++) {
-        //    calc_params.col(i) = fOuterBinMap.ToMinimizerParams(
-        //            root::MapContentsToEigen(bkgd_params.at(fComponentLabelIdxMap.at(i)))
-        //    );
-        //}
         return calc_params.reshaped();
     }
 
@@ -358,9 +353,6 @@ namespace xsec {
                     ).data()
             );
         }
-        //for(auto i = 1u; i < calc_param_m.cols(); i++) {
-        //    bkgd_params[fComponentLabelIdxMap.at(i)]->SetContent(fOuterBinMap.ToUserParams(calc_param_m.col(i)).data());
-        //}
     }
 
     TH1 *
@@ -484,6 +476,12 @@ namespace xsec {
         return fFitter;
     }
 
+    fit::IFitCalculator *
+    TemplateFitSignalEstimator::
+    GetFitCalc() const {
+        return fFitCalc;
+    }
+
     TemplateFitResult
     TemplateFitSignalEstimator::
     Fit(const TH1 * data) const {
@@ -523,6 +521,11 @@ namespace xsec {
         ToUserParams(result.params_error_up, signal_params_error_up, background_params_error_up);
         ToUserParams(result.params_error_down, signal_params_error_down, background_params_error_down);
 
+        auto covariance = new TH2D("", "",
+                                   result.covariance.rows(), 0, result.covariance.rows(),
+                                   result.covariance.rows(), 0, result.covariance.rows());
+        root::FillTH2Contents(covariance, result.covariance);
+
         return {result.fun_val,
                 signal_params,
                 signal_params_error_up,
@@ -530,7 +533,7 @@ namespace xsec {
                 background_params,
                 background_params_error_up,
                 background_params_error_down,
-                result.covariance,
+                covariance,
                 result.fun_calls};
     }
 
@@ -539,5 +542,36 @@ namespace xsec {
     Fit(const TH1 * data, fit::IFitter * fitter) {
         SetFitter(fitter);
         return Fit(data);
+    }
+
+    TCanvas *
+    TemplateFitSignalEstimator::
+    DrawParameterCovariance(const TemplateFitResult & fit_result) const {
+        auto c = new TCanvas("parameter_covariance");
+        auto xmax = fit_result.covariance->GetXaxis()->GetBinLowEdge(fit_result.covariance->GetNbinsX()+1);
+        auto xaxis = new TGaxis(0, 0, xmax, 0, 0.001, fBackgroundTemplates.size()+1);
+        auto yaxis = new TGaxis(0, 0, 0, xmax, 0.001, fBackgroundTemplates.size()+1);
+        xaxis->SetNdivisions(fBackgroundTemplates.size()+1);
+        yaxis->SetNdivisions(fBackgroundTemplates.size()+1);
+
+        xaxis->ChangeLabel(1, 40, -1, 33, -1, -1, "Signal");
+        yaxis->ChangeLabel(1, 40, -1, 33, -1, -1, "Signal");
+        for(auto bkgd : fComponentLabelIdxMap) {
+            xaxis->ChangeLabel(bkgd.second+1, 40, -1, 33, -1, -1, bkgd.first.c_str());
+            yaxis->ChangeLabel(bkgd.second+1, 40, -1, 33, -1, -1, bkgd.first.c_str());
+        }
+
+        auto tmp_cov = (TH2D*) fit_result.covariance->Clone();
+        double zlim = std::max(std::abs(tmp_cov->GetMaximum()),std::abs(tmp_cov->GetMinimum()));
+        tmp_cov->GetZaxis()->SetRangeUser(-zlim, zlim);
+        tmp_cov->GetXaxis()->SetTickLength(0);
+        tmp_cov->GetYaxis()->SetTickLength(0);
+        tmp_cov->GetXaxis()->SetLabelSize(0);
+        tmp_cov->GetYaxis()->SetLabelSize(0);
+
+        tmp_cov->Draw("colz");
+        xaxis->Draw("same");
+        yaxis->Draw("same");
+        return c;
     }
 }

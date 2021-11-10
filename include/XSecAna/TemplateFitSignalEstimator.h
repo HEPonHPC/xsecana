@@ -4,6 +4,8 @@
 #include "XSecAna/ISignalEstimator.h"
 #include "XSecAna/Fit/IFitter.h"
 
+#include "TCanvas.h"
+
 namespace xsec {
     struct TemplateFitResult {
         double fun_val;
@@ -13,7 +15,7 @@ namespace xsec {
         std::map<std::string, TH1*> background_params;
         std::map<std::string, TH1*> background_params_error_up;
         std::map<std::string, TH1*> background_params_error_down;
-        Array2D covariance;
+        TH2D * covariance;
         unsigned int fun_calls;
     };
 
@@ -27,6 +29,7 @@ namespace xsec {
 
         void SetFitter(fit::IFitter * fitter);
         fit::IFitter * GetFitter() const;
+        fit::IFitCalculator * GetFitCalc() const;
 
         TemplateFitResult Fit(const TH1 * data) const;
         TemplateFitResult Fit(const TH1 * data, fit::IFitter * fitter);
@@ -67,6 +70,7 @@ namespace xsec {
         TH1D * GetReducedBackgroundTemplate(const std::string & bkgd_label) const;
         TH1D * GetReducedTotalTemplate() const;
 
+        TCanvas * DrawParameterCovariance(const TemplateFitResult & fit_result) const;
 
     private:
         TH1 * _mask_and_flatten(const TH1 * mask, const TH1 * templ) const;
