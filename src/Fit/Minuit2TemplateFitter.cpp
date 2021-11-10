@@ -3,6 +3,7 @@
 //
 
 #include "XSecAna/Fit/Minuit2TemplateFitter.h"
+#include "XSecAna/Fit/TemplateFitCalculator.h"
 
 namespace xsec {
     namespace fit {
@@ -99,13 +100,21 @@ namespace xsec {
                 result.fun_val = mins[global_min_idx].Fval();
                 result.params = fFitCalc->ToUserParams(best_fit_params);
                 result.fun_calls = fFitCalc->GetNFunCalls();
-                result.covariance = Eigen::MatrixXd::Zero(fFitCalc->GetNMinimizerParams(),
-                                                          fFitCalc->GetNMinimizerParams());
+                result.covariance = Eigen::MatrixXd::Zero(fFitCalc->GetNUserParams(),
+                                                          fFitCalc->GetNUserParams());
                 if(mins[global_min_idx].HasCovariance() && mins[global_min_idx].HasValidCovariance()) {
-                    for (auto irow = 0u; irow < fFitCalc->GetNMinimizerParams(); irow++) {
+                    int ii = 0;
+                    auto param_map = ((fit::TemplateFitCalculator*) fFitCalc)->GetParamMap();
+                    auto masked = param_map.ToUserParams(Array::Ones(fFitCalc->GetNMinimizerParams()));
+                    for (auto irow = 0u; irow < fFitCalc->GetNUserParams(); irow++) {
+                        if(!masked(irow)) continue;
+
+                        Array min_param_col(fFitCalc->GetNMinimizerParams());
                         for (auto icol = 0u; icol < fFitCalc->GetNMinimizerParams(); icol++) {
-                            result.covariance(irow, icol) = mins[global_min_idx].UserCovariance()(irow, icol);
+                            min_param_col(icol) = mins[global_min_idx].UserCovariance()(ii, icol);
                         }
+                        ii++;
+                        result.covariance.row(irow) = param_map.ToUserParams(min_param_col);
                     }
                 }
                 else {
