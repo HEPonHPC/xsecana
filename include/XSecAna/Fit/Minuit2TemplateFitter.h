@@ -24,9 +24,11 @@ namespace xsec {
         class Minuit2TemplateFitter : public IFitter, public ROOT::Minuit2::FCNBase {
         public:
             Minuit2TemplateFitter(int strategy = 2,
-                                  double up = 1)
-                          : fMnStrategy(strategy),
-                            fUp(up)
+                                  double up = 1,
+                                  bool minos_errors = true)
+                    : fMnStrategy(strategy),
+                      fUp(up),
+                      fMinosErrors(minos_errors)
             {}
 
             // IFitter overrides
@@ -44,6 +46,7 @@ namespace xsec {
             IFitCalculator * fFitCalc;
             int fMnStrategy;
             double fUp;
+            bool fMinosErrors;
             Array fData;
         };
 

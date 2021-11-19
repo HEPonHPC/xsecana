@@ -56,9 +56,8 @@ namespace xsec {
                     // can we name these better?
                     mn_params.Add(std::to_string(i),
                                   seed(i),
-                                  0.01, // 10% error
-                                  0,   // lower bound: 0
-                                  20);  // upper bound: 20. Hopefully our MC isn't that bad
+                                  0.01);
+                    mn_params.SetLowerLimit(std::to_string(i), 0);
                 }
                 // call minimizer with this
                 ROOT::Minuit2::MnMigrad minimizer(*this, mn_params, fMnStrategy);
@@ -79,16 +78,23 @@ namespace xsec {
             }
 
             // get errors
-            ROOT::Minuit2::MnMinos minos(*this, mins[global_min_idx], fMnStrategy);
+
             Vector params_error_up(fFitCalc->GetNMinimizerParams());
             Vector params_error_down(fFitCalc->GetNMinimizerParams());
             Vector best_fit_params(fFitCalc->GetNMinimizerParams());
             for (auto i = 0u; i < fFitCalc->GetNMinimizerParams(); i++) {
-                // each call to minos does a fit so this part will take some time
-                auto e = minos(i);
-                params_error_down(i) = std::get<0>(e);
-                params_error_up(i) = std::get<1>(e);
-                best_fit_params(i) = mins[global_min_idx].UserState().Params()[i];
+                if (fMinosErrors) {
+                    ROOT::Minuit2::MnMinos minos(*this, mins[global_min_idx], fMnStrategy);
+                    // each call to minos does a fit so this part will take some time
+                    auto e = minos(i);
+                    params_error_down(i) = std::get<0>(e);
+                    params_error_up(i) = std::get<1>(e);
+                }
+                else {
+                    params_error_up(i) = mins[global_min_idx].UserParameters().Error(std::to_string(i));
+                    params_error_down(i) = -1 * params_error_up(i);
+                }
+                best_fit_params(i) = mins[global_min_idx].UserParameters().Value(std::to_string(i));
             }
 
             // return as FitResult
