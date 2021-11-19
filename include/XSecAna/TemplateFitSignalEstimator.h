@@ -21,6 +21,7 @@ namespace xsec {
 
     class TemplateFitSignalEstimator : public IEigenSignalEstimator {
     public:
+
         TemplateFitSignalEstimator(const TH1 * signal_template,
                                    const std::map<std::string, const TH1*> & background_templates,
                                    const std::map<std::string, Systematic<TH1>> & systematics,
@@ -31,8 +32,8 @@ namespace xsec {
         fit::IFitter * GetFitter() const;
         fit::IFitCalculator * GetFitCalc() const;
 
-        TemplateFitResult Fit(const TH1 * data) const;
-        TemplateFitResult Fit(const TH1 * data, fit::IFitter * fitter);
+        TemplateFitResult Fit(const TH1 * data, int nrandom_seeds=-1) const;
+        TemplateFitResult Fit(const TH1 * data, fit::IFitter * fitter, int nrandom_seeds=-1);
 
         virtual TH1 * Background(const TH1 * data) const override;
 
@@ -58,11 +59,9 @@ namespace xsec {
         TH1 * PredictProjectedSignal(const TH1 * signal_params) const;
         TH1 * PredictProjectedBackground(const std::string & background_label,
                                          const TH1 * bkgd_params) const;
-
-        //std::pair<TH1*, std::map<std::string, TH1*>>
-        //PredictComponents(const Matrix & signal_params,
-        //                  const std::map<std::string, Matrix> & bkgd_params) const;
-
+        double Chi2(const TH1 * data,
+                    const TH1 * signal_params,
+                    const std::map<std::string, TH1*> & bkgd_params) const;
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;
@@ -71,9 +70,17 @@ namespace xsec {
         TH1D * GetReducedTotalTemplate() const;
 
         TCanvas * DrawParameterCovariance(const TemplateFitResult & fit_result) const;
+        TCanvas * DrawParameterCorrelation(const TemplateFitResult & fit_result) const;
+
+        std::vector<std::string> GetBackgroundLabels() const;
+        std::vector<std::string> GetSystematicLabels() const;
 
     private:
+        void _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const;
+        TemplateFitResult _template_fit_result(const fit::FitResult & fit_result) const;
+        TemplateFitResult _fit(const TH1 * data, const std::vector<Vector> & seeds) const;
         TH1 * _mask_and_flatten(const TH1 * mask, const TH1 * templ) const;
+        TH1 * _mask_and_flatten(const TH1 * templ) const;
         TH1 * _to_template_binning(const Array & reduced_templates) const;
         Array _predict_component(const TH1 * component_templates, const TH1 * params) const;
         virtual void _eval_impl(const Array & data, const Array & error,
@@ -85,9 +92,6 @@ namespace xsec {
         void ToUserParams(const fit::Vector & calc_params,
                           TH1 * signal_params,
                           std::map<std::string, TH1*> & bkgd_params) const;
-
-        std::vector<int> GetSignalTemplateIdxs();
-
 
         TH1 * fSignalTemplate;
         std::map<std::string, TH1*> fBackgroundTemplates;

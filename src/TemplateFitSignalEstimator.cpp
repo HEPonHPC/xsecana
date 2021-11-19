@@ -4,7 +4,38 @@
 #include "XSecAna/TemplateFitSignalEstimator.h"
 #include "TGaxis.h"
 
+#include <random>
+#include <iostream>
+#include <iomanip>
+
 namespace xsec {
+
+    std::vector<std::string>
+    TemplateFitSignalEstimator::
+    GetBackgroundLabels() const {
+        std::vector<std::string> ret;
+        for(auto bkgd : fBackgroundTemplates) {
+            ret.push_back(bkgd.first);
+        }
+        return ret;
+    }
+
+    std::vector<std::string>
+    TemplateFitSignalEstimator::
+    GetSystematicLabels() const {
+        std::vector<std::string> ret;
+        for(auto syst : fSystematics) {
+            ret.push_back(syst.first);
+        }
+        return ret;
+    }
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    _mask_and_flatten(const TH1 * templ) const {
+        return this->_mask_and_flatten(fMask, templ);
+    }
+
     TH1 *
     TemplateFitSignalEstimator::
     _mask_and_flatten(const TH1 * mask, const TH1 * templ) const {
@@ -266,20 +297,9 @@ namespace xsec {
     void
     TemplateFitSignalEstimator::
     FixComponent(const std::string & component_label, const double & val) {
-        //int idx = -1;
-        //for(auto comp : fComponentLabelIdxMap) {
-        //    if(comp.second == template_name) {
-        //        idx = comp.first;
-        //    }
-        //}
-        //if(idx < 0) {
-        //    throw std::runtime_error(("No component named " + template_name).c_str());
-        //}
-        // fix this component in each outer bin
         auto idx = fComponentLabelIdxMap.at(component_label);
         for(auto o = 0u; o < fDims[0]; o++) {
             fFitCalc->FixTemplate(idx*fDims[0] + o, val);
-            //fFitCalc->FixTemplate(idx * fDims[0] + o, val);
         }
         fIsFreeTemplate.at(component_label) = false;
     }
@@ -287,19 +307,9 @@ namespace xsec {
     void
     TemplateFitSignalEstimator::
     ReleaseComponent(const std::string & component_label) {
-        //int idx = -1;
-        //for(auto comp : fComponentLabelIdxMap) {
-        //    if(comp.second == template_name) {
-        //        idx = comp.first;
-        //    }
-        //}
-        //if(idx < 0) {
-        //    throw std::runtime_error(("No component named " + template_name).c_str());
-        //}
         auto idx = fComponentLabelIdxMap.at(component_label);
         for(auto o = 0u; o < fDims[0]; o++) {
             fFitCalc->ReleaseTemplate(idx*fDims[0] + o);
-            //fFitCalc->ReleaseTemplate(idx * fDims[0] + o);
         }
         fIsFreeTemplate.at(component_label) = true;
     }
@@ -319,6 +329,7 @@ namespace xsec {
     void
     TemplateFitSignalEstimator::
     SaveTo(TDirectory * dir, const std::string &) const {
+
     }
 
     fit::Vector
@@ -464,6 +475,15 @@ namespace xsec {
                             fProjectPredictionProps);
     }
 
+    double
+    TemplateFitSignalEstimator::
+    Chi2(const TH1 * data,
+         const TH1 * signal_params,
+         const std::map<std::string, TH1*> & bkgd_params) const {
+        auto data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
+        return fFitCalc->fun(ToCalculatorParams(signal_params, bkgd_params), data_arr);
+    }
+
     void
     TemplateFitSignalEstimator::
     SetFitter(fit::IFitter * fitter) {
@@ -484,16 +504,55 @@ namespace xsec {
 
     TemplateFitResult
     TemplateFitSignalEstimator::
-    Fit(const TH1 * data) const {
+    Fit(const TH1 * data, int nrandom_seeds) const {
+        if (nrandom_seeds < 0) {
+            // no random seeds
+            // seed at all parameters equal to 1
+            return this->_fit(data, {Array::Ones(fFitCalc->GetNMinimizerParams())});
+        }
+        else {
+            // throw 100 random seed configurations
+            // evaluate fit calc at seed set and take the best nrandom_seeds
+            // seed fit with these
+            auto data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
+            int nrandom_throws = 100;
+            if(nrandom_seeds > nrandom_throws) {
+                nrandom_throws = nrandom_seeds;
+            }
+            return this->_fit(
+                    data,
+                    fFitCalc->GetBestSeeds(
+                            data_arr,
+                            fFitCalc->GetRandomSeeds(nrandom_throws, -0.7, 1.5),
+                            nrandom_seeds
+                    )
+            );
+        }
+    }
+
+    TemplateFitResult
+    TemplateFitSignalEstimator::
+    _fit(const TH1 * data, const std::vector<Vector> & seeds) const {
         if(!fFitter) {
             throw std::runtime_error("This TemplateFitSignalEstimator does not have an active IFitter");
         }
-        Array data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
-        auto result = fFitter->Fit(fFitCalc, data_arr);
+        auto data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
+        return this->_template_fit_result(fFitter->Fit(fFitCalc, data_arr, seeds));
+    }
 
-        auto signal_params = (TH1*) fMask->Clone();
-        auto signal_params_error_up = (TH1*) fMask->Clone();
-        auto signal_params_error_down = (TH1*) fMask->Clone();
+    TemplateFitResult
+    TemplateFitSignalEstimator::
+    Fit(const TH1 * data, fit::IFitter * fitter, int nrandom_seeds) {
+        SetFitter(fitter);
+        return Fit(data, nrandom_seeds);
+    }
+
+    TemplateFitResult
+    TemplateFitSignalEstimator::
+    _template_fit_result(const fit::FitResult & result) const {
+        auto signal_params = (TH1 *) fMask->Clone();
+        auto signal_params_error_up = (TH1 *) fMask->Clone();
+        auto signal_params_error_down = (TH1 *) fMask->Clone();
         root::CopyAxisLabels(fProjectPredictionProps, signal_params);
         root::CopyAxisLabels(fProjectPredictionProps, signal_params_error_up);
         root::CopyAxisLabels(fProjectPredictionProps, signal_params_error_down);
@@ -502,13 +561,13 @@ namespace xsec {
         signal_params_error_up->SetTitle("Parameters Error Up: Signal");
         signal_params_error_down->SetTitle("Parameters Error Down: Signal");
 
-        std::map<std::string, TH1*> background_params;
-        std::map<std::string, TH1*> background_params_error_up;
-        std::map<std::string, TH1*> background_params_error_down;
-        for(auto bkgd : fBackgroundTemplates) {
-            background_params[bkgd.first] = (TH1*) fMask->Clone();
-            background_params_error_up[bkgd.first] = (TH1*) fMask->Clone();
-            background_params_error_down[bkgd.first] = (TH1*) fMask->Clone();
+        std::map<std::string, TH1 *> background_params;
+        std::map<std::string, TH1 *> background_params_error_up;
+        std::map<std::string, TH1 *> background_params_error_down;
+        for (auto bkgd: fBackgroundTemplates) {
+            background_params[bkgd.first] = (TH1 *) fMask->Clone();
+            background_params_error_up[bkgd.first] = (TH1 *) fMask->Clone();
+            background_params_error_down[bkgd.first] = (TH1 *) fMask->Clone();
 
             root::CopyAxisLabels(fProjectPredictionProps, background_params.at(bkgd.first));
             root::CopyAxisLabels(fProjectPredictionProps, background_params_error_up.at(bkgd.first));
@@ -537,17 +596,37 @@ namespace xsec {
                 result.fun_calls};
     }
 
-    TemplateFitResult
+    
+    TCanvas *
     TemplateFitSignalEstimator::
-    Fit(const TH1 * data, fit::IFitter * fitter) {
-        SetFitter(fitter);
-        return Fit(data);
+    DrawParameterCorrelation(const TemplateFitResult & fit_result) const {
+        auto c = new TCanvas("parameter_correlation");
+        auto tmp_cor = (TH2D*) fit_result.covariance->Clone();
+        for(auto i = 1; i <= tmp_cor->GetNbinsX(); i++) {
+            for(auto j = 1; j <= tmp_cor->GetNbinsY(); j++) {
+                double cov = fit_result.covariance->GetBinContent(i,j);
+                double dii = fit_result.covariance->GetBinContent(i,i);
+                double djj = fit_result.covariance->GetBinContent(j,j);
+                tmp_cor->SetBinContent(i,j, cov / std::sqrt(dii * djj));
+            }
+        }
+
+        this->_draw_covariance_helper(c, tmp_cor, fit_result);
+        return c;
     }
 
     TCanvas *
     TemplateFitSignalEstimator::
     DrawParameterCovariance(const TemplateFitResult & fit_result) const {
         auto c = new TCanvas("parameter_covariance");
+        auto tmp_cov = (TH2D*) fit_result.covariance->Clone();
+        this->_draw_covariance_helper(c, tmp_cov, fit_result);
+        return c;
+    }
+
+    void
+    TemplateFitSignalEstimator::
+    _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const {
         auto xmax = fit_result.covariance->GetXaxis()->GetBinLowEdge(fit_result.covariance->GetNbinsX()+1);
         auto xaxis = new TGaxis(0, 0, xmax, 0, 0.001, fBackgroundTemplates.size()+1);
         auto yaxis = new TGaxis(0, 0, 0, xmax, 0.001, fBackgroundTemplates.size()+1);
@@ -560,18 +639,16 @@ namespace xsec {
             xaxis->ChangeLabel(bkgd.second+1, 40, -1, 33, -1, -1, bkgd.first.c_str());
             yaxis->ChangeLabel(bkgd.second+1, 40, -1, 33, -1, -1, bkgd.first.c_str());
         }
-
-        auto tmp_cov = (TH2D*) fit_result.covariance->Clone();
-        double zlim = std::max(std::abs(tmp_cov->GetMaximum()),std::abs(tmp_cov->GetMinimum()));
-        tmp_cov->GetZaxis()->SetRangeUser(-zlim, zlim);
-        tmp_cov->GetXaxis()->SetTickLength(0);
-        tmp_cov->GetYaxis()->SetTickLength(0);
-        tmp_cov->GetXaxis()->SetLabelSize(0);
-        tmp_cov->GetYaxis()->SetLabelSize(0);
-
-        tmp_cov->Draw("colz");
+        mat->GetXaxis()->SetNdivisions(fBackgroundTemplates.size()+1, false);
+        mat->GetYaxis()->SetNdivisions(fBackgroundTemplates.size()+1, false);
+        double zlim = std::max(std::abs(mat->GetMaximum()),std::abs(mat->GetMinimum()));
+        mat->GetZaxis()->SetRangeUser(-zlim, zlim);
+        mat->GetXaxis()->SetTickLength(0);
+        mat->GetYaxis()->SetTickLength(0);
+        mat->GetXaxis()->SetLabelSize(0);
+        mat->GetYaxis()->SetLabelSize(0);
+        mat->Draw("colz");
         xaxis->Draw("same");
         yaxis->Draw("same");
-        return c;
     }
 }
