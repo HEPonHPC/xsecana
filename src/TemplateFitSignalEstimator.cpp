@@ -523,7 +523,7 @@ namespace xsec {
                     data,
                     fFitCalc->GetBestSeeds(
                             data_arr,
-                            fFitCalc->GetRandomSeeds(nrandom_throws, -0.7, 1.5),
+                            fFitCalc->GetRandomSeeds(nrandom_throws, -0.5, 0.5),
                             nrandom_seeds
                     )
             );
