@@ -12,7 +12,12 @@ namespace xsec {
                 auto cov_ij = cov->GetBinContent(i,j);
                 auto cov_ii = cov->GetBinContent(i,i);
                 auto cov_jj = cov->GetBinContent(j,j);
-                cor->SetBinContent(i,j,cov_ij / std::sqrt(cov_ii * cov_jj));
+                if(cov_ii * cov_jj) {
+                    cor->SetBinContent(i, j, cov_ij / std::sqrt(cov_ii * cov_jj));
+                }
+                else {
+                    cor->SetBinContent(i, j, 0);
+                }
             }
         }
         return cor;
