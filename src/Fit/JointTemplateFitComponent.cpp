@@ -8,14 +8,14 @@
 namespace xsec {
     namespace fit {
         namespace detail {
-            TH1 *
-            _join(const TH1 * lhs,
-                  const TH1 * rhs) {
-                TH1 * ret;
+            std::shared_ptr<TH1>
+            _join(const std::shared_ptr<TH1> lhs,
+                  const std::shared_ptr<TH1> rhs) {
+                std::shared_ptr<TH1> ret;
                 if (lhs->GetDimension() == 1) {
                     int njoined = lhs->GetNbinsX() + rhs->GetNbinsX();
-                    ret = new TH1D("", "",
-                                   njoined, 0, njoined);
+                    ret = std::make_shared<TH1D>("", "",
+                                                 njoined, 0, njoined);
                     for (int x = 1; x <= lhs->GetNbinsX(); x++) {
                         ret->SetBinContent(x, lhs->GetBinContent(x));
                         ret->SetBinError(x, lhs->GetBinError(x));
@@ -29,19 +29,19 @@ namespace xsec {
                     if (lhs->GetXaxis()->IsVariableBinSize()) {
                         std::vector<double> ybins(njoined + 1);
                         for (int i = 0; i < njoined + 1; i++) ybins[i] = i;
-                        ret = new TH2D("", "",
-                                       lhs->GetXaxis()->GetNbins(),
-                                       lhs->GetXaxis()->GetXbins()->GetArray(),
-                                       njoined,
-                                       &ybins[0]);
+                        ret = std::make_shared<TH2D>("", "",
+                                                     lhs->GetXaxis()->GetNbins(),
+                                                     lhs->GetXaxis()->GetXbins()->GetArray(),
+                                                     njoined,
+                                                     &ybins[0]);
                     } else {
-                        ret = new TH2D("", "",
-                                       lhs->GetNbinsX(),
-                                       lhs->GetXaxis()->GetBinLowEdge(1),
-                                       lhs->GetXaxis()->GetBinLowEdge(lhs->GetNbinsX() + 1),
-                                       njoined,
-                                       0,
-                                       njoined);
+                        ret = std::make_shared<TH2D>("", "",
+                                                     lhs->GetNbinsX(),
+                                                     lhs->GetXaxis()->GetBinLowEdge(1),
+                                                     lhs->GetXaxis()->GetBinLowEdge(lhs->GetNbinsX() + 1),
+                                                     njoined,
+                                                     0,
+                                                     njoined);
                     }
                     ret->GetXaxis()->SetTitle(lhs->GetXaxis()->GetTitle());
                     ret->GetYaxis()->SetTitle("Joined Template Bins");
@@ -69,24 +69,24 @@ namespace xsec {
                         lhs->GetYaxis()->IsVariableBinSize()) {
                         std::vector<double> zbins(njoined + 1);
                         for (int i = 0; i < njoined + 1; i++) zbins[i] = i;
-                        ret = new TH3D("", "",
-                                       lhs->GetNbinsX(),
-                                       lhs->GetXaxis()->GetXbins()->GetArray(),
-                                       lhs->GetNbinsY(),
-                                       lhs->GetYaxis()->GetXbins()->GetArray(),
-                                       njoined,
-                                       &zbins[0]);
+                        ret = std::make_shared<TH3D>("", "",
+                                                     lhs->GetNbinsX(),
+                                                     lhs->GetXaxis()->GetXbins()->GetArray(),
+                                                     lhs->GetNbinsY(),
+                                                     lhs->GetYaxis()->GetXbins()->GetArray(),
+                                                     njoined,
+                                                     &zbins[0]);
                     } else {
-                        ret = new TH3D("", "",
-                                       lhs->GetNbinsX(),
-                                       lhs->GetXaxis()->GetBinLowEdge(1),
-                                       lhs->GetXaxis()->GetBinLowEdge(lhs->GetNbinsX() + 1),
-                                       lhs->GetNbinsY(),
-                                       lhs->GetYaxis()->GetBinLowEdge(1),
-                                       lhs->GetYaxis()->GetBinLowEdge(lhs->GetNbinsY() + 1),
-                                       njoined,
-                                       0,
-                                       njoined);
+                        ret = std::make_shared<TH3D>("", "",
+                                                     lhs->GetNbinsX(),
+                                                     lhs->GetXaxis()->GetBinLowEdge(1),
+                                                     lhs->GetXaxis()->GetBinLowEdge(lhs->GetNbinsX() + 1),
+                                                     lhs->GetNbinsY(),
+                                                     lhs->GetYaxis()->GetBinLowEdge(1),
+                                                     lhs->GetYaxis()->GetBinLowEdge(lhs->GetNbinsY() + 1),
+                                                     njoined,
+                                                     0,
+                                                     njoined);
                     }
                     for (int x = 1; x <= lhs->GetNbinsX(); x++) {
                         for (int y = 1; y <= lhs->GetNbinsY(); y++) {
@@ -119,146 +119,6 @@ namespace xsec {
                 return ret;
             }
 
-            std::pair<TH1 *, TH1 *>
-            _split(const TH1 * joined,
-                   const int & nbins_left) {
-                TH1 * lret;
-                TH1 * rret;
-                if (joined->GetDimension() == 1) {
-                    int nbins_right = joined->GetNbinsX() - nbins_left;
-                    lret = new TH1D("", "", nbins_left, 0, nbins_left);
-                    rret = new TH1D("", "", nbins_right, 0, nbins_right);
-                    for (int x = 1; x <= lret->GetNbinsX(); x++) {
-                        lret->SetBinContent(x, joined->GetBinContent(x));
-                        lret->SetBinError(x, joined->GetBinError(x));
-                    }
-                    for (int x = 1; x <= rret->GetNbinsX(); x++) {
-                        rret->SetBinContent(x, joined->GetBinContent(x + nbins_left));
-                        rret->SetBinError(x, joined->GetBinError(x + nbins_left));
-                    }
-                } else if (joined->GetDimension() == 2) {
-                    int nbins_right = joined->GetNbinsY() - nbins_left;
-                    if (joined->GetXaxis()->IsVariableBinSize()) {
-                        std::vector<double> ybins_left(nbins_left + 1);
-                        std::vector<double> ybins_right(nbins_right + 1);
-                        for (int i = 0; i < nbins_left + 1; i++) ybins_left[i] = i;
-                        for (int i = 0; i < nbins_right + 1; i++) ybins_right[i] = i;
-                        lret = new TH2D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetXbins()->GetArray(),
-                                        nbins_left,
-                                        &ybins_left[0]);
-                        rret = new TH2D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetXbins()->GetArray(),
-                                        nbins_right,
-                                        &ybins_right[0]);
-                    } else {
-                        lret = new TH2D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetBinLowEdge(1),
-                                        joined->GetXaxis()->GetBinLowEdge(joined->GetNbinsX()),
-                                        nbins_left,
-                                        0,
-                                        nbins_left);
-                        rret = new TH2D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetBinLowEdge(1),
-                                        joined->GetXaxis()->GetBinLowEdge(joined->GetNbinsX()),
-                                        nbins_right,
-                                        0,
-                                        nbins_right);
-                    }
-                    for (int x = 1; x <= joined->GetNbinsX(); x++) {
-                        for (int y = 1; y <= lret->GetNbinsY(); y++) {
-                            lret->SetBinContent(x,
-                                                y,
-                                                joined->GetBinContent(x, y));
-                            lret->SetBinError(x,
-                                              y,
-                                              joined->GetBinError(x, y));
-                        }
-                        for (int y = 1; y <= rret->GetNbinsY(); y++) {
-                            rret->SetBinContent(x,
-                                                y,
-                                                joined->GetBinContent(x, y + nbins_left));
-                            rret->SetBinError(x,
-                                              y,
-                                              joined->GetBinError(x, y + nbins_left));
-                        }
-                    }
-                } else {
-                    int nbins_right = joined->GetNbinsY() - nbins_left;
-                    if (joined->GetXaxis()->IsVariableBinSize() ||
-                        joined->GetYaxis()->IsVariableBinSize()) {
-                        std::vector<double> zbins_left(nbins_left + 1);
-                        std::vector<double> zbins_right(nbins_right + 1);
-                        for (int i = 0; i < nbins_left + 1; i++) zbins_left[i] = i;
-                        for (int i = 0; i < nbins_right + 1; i++) zbins_right[i] = i;
-                        lret = new TH3D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetXbins()->GetArray(),
-                                        joined->GetNbinsY(),
-                                        joined->GetYaxis()->GetXbins()->GetArray(),
-                                        nbins_left,
-                                        &zbins_left[0]);
-                        rret = new TH3D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetXbins()->GetArray(),
-                                        joined->GetNbinsY(),
-                                        joined->GetYaxis()->GetXbins()->GetArray(),
-                                        nbins_right,
-                                        &zbins_right[0]);
-                    } else {
-                        lret = new TH3D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetBinLowEdge(1),
-                                        joined->GetXaxis()->GetBinLowEdge(joined->GetNbinsX()),
-                                        joined->GetNbinsX(),
-                                        joined->GetYaxis()->GetBinLowEdge(1),
-                                        joined->GetYaxis()->GetBinLowEdge(joined->GetNbinsY()),
-                                        nbins_left,
-                                        0,
-                                        nbins_left);
-                        lret = new TH3D("", "",
-                                        joined->GetNbinsX(),
-                                        joined->GetXaxis()->GetBinLowEdge(1),
-                                        joined->GetXaxis()->GetBinLowEdge(joined->GetNbinsX()),
-                                        joined->GetNbinsX(),
-                                        joined->GetYaxis()->GetBinLowEdge(1),
-                                        joined->GetYaxis()->GetBinLowEdge(joined->GetNbinsY()),
-                                        nbins_right,
-                                        0,
-                                        nbins_right);
-                    }
-                }
-                for (int x = 1; x <= joined->GetNbinsX(); x++) {
-                    for (int y = 1; y <= joined->GetNbinsY(); y++) {
-                        for (int z = 1; z <= lret->GetNbinsZ(); z++) {
-                            lret->SetBinContent(x,
-                                                y,
-                                                z,
-                                                joined->GetBinContent(x, y, z));
-                            lret->SetBinError(x,
-                                              y,
-                                              z,
-                                              joined->GetBinError(x, y, z));
-                        }
-                        for (int z = 1; z <= rret->GetNbinsZ(); z++) {
-                            rret->SetBinContent(x,
-                                                y,
-                                                z,
-                                                joined->GetBinContent(x, y, z + nbins_left));
-                            rret->SetBinError(x,
-                                              y,
-                                              z,
-                                              joined->GetBinError(x, y, z + nbins_left));
-                        }
-                    }
-                }
-                return {lret, rret};
-            }
-
             TemplateFitSample
             _join(const std::map<std::string, TemplateFitSample> & samples) {
                 std::map<std::string, IUserTemplateComponent *> joined_components;
@@ -287,18 +147,18 @@ namespace xsec {
             Systematic<TH1>
             _join(const Systematic<TH1> & lhs,
                   const Systematic<TH1> & rhs) {
-                std::vector<const TH1 *> joined;
+                std::vector<std::shared_ptr<TH1>> joined;
                 for (auto i = 0u; i < lhs.GetShifts().size(); i++) {
                     joined.push_back(_join(lhs.GetShifts()[i], rhs.GetShifts()[i]));
                 }
                 return Systematic<TH1>(lhs.GetName(), joined, lhs.GetType());
             }
 
-            TH1 *
-            _join(const std::vector<const TH1 *> & samples) {
-                TH1 * ret = 0;
+            std::shared_ptr<TH1>
+            _join(const std::vector<std::shared_ptr<TH1>> & samples) {
+                std::shared_ptr<TH1> ret = nullptr;
                 for (auto sample: samples) {
-                    if (!ret) ret = (TH1 *) sample->Clone();
+                    if (!ret) ret = std::shared_ptr<TH1>((TH1 *) sample->Clone());
                     else {
                         ret = _join(ret, sample);
                     }
@@ -313,21 +173,6 @@ namespace xsec {
                     ret = _join(ret, samples[i]);
                 }
                 return ret;
-            }
-
-            std::pair<Systematic<TH1>, Systematic<TH1>>
-            _split(const Systematic<TH1> & joined,
-                   const Systematic<TH1> & rhs,
-                   const int & split_bin) {
-                std::vector<const TH1 *> split_left;
-                std::vector<const TH1 *> split_right;
-                for (auto i = 0u; i < joined.GetShifts().size(); i++) {
-                    auto[l, r] = _split(joined.GetShifts()[i], split_bin);
-                    split_left.push_back(l);
-                    split_right.push_back(r);
-                }
-                return {Systematic<TH1>(joined.GetName(), split_left, joined.GetType()),
-                        Systematic<TH1>(joined.GetName(), split_right, joined.GetType())};
             }
         }
 
@@ -349,16 +194,16 @@ namespace xsec {
         }
        */
 
-        TH1 *
+        std::shared_ptr<TH1>
         UserJointTemplateComponent::
-        _to1d(const TH1 * h) {
+        _to1d(const std::shared_ptr<TH1> h) {
             if (h->GetDimension() == 1) {
-                return (TH1 *) h->Clone();
+                return std::shared_ptr<TH1>((TH1 *) h->Clone());
             }
-            Array contents = xsec::root::MapContentsToEigen(h);
-            Array errors = xsec::root::MapErrorsToEigen(h);
-            auto ret = new TH1D("", "",
-                                contents.size() - 2, 0, contents.size() - 2);
+            Array contents = xsec::root::MapContentsToEigen(h.get());
+            Array errors = xsec::root::MapErrorsToEigen(h.get());
+            auto ret = std::make_shared<TH1D>("", "",
+                                              contents.size() - 2, 0, contents.size() - 2);
             for (auto x = 0; x < contents.size(); x++) {
                 ret->SetBinContent(x, contents(x));
                 ret->SetBinError(x, errors(x));
@@ -366,18 +211,18 @@ namespace xsec {
             return ret;
         }
 
-        TH1 *
+        std::shared_ptr<TH1>
         UserJointTemplateComponent::
-        _join1d(const TH1 * lhs, const TH1 * rhs) {
+        _join1d(const std::shared_ptr<TH1> lhs, const std::shared_ptr<TH1> rhs) {
             auto lhs1d = _to1d(lhs);
             auto rhs1d = _to1d(rhs);
             return detail::_join(lhs1d, rhs1d);
         }
 
-        TH1 *
+        std::shared_ptr<TH1>
         UserJointTemplateComponent::
-        _join1d(std::vector<const TH1 *> hists) {
-            TH1 * ret = (TH1 *) hists[0]->Clone();
+        _join1d(std::vector<std::shared_ptr<TH1>> hists) {
+            auto ret = std::shared_ptr<TH1>((TH1 *) hists[0]->Clone());
             for (auto i = 1u; i < hists.size(); i++) {
                 ret = _join1d(ret, hists[i]);
             }
@@ -387,7 +232,7 @@ namespace xsec {
         Systematic<TH1>
         UserJointTemplateComponent::
         _to1d(const Systematic<TH1> & syst) {
-            std::vector<const TH1 *> hists1d;
+            std::vector<std::shared_ptr<TH1>> hists1d;
             for (auto i = 0u; i < syst.GetShifts().size(); i++) {
                 hists1d.push_back(_to1d(syst.GetShifts()[i]));
             }
@@ -399,10 +244,11 @@ namespace xsec {
         UserJointTemplateComponent(const std::map<std::string, const UserTemplateComponent *> & sample_components)
                 : fSamples(sample_components) {
             // joined templates
-            std::vector<const TH1 *> vmeans;
+            std::vector<std::shared_ptr<TH1>> vmeans;
             for (const auto & sample_mean: sample_components) {
                 vmeans.push_back(sample_mean.second->GetNominal());
             }
+            fJointTemplateMean = detail::_join(vmeans);
             for(const auto & syst : sample_components.begin()->second->GetSystematics()) {
                 std::vector<Systematic<TH1>> vsysts;
                 for(const auto & sample : sample_components) {
@@ -410,10 +256,10 @@ namespace xsec {
                 }
                 fJointTemplateSystematics[syst.first] = detail::_join(vsysts);
             }
-            fJointTemplateMean = detail::_join(vmeans);
+
 
             // project sample means
-            std::vector<const TH1 *> projected_sample_means;
+            std::vector<std::shared_ptr<TH1>> projected_sample_means;
             for (const auto & sample: sample_components) {
                 fSampleNormalizations[sample.first] = _to1d(ComponentReducer::Project(sample.second->GetNominal()));
                 projected_sample_means.push_back(fSampleNormalizations.at(sample.first));
@@ -437,7 +283,7 @@ namespace xsec {
             }
             fJointNormalizationTotalCovariance = 0;
             for (auto syst: fJointNormSystematics) {
-                fJointNormalizationCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalization);
+                fJointNormalizationCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalization.get());
                 if (!fJointNormalizationTotalCovariance) {
                     fJointNormalizationTotalCovariance = (TH1 *) fJointNormalizationCovariances.at(
                             syst.first)->Clone();
@@ -450,7 +296,7 @@ namespace xsec {
                 fSampleNormalizationTotalCovariance[sample.first] = 0;
                 for (auto syst: fSampleNormSystematics.at(sample.first)) {
                     fSampleNormalizationCovariances[sample.first][syst.first] =
-                            syst.second.CovarianceMatrix(fSampleNormalizations.at(sample.first));
+                            syst.second.CovarianceMatrix(fSampleNormalizations.at(sample.first).get());
                     if (!fSampleNormalizationTotalCovariance.at(sample.first)) {
                         fSampleNormalizationTotalCovariance.at(sample.first) =
                                 (TH1 *) fSampleNormalizationCovariances.at(sample.first).at(
@@ -489,7 +335,7 @@ namespace xsec {
                 // loop over samples
                 std::vector<Systematic<TH1>> systematics1d;
                 for (const auto & sample: fSampleNormSystematics) {
-                    std::vector<const TH1 *> compressed_shifts;
+                    std::vector<std::shared_ptr<TH1>> compressed_shifts;
                     for (auto i = 0u;
                          i < fSampleNormSystematics.at(sample.first).at(syst.first).GetShifts().size(); i++) {
                         compressed_shifts.push_back(
@@ -504,8 +350,8 @@ namespace xsec {
                 compressed_joined_norm_systematics1d[syst.first] = detail::_join(systematics1d);
             }
 
-            std::vector<const TH1 *> compressed_norm_means_to_join;
-            std::map<std::string, TH1 *> compressed_sample_norm_means;
+            std::vector<std::shared_ptr<TH1>> compressed_norm_means_to_join;
+            std::map<std::string, std::shared_ptr<TH1>> compressed_sample_norm_means;
             for (const auto & sample: fSampleNormalizations) {
                 compressed_sample_norm_means[sample.first] = reducer.Compress1D(sample.second);
                 compressed_norm_means_to_join.push_back(compressed_sample_norm_means.at(sample.first));
@@ -525,8 +371,8 @@ namespace xsec {
         ReducedJointTemplateComponent::
         ReducedJointTemplateComponent(std::map<std::string, const ReducedTemplateComponent *> samples,
                                       const ReducedComponent * joined_template_mean,
-                                      TH1 * joined_norm_mean,
-                                      std::map<std::string, TH1 *> & sample_norm_means,
+                                      std::shared_ptr<TH1> joined_norm_mean,
+                                      std::map<std::string, std::shared_ptr<TH1>> & sample_norm_means,
                                       std::map<std::string, Systematic<TH1>> & joint_norm_systematics)
                 : fJointTemplateMean(joined_template_mean),
                   fJointNormalization(joined_norm_mean),
@@ -545,7 +391,7 @@ namespace xsec {
 
             fJoinedNormTotalCovariance = nullptr;
             for (const auto & syst: joint_norm_systematics) {
-                fJoinedNormCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalization);
+                fJoinedNormCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalization.get());
                 if (!fJoinedNormTotalCovariance) {
                     fJoinedNormTotalCovariance = (TH1 *) fJoinedNormCovariances.at(syst.first)->Clone();
                 } else {
@@ -562,12 +408,12 @@ namespace xsec {
             }
 
             auto sample_it = fSampleNormalizations.begin();
-            fConditioningSampleNormalization = root::MapContentsToEigenInner(sample_it->second);
+            fConditioningSampleNormalization = root::MapContentsToEigenInner(sample_it->second.get());
             fConditioningSampleLabel = sample_it->first;
             fConditioningSample = samples.at(fConditioningSampleLabel);
 
             sample_it++;
-            fComplimentarySampleNormalization = root::MapContentsToEigenInner(sample_it->second);
+            fComplimentarySampleNormalization = root::MapContentsToEigenInner(sample_it->second.get());
             fComplimentarySampleLabel = sample_it->first;
             fComplimentarySample = samples.at(fComplimentarySampleLabel);
 

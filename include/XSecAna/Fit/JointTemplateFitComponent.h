@@ -5,8 +5,8 @@ namespace xsec {
         namespace detail {
             // Functions for joining template components from multiple samples
             // All of the work is in here
-            TH1 * _join(const TH1 * lhs, const TH1 * rhs);
-            TH1 * _join(const std::vector<const TH1 *> & samples);
+            std::shared_ptr<TH1> _join(const std::shared_ptr<TH1> lhs, const std::shared_ptr<TH1> rhs);
+            std::shared_ptr<TH1> _join(const std::vector<std::shared_ptr<TH1>> & samples);
 
             // various overloads for more complicated objects
             Systematic <TH1> _join(const Systematic <TH1> & lhs, const Systematic <TH1> & rhs);
@@ -31,8 +31,6 @@ namespace xsec {
                 }
                 return joined;
             }
-
-            std::pair<TH1 *, TH1 *> _split(const TH1 * joined, const int & nbins_left);
         }
         /*
         class UserSingleSampleTemplateComponent : public IUserTemplateComponent {
@@ -71,34 +69,34 @@ namespace xsec {
             UserJointTemplateComponent(const std::map<std::string, const UserTemplateComponent *> & sample_components);
             [[nodiscard]] IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
 
-            const TH1 * GetNominal() const override { return fJointTemplateMean; }
+            std::shared_ptr<TH1> GetNominal() const override { return fJointTemplateMean; }
             const std::map<std::string, Systematic<TH1>> & GetSystematics() const override { return fJointTemplateSystematics; }
-            const TH1 * GetSampleNormalization(const std::string & sample_name) const
+            const std::shared_ptr<TH1> GetSampleNormalization(const std::string & sample_name) const
             { return fSampleNormalizations.at(sample_name); }
-            const TH1 * GetJointNormalization() const
+            const std::shared_ptr<TH1> GetJointNormalization() const
             { return fJointNormalization; }
             const std::map<std::string, const UserTemplateComponent *> & GetUserTemplateComponents() const
             { return fSamples; }
 
         private:
-            static TH1 * _to1d(const TH1 * h);
-            static TH1 * _join1d(const TH1 * lhs, const TH1 * rhs);
-            static TH1 * _join1d(std::vector<const TH1*> hists);
+            static std::shared_ptr<TH1> _to1d(const std::shared_ptr<TH1> h);
+            static std::shared_ptr<TH1> _join1d(const std::shared_ptr<TH1> lhs, const std::shared_ptr<TH1> rhs);
+            static std::shared_ptr<TH1> _join1d(std::vector<std::shared_ptr<TH1>> hists);
             static Systematic<TH1> _to1d(const Systematic<TH1> & syst);
 
             const std::map<std::string, const UserTemplateComponent*> fUserTemplateComponents;
-            TH1 * fJointTemplateMean;
+            std::shared_ptr<TH1> fJointTemplateMean;
             std::map<std::string, Systematic<TH1>> fJointTemplateSystematics;
 
-            TH1 * fJointNormalization;
-            std::map<std::string, TH1 *> fSampleNormalizations;
+            std::shared_ptr<TH1> fJointNormalization;
+            std::map<std::string, std::shared_ptr<TH1>> fSampleNormalizations;
             std::map<std::string, std::map<std::string, Systematic<TH1>>> fSampleNormSystematics;
             std::map<std::string, Systematic<TH1>> fJointNormSystematics;
 
             TH1 * fJointNormalizationTotalCovariance;
-            std::map<std::string, TH1 *> fJointNormalizationCovariances;
-            std::map<std::string, TH1 *> fSampleNormalizationTotalCovariance;
-            std::map<std::string, std::map<std::string, TH1 *>> fSampleNormalizationCovariances;
+            std::map<std::string, TH1*> fJointNormalizationCovariances;
+            std::map<std::string, TH1*> fSampleNormalizationTotalCovariance;
+            std::map<std::string, std::map<std::string, TH1*>> fSampleNormalizationCovariances;
 
             std::string fConditioningSampleLabel;
             std::map<std::string, const UserTemplateComponent*> fSamples;
@@ -112,8 +110,8 @@ namespace xsec {
         public:
             ReducedJointTemplateComponent(std::map<std::string, const ReducedTemplateComponent*> samples,
                                           const ReducedComponent * joined_template_mean,
-                                          TH1 * joined_normalization,
-                                          std::map<std::string, TH1 *> & sample_normalizations,
+                                          std::shared_ptr<TH1> joined_normalization,
+                                          std::map<std::string, std::shared_ptr<TH1>> & sample_normalizations,
                                           std::map<std::string, Systematic<TH1>> & joint_norm_systematics);
 
             [[nodiscard]] Vector Predict(const Vector & component_params) const override;
@@ -131,19 +129,19 @@ namespace xsec {
             TH1 * GetJointNormalizationCovariance(std::string systematic_label) const
             { return fJoinedNormCovariances.at(systematic_label); }
 
-            const TH1 * GetJointNormalization() const
+            const std::shared_ptr<TH1> GetJointNormalization() const
             { return fJointNormalization; }
 
-            const TH1 * GetSampleNormalization(std::string sample_name) const
+            const std::shared_ptr<TH1> GetSampleNormalization(std::string sample_name) const
             { return fSampleNormalizations.at(sample_name); }
 
             const std::map<std::string, Systematic<TH1>> & GetJointNormalizationSystematics() const
             { return fJointNormSystematics; }
 
-            const TH1 * GetConditioningSampleNormalization() const
+            const std::shared_ptr<TH1> GetConditioningSampleNormalization() const
             { return fSampleNormalizations.at(fConditioningSampleLabel); }
 
-            const TH1 * GetComplimentarySampleNormalization() const
+            const std::shared_ptr<TH1> GetComplimentarySampleNormalization() const
             { return fSampleNormalizations.at(fComplimentarySampleLabel); }
 
             const ReducedTemplateComponent * GetConditioningComponent() const
@@ -159,8 +157,8 @@ namespace xsec {
             const ReducedComponent * fJointTemplateMean;
             std::map<std::string, Systematic<TH1>> fJointTemplateSystematics;
 
-            TH1 * fJointNormalization;
-            const std::map<std::string, TH1*> fSampleNormalizations;
+            std::shared_ptr<TH1> fJointNormalization;
+            const std::map<std::string, std::shared_ptr<TH1>> fSampleNormalizations;
             const std::map<std::string, Systematic<TH1>> fJointNormSystematics;
 
             TH1 * fJoinedNormTotalCovariance;

@@ -35,14 +35,14 @@ namespace xsec {
             //explicit ReducedComponent(const TH1 * h);
             ReducedComponent(const Vector & a, int nouter_bins, int ninner_bins);
             ReducedComponent(const TH1 * h, int nouter_bins, int ninner_bins);
-            const TH1 * GetHist() const { return fHist; }
+            std::shared_ptr<TH1> GetHist() const { return fHist; }
             [[nodiscard]] TH1 * ToHist1D() const;
             const Vector & GetArray() const { return fArray; };
             int GetNInnerBins() const { return fNInnerBins; }
             int GetNOuterBins() const { return fNOuterBins; }
 
         private:
-            const TH1 * fHist;
+            std::shared_ptr<TH1> fHist;
             const Vector fArray;
             int fNOuterBins;
             int fNInnerBins;
@@ -55,10 +55,10 @@ namespace xsec {
         class ComponentReducer {
         public:
             explicit ComponentReducer(const TH1 * mask);
-            [[nodiscard]] ReducedComponent * Reduce(const TH1 * component) const;
+            [[nodiscard]] ReducedComponent * Reduce(const std::shared_ptr<TH1> component) const;
             [[nodiscard]] Systematic<TH1> Reduce(const Systematic<TH1> & syst) const;
-            [[nodiscard]] TH1 * Compress1D(const TH1 * component) const;
-            static TH1 * Project(const TH1 * templ);
+            [[nodiscard]] std::shared_ptr<TH1> Compress1D(const std::shared_ptr<TH1> component) const;
+            static std::shared_ptr<TH1> Project(const std::shared_ptr<TH1> templ);
             static Systematic<TH1> Project(const Systematic<TH1> & syst);
 
             const TH1 * GetMask() const { return fMask; }
@@ -83,9 +83,9 @@ namespace xsec {
         class IUserTemplateComponent {
         public:
             [[nodiscard]] virtual IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const = 0;
-            virtual const TH1 * GetNominal() const = 0;
+            virtual std::shared_ptr<TH1> GetNominal() const = 0;
             virtual const std::map<std::string, Systematic<TH1>> & GetSystematics() const = 0;
-            virtual TH1 * ProjectNominal() const final;
+            virtual std::shared_ptr<TH1> ProjectNominal() const final;
             virtual std::map<std::string, Systematic<TH1>> ProjectSystematics() const final;
         };
 
@@ -128,16 +128,16 @@ namespace xsec {
         ///\brief Basic user-level template component object for single-sample template fitting
         class UserTemplateComponent : public IUserTemplateComponent {
         public:
-            explicit UserTemplateComponent(const TH1 * mean,
+            explicit UserTemplateComponent(const std::shared_ptr<TH1> mean,
                                            const std::map<std::string, Systematic<TH1>> & systematics = std::map<std::string, Systematic<TH1>>())
                     : fMean(mean), fSystematics(std::move(systematics)) {}
 
             [[nodiscard]] IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
-            const TH1 * GetNominal() const override { return fMean; }
+            std::shared_ptr<TH1> GetNominal() const override { return fMean; }
             const std::map<std::string, Systematic<TH1>> & GetSystematics() const override { return fSystematics; }
 
         private:
-            const TH1 * fMean;
+            const std::shared_ptr<TH1> fMean;
             const std::map<std::string, Systematic<TH1>> & fSystematics;
         };
 

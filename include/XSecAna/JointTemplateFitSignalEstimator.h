@@ -9,8 +9,8 @@ namespace xsec {
         JointTemplateFitSignalEstimator(const std::map<std::string, fit::TemplateFitSample> & samples,
                                         const TH1 * mask = 0);
 
-        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const TH1 * data, int nrandom_seeds=-1) const;
-        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const TH1 * data, fit::IFitter * fitter, int nrandom_seeds=-1);
+        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::shared_ptr<TH1> data, int nrandom_seeds=-1) const;
+        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds=-1);
 
         TemplateFitSignalEstimator * GetSampleTemplateFit(const std::string & name) const { return fSampleEstimators.at(name); }
         TemplateFitSignalEstimator * GetJointTemplateFit() const { return fJointEstimator; }
@@ -25,7 +25,7 @@ namespace xsec {
         TH1 * NominalTotal() const
         { return fJointEstimator->NominalTotal(); }
 
-        double Chi2(const TH1 * data, const std::map<std::string, TH1*> & params) const;
+        double Chi2(const std::shared_ptr<TH1> data, const std::map<std::string, TH1*> & params) const;
 
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;

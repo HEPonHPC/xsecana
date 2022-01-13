@@ -143,13 +143,10 @@ namespace xsec {
         ReducedComponent::
         ReducedComponent(const Vector & a, int nouter_bins, int ninner_bins)
                 : fArray(a), fNOuterBins(nouter_bins), fNInnerBins(ninner_bins) {
-            TH1 * tmp;
-            tmp = new TH1D("", "", a.size(), 0, a.size());
+            fHist = std::make_shared<TH1D>("", "", a.size(), 0, a.size());
             for(int i = 0; i < a.size(); i++) {
-                tmp->SetBinContent(i+1, a(i));
+                fHist->SetBinContent(i+1, a(i));
             }
-            fHist = tmp;
-            tmp = nullptr;
         }
 
         Vector
@@ -178,64 +175,64 @@ namespace xsec {
         xsec::Systematic<TH1>
         ComponentReducer::
         Reduce(const Systematic<TH1> & syst) const {
-            std::vector<const TH1*> reduced;
+            std::vector<std::shared_ptr<TH1>> reduced;
             for(auto i = 0u; i < syst.GetShifts().size(); i++) {
                 reduced.push_back(this->Reduce(syst.GetShifts()[i])->GetHist());
             }
             return Systematic<TH1>(syst.GetName(), reduced, syst.GetType());
         }
 
-        TH1 *
+        std::shared_ptr<TH1>
         ComponentReducer::
-        Project(const TH1 * templ) {
+        Project(const std::shared_ptr<TH1> templ) {
             if (templ->GetDimension() == 1) {
-                auto ret = new TH1D("", "", 1, 0, 1);
+                auto ret = std::make_shared<TH1D>("", "", 1, 0, 1);
                 double error;
                 double integral = templ->IntegralAndError(1, templ->GetNbinsX(), error);
                 ret->SetBinContent(1, integral);
                 ret->SetBinError(1, error);
                 return ret;
             } else if (templ->GetDimension() == 2) {
-                return ((TH2 *) templ)->ProjectionX("",
-                                                    1,
-                                                    templ->GetNbinsY(),
-                                                    "e");
+                return std::shared_ptr<TH1>(((TH2 *) templ.get())->ProjectionX("",
+                                                                               1,
+                                                                               templ->GetNbinsY(),
+                                                                               "e"));
             } else {
                 // project into xy plane
                 // NOF: no over flow
                 // NUF: no under flow
                 // e: calculate errors
-                return ((TH3 *) templ)->Project3D("yx NOF NUF e");
+                return std::shared_ptr<TH1>(((TH3 *) templ.get())->Project3D("yx NOF NUF e"));
             }
         }
 
         Systematic<TH1>
         ComponentReducer::
         Project(const Systematic<TH1> & syst) {
-            std::vector<const TH1*> projected(syst.GetShifts().size());
+            std::vector<std::shared_ptr<TH1>> projected(syst.GetShifts().size());
             for(auto i = 0u; i < syst.GetShifts().size(); i++) {
                 projected[i] = ComponentReducer::Project(syst.GetShifts()[i]);
             }
             return Systematic<TH1>(syst.GetName(), projected, syst.GetType());
         }
 
-        TH1 *
+        std::shared_ptr<TH1>
         ComponentReducer::
-        Compress1D(const TH1 * component) const {
+        Compress1D(const std::shared_ptr<TH1> component) const {
             Array compressed_c = Array::Zero(fMap.GetNMinimizerParams()+2);
             compressed_c(Eigen::seqN(1, fMap.GetNMinimizerParams())) =
-                    fMap.ToMinimizerParams(root::MapContentsToEigen(component));
+                    fMap.ToMinimizerParams(root::MapContentsToEigen(component.get()));
             Array compressed_e = Array::Zero(fMap.GetNMinimizerParams()+2);
             compressed_e(Eigen::seqN(1, fMap.GetNMinimizerParams())) =
-                    fMap.ToMinimizerParams(root::MapErrorsToEigen(component));
+                    fMap.ToMinimizerParams(root::MapErrorsToEigen(component.get()));
 
             auto ret = new TH1D("", "", fMap.GetNMinimizerParams(), 0, fMap.GetNMinimizerParams());
-            return root::ToROOTLike(ret, compressed_c, compressed_e);
+            return std::shared_ptr<TH1>(root::ToROOTLike(ret, compressed_c, compressed_e));
         }
 
         ReducedComponent *
         ComponentReducer::
-        Reduce(const TH1 * component) const {
+        Reduce(const std::shared_ptr<TH1> component) const {
             std::vector<int> dims(2);
             if (component->GetDimension() == 1) {
                 std::cout << "Warning: Attempting to apply to mask 1-dimensional template fit" << std::endl;
@@ -351,7 +348,7 @@ namespace xsec {
             return fComponents.at(component_label)->Predict(component_params);
         }
 
-        TH1*
+        std::shared_ptr<TH1>
         IUserTemplateComponent::
         ProjectNominal() const {
             return ComponentReducer::Project(this->GetNominal());

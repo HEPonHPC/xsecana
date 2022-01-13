@@ -41,19 +41,19 @@ namespace xsec {
     }
 
 
-    inline TH1 *
-    QuadSum(const std::vector<const TH1 *> & deltas) {
+    inline std::shared_ptr<TH1>
+    QuadSum(const std::vector<std::shared_ptr<TH1>> & deltas) {
         std::vector<Array> _deltas_c(deltas.size());
         std::vector<Array> _deltas_e(deltas.size());
         for (auto i = 0u; i < deltas.size(); i++) {
-            _deltas_c[i] = root::MapContentsToEigen(deltas[i]);
-            _deltas_e[i] = root::MapErrorsToEigen(deltas[i]);
+            _deltas_c[i] = root::MapContentsToEigen(deltas[i].get());
+            _deltas_e[i] = root::MapErrorsToEigen(deltas[i].get());
 
         }
-        return root::ToROOT(QuadSum(_deltas_c),
-                            QuadSum(_deltas_e),
-                            root::TH1Props(deltas[0],
-                                           root::MakeUnique(std::string(__FUNCTION__)).c_str()));
+        return std::shared_ptr<TH1>(root::ToROOT(QuadSum(_deltas_c),
+                                                 QuadSum(_deltas_e),
+                                                 root::TH1Props(deltas[0].get(),
+                                                                root::MakeUnique(std::string(__FUNCTION__)).c_str())));
     }
 
     inline Array
@@ -71,15 +71,20 @@ namespace xsec {
         return ret;
     }
 
-    inline TH1 *
-    QuadSum(const TH1 * d1, const TH1 * d2) {
-        return QuadSum(std::vector<const TH1 *>{d1, d2});
+    inline std::shared_ptr<TH1>
+    QuadSum(const std::shared_ptr<TH1> d1,
+            const std::shared_ptr<TH1> d2) {
+        return QuadSum(std::vector<std::shared_ptr<TH1>>{d1, d2});
     }
 
-    inline TH1 *
-    QuadSum(const TH1 * d1, const TH1 * d2, const TH1 * d3) {
-        return QuadSum(std::vector<const TH1 *>{d1, d2, d3});
+    inline std::shared_ptr<TH1>
+    QuadSum(const std::shared_ptr<TH1> d1,
+            const std::shared_ptr<TH1> d2,
+            const std::shared_ptr<TH1> d3) {
+        return QuadSum(std::vector<std::shared_ptr<TH1>>{d1, d2, d3});
     }
+
+
 
     // inline some common functions
     inline Array
@@ -92,11 +97,11 @@ namespace xsec {
         return stack.colwise().maxCoeff();
     }
 
-    inline TH1 *
+    inline std::shared_ptr<TH1>
     MaxShift(const TH1 * h1,
              const TH1 * h2) {
-        return root::ToROOTLike(h1, MaxShift(root::MapContentsToEigen(h1),
-                                             root::MapContentsToEigen(h2)));
+        return std::shared_ptr<TH1>(root::ToROOTLike(h1, MaxShift(root::MapContentsToEigen(h1),
+                                                                  root::MapContentsToEigen(h2))));
     }
 
 

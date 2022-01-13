@@ -15,7 +15,7 @@ namespace xsec {
 
     class IMeasurement {
     public:
-        virtual const TH1 * Eval(const TH1 * data) const = 0;
+        virtual std::shared_ptr<TH1> Eval(const TH1 * data) const = 0;
         virtual void SaveTo(TDirectory * dir, const std::string & subdir) const = 0;
         virtual ~IMeasurement() = default;
         static std::unique_ptr<IMeasurement>
@@ -29,7 +29,7 @@ namespace xsec {
 
     class IEigenEval : public virtual IMeasurement {
     public:
-        const TH1 * Eval(const TH1 * data) const final {
+        std::shared_ptr<TH1> Eval(const TH1 * data) const final {
             fHistProps = root::TH1Props(data,
                                         root::MakeUnique("UniqueEval").c_str());
 
@@ -41,7 +41,7 @@ namespace xsec {
             Array _rerror(fHistProps.nbins_and_uof);
             this->_eval_impl(_data, _error,
                              _result, _rerror);
-            return root::ToROOT(_result, _rerror, fHistProps);
+            return std::shared_ptr<TH1>(root::ToROOT(_result, _rerror, fHistProps));
 
         }
         virtual ~IEigenEval()= default;

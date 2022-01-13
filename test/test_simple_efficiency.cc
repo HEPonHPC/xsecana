@@ -63,7 +63,7 @@ int main(int argc, char ** argv) {
     expected->Divide(num, den, 1, 1, "B");
 
     TEST_HIST("ratio calculation",
-              eff.Eval(num), // pass num as dummy
+              eff.Eval(num).get(), // pass num as dummy
               expected,
               0,
               verbose);
@@ -92,8 +92,8 @@ int main(int argc, char ** argv) {
               0,
               verbose);
     TEST_HIST("saveto/loadfrom ratio",
-              loaded->Eval(num),
-              eff.Eval(num),
+              loaded->Eval(num).get(),
+              eff.Eval(num).get(),
               0,
               verbose);
 

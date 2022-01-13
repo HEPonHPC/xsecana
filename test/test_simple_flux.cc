@@ -27,7 +27,7 @@ int main(int argc, char ** argv) {
 
 
     pass &= TEST_HIST("flux.Eval()",
-                      flux.Eval(flux_hist),
+                      flux.Eval(flux_hist).get(),
                       flux_hist,
                       0,
                       verbose);
@@ -40,7 +40,7 @@ int main(int argc, char ** argv) {
                                                    Array::Ones(ones_analysis_binning->GetNbinsX() + 2) *
                                                    nerr);
     pass &= TEST_HIST("integrated_flux.Eval()",
-                      integrated_flux.Eval(ones_analysis_binning),
+                      integrated_flux.Eval(ones_analysis_binning).get(),
                       target_integrated_flux,
                       0,
                       verbose);
@@ -64,12 +64,12 @@ int main(int argc, char ** argv) {
     delete input;
 
     pass &= TEST_HIST("loaded_flux",
-                      loaded_flux->Eval(flux_hist),
+                      loaded_flux->Eval(flux_hist).get(),
                       flux_hist,
                       0,
                       verbose);
     pass &= TEST_HIST("loaded_integrated_flux",
-                      loaded_integrated_flux->Eval(ones_analysis_binning),
+                      loaded_integrated_flux->Eval(ones_analysis_binning).get(),
                       target_integrated_flux,
                       0,
                       verbose);

@@ -26,7 +26,7 @@ namespace xsec {
             Systematic<TH1>
             EvalSystematic(const xsec::Systematic<T> & shifted_obj,
                            Args && ...  args) {
-                std::vector<const TH1 *> shifts(shifted_obj.GetShifts().size());
+                std::vector<std::shared_ptr<TH1>> shifts(shifted_obj.GetShifts().size());
                 for (auto i = 0u; i < shifted_obj.GetShifts().size(); i++) {
                     shifts[i] = shifted_obj.GetShifts()[i]->Eval(std::forward<Args>(args)...);
                 }
@@ -52,17 +52,17 @@ namespace xsec {
                     up_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, 1)) - nom_c;
                     down_c = root::MapContentsToEigen(MultiverseShift(shifted_obj, nominal, -1)) - nom_c;
                 } else if (shifted_obj.GetType() == kTwoSided) {
-                    up_c = root::MapContentsToEigen(shifted_obj.GetShifts()[0]);
-                    down_c = root::MapContentsToEigen(shifted_obj.GetShifts()[1]);
+                    up_c = root::MapContentsToEigen(shifted_obj.GetShifts()[0].get());
+                    down_c = root::MapContentsToEigen(shifted_obj.GetShifts()[1].get());
                     up_c = up_c - nom_c;
                     down_c = down_c - nom_c;
                 } else {
-                    up_c = root::MapContentsToEigen(shifted_obj.GetShifts()[0]);
+                    up_c = root::MapContentsToEigen(shifted_obj.GetShifts()[0].get());
                     up_c = up_c - nom_c;
                     down_c = up_c;
                 }
                 auto max_c = MaxShift(up_c.abs(), down_c.abs());
-                auto diff = root::ToROOTLike(nominal, max_c, Array::Zero(props.nbins_and_uof));
+                auto diff = std::shared_ptr<TH1>(root::ToROOTLike(nominal, max_c, Array::Zero(props.nbins_and_uof)));
                 return {nominal,
                         Systematic<TH1>(shifted_obj.GetName(),
                                         diff,
@@ -74,7 +74,7 @@ namespace xsec {
             std::pair<const TH1 *, Systematic<TH1>>
             _FractionalUncertainty(const TH1 * nominal,
                                    const xsec::Systematic<TH1> & shifted_obj) {
-                auto frac = (TH1*) std::get<1>(_AbsoluteUncertainty(nominal, shifted_obj)).Up()->Clone();
+                auto frac = std::get<1>(_AbsoluteUncertainty(nominal, shifted_obj)).Up();
                 frac->Divide(nominal);
                 // root assumes all histograms are independent when calculating errors.
                 // In this case, nominal is in numerator and denominator, and error simplifies
@@ -89,7 +89,7 @@ namespace xsec {
             _TotalAbsoluteUncertainty(const TH1 * nominal,
                                       const std::map<std::string,
                                                      xsec::Systematic<TH1>> & shifted_objs) {
-                std::vector<const TH1 *> shifts;
+                std::vector<std::shared_ptr<TH1>> shifts;
                 for (auto syst_it = shifted_objs.begin(); syst_it != shifted_objs.end(); syst_it++) {
                     shifts.push_back(std::get<1>(_AbsoluteUncertainty(nominal,
                                                                       syst_it->second)).Up());
@@ -107,7 +107,7 @@ namespace xsec {
             _TotalFractionalUncertainty(const TH1 * nominal,
                                         const std::map<std::string,
                                                        xsec::Systematic<TH1>> & shifted_objs) {
-                std::vector<const TH1 *> shifts;
+                std::vector<std::shared_ptr<TH1>> shifts;
                 for (auto syst_it = shifted_objs.begin(); syst_it != shifted_objs.end(); syst_it++) {
                     shifts.push_back(std::get<1>(_AbsoluteUncertainty(nominal,
                                                                       syst_it->second)).Up());
@@ -146,10 +146,10 @@ namespace xsec {
             if constexpr(std::is_same<T, TH1>::value) {
                 return _AbsoluteUncertainty(nominal_obj, shifted_obj);
             } else {
-                auto hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
+                std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
                 Systematic<TH1> hsystematic = EvalSystematic(shifted_obj,
                                                              std::forward<Args>(args)...);
-                return _AbsoluteUncertainty(hnominal,
+                return _AbsoluteUncertainty(hnominal.get(),
                                             hsystematic);
             }
         }
@@ -178,10 +178,10 @@ namespace xsec {
             if constexpr(std::is_same<T, TH1>::value) {
                 return _FractionalUncertainty(nominal_obj, shifted_obj);
             } else {
-                auto hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
+                std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
                 auto hsystematic = EvalSystematic(shifted_obj,
                                                   std::forward<Args>(args)...);
-                return _FractionalUncertainty(hnominal, hsystematic);
+                return _FractionalUncertainty(hnominal.get(), hsystematic);
             }
         }
 
@@ -213,14 +213,14 @@ namespace xsec {
             if constexpr(std::is_same<T, TH1>::value) {
                 return _TotalAbsoluteUncertainty(nominal_obj, shifted_objs);
             } else {
-                auto hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
+                std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
                 std::map<std::string, Systematic<TH1>> hsystematics;
                 for (auto syst_it = shifted_objs.begin(); syst_it != shifted_objs.end(); syst_it++) {
                     hsystematics[syst_it->first] = EvalSystematic(syst_it->second,
                                                                   std::forward<Args>(args)...);
                 }
 
-                return _TotalAbsoluteUncertainty(hnominal, hsystematics);
+                return _TotalAbsoluteUncertainty(hnominal.get(), hsystematics);
             }
         }
 
@@ -252,14 +252,14 @@ namespace xsec {
             if constexpr(std::is_same<T, TH1>::value) {
                 return _TotalFractionalUncertainty(nominal_obj, shifted_objs);
             } else {
-                auto hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
+                std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
                 std::map<std::string, Systematic<TH1>> hsystematics;
                 for (auto syst_it = shifted_objs.begin(); syst_it != shifted_objs.end(); syst_it++) {
                     hsystematics[syst_it->first] = EvalSystematic(syst_it->second,
                                                                   std::forward<Args>(args)...);
                 }
 
-                return _TotalFractionalUncertainty(hnominal, hsystematics);
+                return _TotalFractionalUncertainty(hnominal.get(), hsystematics);
             }
         }
     }

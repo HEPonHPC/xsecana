@@ -28,8 +28,8 @@ namespace xsec {
         fit::IFitter * GetFitter() const;
         fit::IFitCalculator * GetFitCalc() const;
 
-        TemplateFitResult Fit(const TH1 * data, int nrandom_seeds=-1) const;
-        TemplateFitResult Fit(const TH1 * data, fit::IFitter * fitter, int nrandom_seeds=-1);
+        TemplateFitResult Fit(const std::shared_ptr<TH1> data, int nrandom_seeds=-1) const;
+        TemplateFitResult Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds=-1);
 
         void SaveTo(TDirectory * dir, const std::string & name) const;
 
@@ -51,7 +51,7 @@ namespace xsec {
         TH1 * PredictProjectedComponent(const std::string & component_label, const TH1 * params) const;
         TH1 * NominalProjectedTotal() const;
 
-        double Chi2(const TH1 * data,
+        double Chi2(const std::shared_ptr<TH1> data,
                     const std::map<std::string, TH1*> & params) const;
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;
@@ -73,7 +73,7 @@ namespace xsec {
     protected:
         void _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const;
         TemplateFitResult _template_fit_result(const fit::FitResult & fit_result) const;
-        TemplateFitResult _fit(const TH1 * data, const std::vector<Vector> & seeds) const;
+        TemplateFitResult _fit(const std::shared_ptr<TH1> data, const std::vector<Vector> & seeds) const;
         TH1 * _to_template_binning(const Array & reduced_templates) const;
         TH1 * _project_prediction(const Array & prediction) const;
         Systematic<TH1> _prefit_component_uncertainty(const std::string & component_label) const;

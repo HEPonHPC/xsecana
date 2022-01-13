@@ -40,10 +40,10 @@ IMeasurement * make_simple_xsec(const TH1 * val) {
 std::vector<IMeasurement *>
 make_simple_xsec_multiverse(const TH1 * hnominal, int nuniverses) {
     std::vector<IMeasurement *> xsec_universes(nuniverses);
-    auto hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
+    std::vector<std::shared_ptr<TH1>> hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
 
     for (auto i = 0; i < nuniverses; i++) {
-        xsec_universes[i] = make_simple_xsec(hist_universes[i]);
+        xsec_universes[i] = make_simple_xsec(hist_universes[i].get());
     }
     return xsec_universes;
 }
@@ -101,7 +101,7 @@ int main(int argc, char ** argv) {
     expected_xsec->Divide(eff);
 
     pass &= TEST_HIST("xsec",
-                      xsec->Eval(data),
+                      xsec->Eval(data).get(),
                       expected_xsec,
                       0,
                       verbose);
@@ -132,7 +132,7 @@ int main(int argc, char ** argv) {
     expected_xsec_differential->Divide(integrated_flux_hist);
     auto result_xsec_differential = xsec_differential->Eval(data);
     pass &= TEST_HIST("xsec_differential",
-                      result_xsec_differential,
+                      result_xsec_differential.get(),
                       expected_xsec_differential,
                       1e-11,
                       verbose);
@@ -163,14 +163,14 @@ int main(int argc, char ** argv) {
     delete input;
 
     pass &= TEST_HIST("loaded xsec",
-                      loaded_xsec->Eval(data),
-                      xsec->Eval(data),
+                      loaded_xsec->Eval(data).get(),
+                      xsec->Eval(data).get(),
                       0,
                       verbose);
 
     pass &= TEST_HIST("loaded differential xsec",
-                      loaded_differential_xsec->Eval(data),
-                      xsec_differential->Eval(data),
+                      loaded_differential_xsec->Eval(data).get(),
+                      xsec_differential->Eval(data).get(),
                       0,
                       verbose);
 
@@ -178,7 +178,7 @@ int main(int argc, char ** argv) {
     auto simple_ones = (TH1 *) simple_data->Clone();
     simple_ones->Divide(simple_data);
     assert((root::MapContentsToEigen(simple_ones) -
-            root::MapContentsToEigen(make_simple_xsec(simple_ones)->Eval(test::utils::get_simple_data()))
+            root::MapContentsToEigen(make_simple_xsec(simple_ones)->Eval(test::utils::get_simple_data()).get())
            ).isZero(0));
 
     return !pass;

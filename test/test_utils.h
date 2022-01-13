@@ -82,16 +82,16 @@
                                           const bool & verbose) {
     bool test = true;
     for (auto imv = 0u; imv < (mv1).GetShifts().size(); imv++) {
-        test &= (xsec::root::MapContentsToEigen(mv1.GetShifts()[imv]) -
-                 xsec::root::MapContentsToEigen(mv2.GetShifts()[imv])).isZero(precision);
+        test &= (xsec::root::MapContentsToEigen(mv1.GetShifts()[imv].get()) -
+                 xsec::root::MapContentsToEigen(mv2.GetShifts()[imv].get())).isZero(precision);
     }
     if (!test || verbose) {
         std::cerr << __FUNCTION__ << "\t" << test_name << (test ? ": PASSED" : ": FAILED") << std::endl;
         for (auto imv = 0u; imv < (mv1).GetShifts().size(); imv++) {
             std::cerr << __FUNCTION__ << "\t" << test_name << "[" << imv << "]\t"
-                      << xsec::root::MapContentsToEigen(mv1.GetShifts()[imv]).transpose() << std::endl;
+                      << xsec::root::MapContentsToEigen(mv1.GetShifts()[imv].get()).transpose() << std::endl;
             std::cerr << __FUNCTION__ << "\t" << test_name << "[" << imv << "]\t"
-                      << xsec::root::MapContentsToEigen(mv2.GetShifts()[imv]).transpose() << std::endl;
+                      << xsec::root::MapContentsToEigen(mv2.GetShifts()[imv].get()).transpose() << std::endl;
         }
 
     }
@@ -176,7 +176,7 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            const TH1 * get_simple_data() {
+            TH1 * get_simple_data() {
                 auto ret = make_simple_hist();
                 ret->SetContent((Array::LinSpaced(12, 1, 2) + 2).eval().data());
                 ret->SetEntries(ret->Integral());
@@ -184,7 +184,7 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            const TH1 * get_hist_of_ones() {
+            TH1 * get_hist_of_ones() {
                 auto ret = new TH1D("", "",
                                     10,
                                     Array::LinSpaced(11, 0, 11).eval().data());
@@ -194,7 +194,7 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            const TH1 * get_simple_background() {
+            TH1 * get_simple_background() {
                 auto ret = make_simple_hist();
                 ret->SetContent(Array::Ones(12).eval().data());
                 ret->SetEntries(ret->Integral());
@@ -203,14 +203,14 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            const TH1 * get_simple_signal() {
+            TH1 * get_simple_signal() {
                 auto signal = (TH1 *) get_simple_data()->Clone();
                 signal->Add(get_simple_background(), -1);
                 return signal;
             }
 
             /////////////////////////////////////////////////////////
-            const TH1 * get_simple_nominal_hist() {
+            TH1 * get_simple_nominal_hist() {
                 auto nominal = make_simple_hist();
                 nominal->SetContent(Array::LinSpaced(12, 1, 20).eval().data());
                 nominal->SetEntries(nominal->Integral());
@@ -218,7 +218,7 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            const TH1 * get_simple_up_hist() {
+            TH1 * get_simple_up_hist() {
                 auto nominal = get_simple_nominal_hist();
                 auto step = make_simple_hist();
                 step->SetContent(Array::LinSpaced(12, 1.1, 1.3).pow(2).reverse().eval().data());
@@ -229,7 +229,7 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            const TH1 * get_simple_down_hist() {
+            TH1 * get_simple_down_hist() {
                 auto nominal = get_simple_nominal_hist();
                 auto step = make_simple_hist();
                 step->SetContent(Array::LinSpaced(12, .7, .9).pow(2).eval().data());
@@ -240,13 +240,13 @@ namespace xsec {
             }
 
             /////////////////////////////////////////////////////////
-            std::vector<const TH1 *> make_simple_hist_multiverse(const TH1 * hnominal, int nuniverses) {
+            std::vector<std::shared_ptr<TH1>> make_simple_hist_multiverse(const TH1 * hnominal, int nuniverses) {
                 double maxy = 0.1;
                 double miny = -0.1;
                 double step = (maxy - miny) / (nuniverses - 1);
-                std::vector<const TH1 *> hist_universes(nuniverses);
+                std::vector<std::shared_ptr<TH1>> hist_universes(nuniverses);
                 for (auto i = 0; i < nuniverses; i++) {
-                    auto h = (TH1 *) hnominal->Clone();
+                    auto h = std::shared_ptr<TH1>((TH1 *) hnominal->Clone());
                     h->Scale(miny + step * i);
                     h->Add(hnominal);
                     h->SetError(Array::Zero(hnominal->GetNbinsX()+2).eval().data());

@@ -19,7 +19,7 @@ int main(int argc, char ** argv) {
 
     double tol = 1e-14;
     pass &= TEST_HIST("signal",
-                      signal_estimator.Eval(data),
+                      signal_estimator.Eval(data).get(),
                       expected_signal,
                       tol,
                       verbose);
@@ -36,7 +36,7 @@ int main(int argc, char ** argv) {
                                          "signal_estimator").release();
 
     pass &= TEST_HIST("loadfrom",
-                      loaded->Eval(data),
+                      loaded->Eval(data).get(),
                       expected_signal,
                       tol,
                       verbose);

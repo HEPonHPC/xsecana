@@ -6,7 +6,7 @@
 namespace xsec {
     class IUnfold {
     public:
-        virtual const TH1 * Truth(const TH1 * reco) const = 0;
+        virtual std::shared_ptr<TH1> Truth(const TH1 * reco) const = 0;
         static std::unique_ptr<IUnfold> LoadFrom(xsec::type::LoadFunction<IUnfold> load,
                                                  TDirectory * dir,
                                                  const std::string & name) {
@@ -25,7 +25,7 @@ namespace xsec {
 
         explicit IdentityUnfolder(int nbins_and_uof);
 
-        const TH1 * Truth(const TH1 * reco) const override;
+        std::shared_ptr<TH1> Truth(const TH1 * reco) const override;
 
         void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
@@ -51,7 +51,7 @@ namespace xsec {
     }
 
     /////////////////////////////////////////////////////////
-    const TH1 *
+    std::shared_ptr<TH1>
     IdentityUnfolder::
     Truth(const TH1 * reco) const {
         return this->Eval(reco);

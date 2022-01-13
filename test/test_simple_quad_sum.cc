@@ -12,27 +12,27 @@ const static double ntargets = 1e4;
 /////////////////////////////////////////////////////////
 // make a cross section object that evaluates out to
 //  the input array when folded
-IMeasurement * make_simple_xsec(const TH1 * val) {
-    auto ones = root::ToROOTLike(val, Array::Ones(val->GetNbinsX() + 2));
+std::shared_ptr<IMeasurement> make_simple_xsec(std::shared_ptr<const TH1> val) {
+    auto ones = root::ToROOTLike(val.get(), Array::Ones(val->GetNbinsX() + 2));
 
     auto signal = (TH1 *) test::utils::get_simple_signal()->Clone();
-    signal->Divide(val);
+    signal->Divide(val.get());
     auto efficiency = new SimpleEfficiency(signal,
                                            ones);
     auto flux = new SimpleFlux(ones);
     auto signal_estimator = new SimpleSignalEstimator(test::utils::get_simple_background());
     auto unfold = new IdentityUnfolder(ones->GetNbinsX() + 2);
-    auto ret = new EigenCrossSectionEstimator(efficiency,
-                                              signal_estimator,
-                                              flux,
-                                              unfold,
-                                              ntargets);
+    auto ret = std::shared_ptr<IMeasurement>(new EigenCrossSectionEstimator(efficiency,
+                                                                            signal_estimator,
+                                                                            flux,
+                                                                            unfold,
+                                                                            ntargets));
     return ret;
 }
 
-std::vector<const IMeasurement *> make_simple_xsec_multiverse(const TH1 * hnominal, int nuniverses) {
+std::vector<std::shared_ptr<IMeasurement>> make_simple_xsec_multiverse(const TH1 * hnominal, int nuniverses) {
     auto hists = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
-    std::vector<const IMeasurement *> xsecs(nuniverses);
+    std::vector<std::shared_ptr<IMeasurement>> xsecs(nuniverses);
     for (auto i = 0; i < hists.size(); i++) {
         xsecs[i] = make_simple_xsec(hists[i]);
     }
@@ -45,11 +45,11 @@ int main(int argc, char ** argv) {
     bool pass = true;
     bool test;
 
-    auto hone = test::utils::get_hist_of_ones();
-    auto hnominal = test::utils::get_simple_nominal_hist();
-    auto hup = test::utils::get_simple_up_hist();
-    auto hdown = test::utils::get_simple_down_hist();
-    auto hmax_shift = (TH1 *) hnominal->Clone();
+    auto hone = std::shared_ptr<TH1>(test::utils::get_hist_of_ones());
+    auto hnominal = std::shared_ptr<TH1>(test::utils::get_simple_nominal_hist());
+    auto hup = std::shared_ptr<TH1>(test::utils::get_simple_up_hist());
+    auto hdown = std::shared_ptr<const TH1>(test::utils::get_simple_down_hist());
+    auto hmax_shift = std::shared_ptr<TH1>((TH1 *) hnominal->Clone());
     for (auto i = 0u; i <= hmax_shift->GetNbinsX() + 1; i++) {
         hmax_shift->SetBinContent(i, std::max(std::abs(hnominal->GetBinContent(i) - hup->GetBinContent(i)),
                                               std::abs(hnominal->GetBinContent(i) - hdown->GetBinContent(i))));
@@ -65,9 +65,9 @@ int main(int argc, char ** argv) {
 
     // simple test of the math
     Systematic<TH1> one("1", hone);
-    Systematic<TH1> four("4", test::utils::make_constant_hist_like(hone, 4));
-    Systematic<TH1> three("3", test::utils::make_constant_hist_like(hone, 3));
-    auto two = test::utils::make_constant_hist_like(hone, 2);
+    Systematic<TH1> four("4", std::shared_ptr<TH1>(test::utils::make_constant_hist_like(hone.get(), 4)));
+    Systematic<TH1> three("3", std::shared_ptr<TH1>(test::utils::make_constant_hist_like(hone.get(), 3)));
+    auto two = test::utils::make_constant_hist_like(hone.get(), 2);
 
 
     auto expected_one = (TH1 *) three.Up()->Clone();
@@ -76,7 +76,7 @@ int main(int argc, char ** argv) {
 
     auto abs_uncert_one = SimpleQuadSum::AbsoluteUncertainty(two, three, data);
     pass &= TEST_HIST("abs_uncert_one",
-                      std::get<1>(abs_uncert_one).Up(),
+                      std::get<1>(abs_uncert_one).Up().get(),
                       expected_one,
                       1e-14,
                       verbose);
@@ -91,7 +91,7 @@ int main(int argc, char ** argv) {
     expected_one_half->SetError(Array::Zero(data->GetNbinsX() + 2).eval().data());
 
     pass &= TEST_HIST("one_half",
-                      std::get<1>(one_half).Up(),
+                      std::get<1>(one_half).Up().get(),
                       expected_one_half,
                       1e-14,
                       verbose);
@@ -119,7 +119,7 @@ int main(int argc, char ** argv) {
     }
 
     pass &= TEST_HIST("sqrt_six_halves",
-                      (std::get<1>(sqrt_six_halves).Up()),
+                      (std::get<1>(sqrt_six_halves).Up().get()),
                       expected_sqrt_six_halves,
                       1e-14,
                       verbose);
@@ -131,24 +131,23 @@ int main(int argc, char ** argv) {
     //
     int nuniverses = 50;
 
-    std::vector<const IMeasurement *> xsec_universes = make_simple_xsec_multiverse(hnominal, nuniverses);
-    std::vector<const TH1 *> hist_universes = test::utils::make_simple_hist_multiverse(hnominal, nuniverses);
+    std::vector<std::shared_ptr<IMeasurement>> xsec_universes = make_simple_xsec_multiverse(hnominal.get(), nuniverses);
+    std::vector<std::shared_ptr<TH1>> hist_universes = test::utils::make_simple_hist_multiverse(hnominal.get(), nuniverses);
 
     Systematic<IMeasurement> syst_mv("mv_xsec", xsec_universes);
     Systematic<TH1> syst_mv_hist("mv_hist", hist_universes);
 
-
-    auto abs_uncert_mv = SimpleQuadSum::AbsoluteUncertainty(nominal_xsec,
+    auto abs_uncert_mv = SimpleQuadSum::AbsoluteUncertainty(nominal_xsec.get(),
                                                             syst_mv,
                                                             data);
 
-    TH1 * target_plus_1_sigma_multiverse = MultiverseShift(syst_mv_hist, hnominal, 1);
-    target_plus_1_sigma_multiverse->Add(hnominal, -1);
+    TH1 * target_plus_1_sigma_multiverse = MultiverseShift(syst_mv_hist, hnominal.get(), 1);
+    target_plus_1_sigma_multiverse->Add(hnominal.get(), -1);
     for(auto i = 0; i < target_plus_1_sigma_multiverse->GetNbinsX()+2; i++) {
         target_plus_1_sigma_multiverse->SetBinError(i, 0);
     }
     pass &= TEST_HIST("plus 1 sigma multiverse",
-                      std::get<1>(abs_uncert_mv).Up(),
+                      std::get<1>(abs_uncert_mv).Up().get(),
                       target_plus_1_sigma_multiverse,
                       1e-14,
                       verbose);
@@ -163,15 +162,15 @@ int main(int argc, char ** argv) {
     Systematic<IMeasurement> syst_2sided("2sided", up, down);
 
     // AbsoluteUncertainty
-    auto abs_uncert_1sided = SimpleQuadSum::AbsoluteUncertainty<IMeasurement>(nominal_xsec,
+    auto abs_uncert_1sided = SimpleQuadSum::AbsoluteUncertainty<IMeasurement>(nominal_xsec.get(),
                                                                               syst_1sided,
                                                                               data);
 
     auto target_abs_uncert_1_sided = (TH1 *) hup->Clone();
-    target_abs_uncert_1_sided->Add(hnominal, -1);
+    target_abs_uncert_1_sided->Add(hnominal.get(), -1);
     target_abs_uncert_1_sided->SetError(Array::Zero(target_abs_uncert_1_sided->GetNbinsX() + 2).eval().data());
     pass &= TEST_HIST("abs_uncert 1 sided",
-                      std::get<1>(abs_uncert_1sided).Up(),
+                      std::get<1>(abs_uncert_1sided).Up().get(),
                       target_abs_uncert_1_sided,
                       1e-14,
                       verbose);
@@ -179,35 +178,35 @@ int main(int argc, char ** argv) {
     std::map<std::string, Systematic<IMeasurement> > rmap = {
             {"1sided", syst_1sided},
     };
-    auto symmetrize = SimpleQuadSum::TotalAbsoluteUncertainty(nominal_xsec,
+    auto symmetrize = SimpleQuadSum::TotalAbsoluteUncertainty(nominal_xsec.get(),
                                                               rmap,
                                                               data);
     pass &= TEST_HIST("symmeterize",
-                      std::get<1>(symmetrize).Up(),
-                      std::get<1>(symmetrize).Down(),
+                      std::get<1>(symmetrize).Up().get(),
+                      std::get<1>(symmetrize).Down().get(),
                       0,
                       verbose);
 
-    auto abs_uncert_2sided = SimpleQuadSum::AbsoluteUncertainty(nominal_xsec,
+    auto abs_uncert_2sided = SimpleQuadSum::AbsoluteUncertainty(nominal_xsec.get(),
                                                                 syst_2sided,
                                                                 data);
 
     pass &= TEST_HIST("abs_uncert 2 sided",
-                      std::get<1>(abs_uncert_2sided).Up(),
-                      hmax_shift,
+                      std::get<1>(abs_uncert_2sided).Up().get(),
+                      hmax_shift.get(),
                       1e-14,
                       verbose);
 
     // FractionalUncertainty
-    auto frac_uncert_1sided = SimpleQuadSum::FractionalUncertainty(nominal_xsec,
+    auto frac_uncert_1sided = SimpleQuadSum::FractionalUncertainty(nominal_xsec.get(),
                                                                    syst_1sided,
                                                                    data);
     auto expected_frac_uncert = (TH1*) hup->Clone();
-    expected_frac_uncert->Add(hnominal, -1);
-    expected_frac_uncert->Divide(hnominal);
+    expected_frac_uncert->Add(hnominal.get(), -1);
+    expected_frac_uncert->Divide(hnominal.get());
     expected_frac_uncert->SetError(Array::Zero(hup->GetNbinsX()+2).eval().data());
     pass &= TEST_HIST("fractional uncert",
-                      std::get<1>(frac_uncert_1sided).Up(),
+                      std::get<1>(frac_uncert_1sided).Up().get(),
                       expected_frac_uncert,
                       1e-14,
                       verbose);
@@ -220,7 +219,7 @@ int main(int argc, char ** argv) {
             {"mv",     syst_mv},
     };
 
-    auto total_abs_uncert = SimpleQuadSum::TotalAbsoluteUncertainty(nominal_xsec,
+    auto total_abs_uncert = SimpleQuadSum::TotalAbsoluteUncertainty(nominal_xsec.get(),
                                                                     systs,
                                                                     data);
 
@@ -234,20 +233,20 @@ int main(int argc, char ** argv) {
     }
 
     pass &= TEST_HIST("total absolute uncert",
-                      std::get<1>(total_abs_uncert).Up(),
+                      std::get<1>(total_abs_uncert).Up().get(),
                       target_total_abs_uncert,
                       1e-14,
                       verbose);
 
     // TotalFractionalUncertainty
-    auto total_frac_uncert = SimpleQuadSum::TotalFractionalUncertainty(nominal_xsec,
+    auto total_frac_uncert = SimpleQuadSum::TotalFractionalUncertainty(nominal_xsec.get(),
                                                                        systs,
                                                                        data);
     auto target_total_frac_abs_uncert = (TH1*) target_total_abs_uncert->Clone();
-    target_total_frac_abs_uncert->Divide(hnominal);
+    target_total_frac_abs_uncert->Divide(hnominal.get());
     target_total_frac_abs_uncert->SetError(Array::Zero(hup->GetNbinsX()+2).eval().data());
     pass &= TEST_HIST("total frac uncert",
-                      std::get<1>(total_frac_uncert).Up(),
+                      std::get<1>(total_frac_uncert).Up().get(),
                       target_total_frac_abs_uncert,
                       1e-14,
                       verbose);

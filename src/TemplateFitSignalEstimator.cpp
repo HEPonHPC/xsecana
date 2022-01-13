@@ -98,7 +98,7 @@ namespace xsec {
 
         // given original template shapes, determine how to return predictions
         TH1 * project_predictions_like;
-        const TH1 * tmp_component = fUserComponents.GetComponents().begin()->second->GetNominal();
+        auto tmp_component = fUserComponents.GetComponents().begin()->second->GetNominal();
         if (tmp_component->GetDimension() == 1) {
             project_predictions_like = new TH1D("", "",
                                                 1, 0, 1);
@@ -121,7 +121,7 @@ namespace xsec {
         // root won't draw histogram unless there are entries
         project_predictions_like->SetEntries(1);
         fProjectPredictionProps = root::TH1Props(project_predictions_like);
-        fPredictionProps = root::TH1Props(tmp_component);
+        fPredictionProps = root::TH1Props(tmp_component.get());
 
         // create reduced systematics
         for (auto syst: sample.shape_only_systematics) {
@@ -149,7 +149,7 @@ namespace xsec {
             if (!fTotalTemplate) {
                 fTotalTemplate = (TH1 *) component.second->GetNominal()->GetHist()->Clone();
             } else {
-                fTotalTemplate->Add(component.second->GetNominal()->GetHist());
+                fTotalTemplate->Add(component.second->GetNominal()->GetHist().get());
             }
         }
 
@@ -332,7 +332,7 @@ namespace xsec {
 
     double
     TemplateFitSignalEstimator::
-    Chi2(const TH1 * data,
+    Chi2(const std::shared_ptr<TH1> data,
          const std::map<std::string, TH1 *> & params) const {
         Array mparams = ToCalculatorParams(params);
         Array mdata = fReducer.Reduce(data)->GetArray();
@@ -359,7 +359,7 @@ namespace xsec {
 
     TemplateFitResult
     TemplateFitSignalEstimator::
-    Fit(const TH1 * data, int nrandom_seeds) const {
+    Fit(const std::shared_ptr<TH1> data, int nrandom_seeds) const {
         if (nrandom_seeds < 0) {
             // no random seeds
             // seed at all parameters equal to 1
@@ -385,7 +385,7 @@ namespace xsec {
 
     TemplateFitResult
     TemplateFitSignalEstimator::
-    _fit(const TH1 * data, const std::vector<Vector> & seeds) const {
+    _fit(const std::shared_ptr<TH1> data, const std::vector<Vector> & seeds) const {
         if (!fFitter) {
             throw std::runtime_error("This TemplateFitSignalEstimator does not have an active IFitter");
         }
@@ -400,16 +400,16 @@ namespace xsec {
         for(const auto & syst : component->GetSystematics()) {
             projected_systematics[syst.first] = fit::ComponentReducer::Project(syst.second);
         }
-        TH1 * nominal = fit::ComponentReducer::Project(component->GetNominal());
-        TH1 * up = (TH1*) std::get<1>(SimpleQuadSum::TotalFractionalUncertainty(nominal, projected_systematics)).Up()->Clone();
-        TH1 * down = (TH1*) up->Clone();
+        auto nominal = fit::ComponentReducer::Project(component->GetNominal());
+        auto up = std::get<1>(SimpleQuadSum::TotalFractionalUncertainty(nominal.get(), projected_systematics)).Up();
+        auto down = std::shared_ptr<TH1>((TH1*) up->Clone());
         down->Scale(-1);
         return Systematic<TH1>("", up, down);
     }
 
     TemplateFitResult
     TemplateFitSignalEstimator::
-    Fit(const TH1 * data, fit::IFitter * fitter, int nrandom_seeds) {
+    Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds) {
         SetFitter(fitter);
         return Fit(data, nrandom_seeds);
     }

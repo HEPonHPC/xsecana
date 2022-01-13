@@ -110,6 +110,6 @@ namespace xsec {
     };
 
     TH1 * MultiverseShift(Systematic<TH1> multiverse,
-                            const TH1 * nominal,
-                            double nsigma = 1);
+                          const TH1 * nominal,
+                          double nsigma = 1);
 }

@@ -237,8 +237,7 @@ namespace xsec {
                                  props.axes[0]->GetXbins()->GetArray(),
                                  props.axes[1]->GetNbins(),
                                  props.axes[1]->GetXbins()->GetArray());
-                }
-                else {
+                } else {
                     h = new TH2D(props.name,
                                  "",
                                  props.axes[0]->GetNbins(),
@@ -270,7 +269,6 @@ namespace xsec {
                                  props.axes[1]->GetXmin(), props.axes[1]->GetXmax(),
                                  props.axes[2]->GetNbins(),
                                  props.axes[2]->GetXmin(), props.axes[2]->GetXmax());
-
                 }
                 h->GetXaxis()->SetTitle(props.axes[0]->GetTitle());
                 h->GetYaxis()->SetTitle(props.axes[1]->GetTitle());
@@ -286,8 +284,8 @@ namespace xsec {
         }
 
         inline TH1 * ToROOT(const Array & data,
-                            const Array & error,
-                            TH1Props props) {
+                                           const Array & error,
+                                           TH1Props props) {
             auto ret = ToROOT(data, props);
             ret->SetError(error.data());
             return ret;

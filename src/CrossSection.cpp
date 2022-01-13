@@ -60,7 +60,7 @@ namespace xsec {
         return unfolded_selected_signal / denom;
     }
 
-    const TH1 *
+    const std::shared_ptr<TH1>
     CalculateCrossSection(const TH1 * unfolded_selected_signal,
                           const TH1 * efficiency,
                           const TH1 * flux,
@@ -79,7 +79,7 @@ namespace xsec {
                                             root::MapContentsToEigen(flux),
                                             ntargets,
                                             bin_widths);
-        return root::ToROOT(result, result, prop);
+        return std::shared_ptr<TH1>(root::ToROOT(result, result, prop));
     }
 
     ////////////////////////////////////////////////

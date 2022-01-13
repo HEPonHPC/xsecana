@@ -38,7 +38,7 @@ namespace xsec {
 
     double
     JointTemplateFitSignalEstimator::
-    Chi2(const TH1 * data, const std::map<std::string, TH1*> & params) const {
+    Chi2(const std::shared_ptr<TH1> data, const std::map<std::string, TH1*> & params) const {
         return fJointEstimator->Chi2(data, params);
     }
 
@@ -63,13 +63,13 @@ namespace xsec {
 
     std::map<std::string, TemplateFitResult>
     JointTemplateFitSignalEstimator::
-    Fit(const TH1 * data, int nrandom_seeds) const {
+    Fit(const std::shared_ptr<TH1> data, int nrandom_seeds) const {
         return _joint_fit_result(fJointEstimator->Fit(data, nrandom_seeds));
     }
 
     std::map<std::string, TemplateFitResult>
     JointTemplateFitSignalEstimator::
-    Fit(const TH1 * data, fit::IFitter * fitter, int nrandom_seeds) {
+    Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds) {
         return _joint_fit_result(fJointEstimator->Fit(data, fitter, nrandom_seeds));
     }
 
