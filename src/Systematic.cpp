@@ -45,6 +45,42 @@ namespace xsec {
               fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
     template<class T>
+    Systematic<T>::
+    Systematic(const Systematic<T> & syst) {
+        fContainer = syst.fContainer;
+        fType = syst.fType;
+        fName = syst.fName;
+    }
+
+    template<class T>
+    Systematic<T>::
+    Systematic(Systematic<T> && syst) {
+        fContainer = std::move(syst.fContainer);
+        fType = syst.fType;
+        fName = syst.fName;
+    }
+
+    template<class T>
+    Systematic<T> &
+    Systematic<T>::
+    operator=(Systematic<T> && syst) {
+        fContainer = std::move(syst.fContainer);
+        fType = syst.fType;
+        fName = syst.fName;
+        return *this;
+    }
+
+    template<class T>
+    Systematic<T> &
+    Systematic<T>::
+    operator=(const Systematic<T> & syst) {
+        fContainer = syst.fContainer;
+        fType = syst.fType;
+        fName = syst.fName;
+        return *this;
+    }
+
+    template<class T>
     SystType_t
     Systematic<T>::
     GetType() const { return fType; }
@@ -75,7 +111,7 @@ namespace xsec {
     }
 
     template<class T>
-    Matrix
+    TH1 *
     Systematic<T>::
     CovarianceMatrix(const T * nominal) const {
         if constexpr (!std::is_base_of<TH1, T>::value) {
@@ -83,28 +119,28 @@ namespace xsec {
                                      std::string(typeid(T).name()) +
                                      " does not implement CovarianceMatrix. Must be of type Systematic<TH1>.");
         } else {
-            Array nom_a = root::MapContentsToEigen(nominal);
-            std::vector<Array> shifts_a(fContainer.size());
+            std::vector<Array> shifts(fContainer.size());
             for(auto i = 0u; i < fContainer.size(); i++) {
-                shifts_a[i] = root::MapContentsToEigen(fContainer[i]);
+                shifts[i] = root::MapContentsToEigen(fContainer[i]);
             }
 
+            Array nom_a = root::MapContentsToEigen(nominal);
             Matrix cov(nom_a.size(), nom_a.size());
             if(fType == kOneSided) {
                 for (auto i = 0; i < nom_a.size(); i++) {
                     for (auto j = 0; j < nom_a.size(); j++) {
-                        cov(i, j) = (nom_a(i) - shifts_a[0](i)) *
-                                    (nom_a(j) - shifts_a[0](j));
+                        cov(i, j) = (nom_a(i) - shifts[0](i)) *
+                                    (nom_a(j) - shifts[0](j));
                     }
                 }
             }
             else if(fType == kTwoSided) {
                 for (auto i = 0; i < nom_a.size(); i++) {
                     for (auto j = 0; j < nom_a.size(); j++) {
-                        auto di_0 = nom_a(i) - shifts_a[0](i);
-                        auto di_1 = nom_a(i) - shifts_a[1](i);
-                        auto dj_0 = nom_a(j) - shifts_a[0](j);
-                        auto dj_1 = nom_a(j) - shifts_a[1](j);
+                        auto di_0 = nom_a(i) - shifts[0](i);
+                        auto di_1 = nom_a(i) - shifts[1](i);
+                        auto dj_0 = nom_a(j) - shifts[0](j);
+                        auto dj_1 = nom_a(j) - shifts[1](j);
                         auto di = (std::abs(di_0) > std::abs(di_1)) ? di_0 : di_1;
                         auto dj = (std::abs(dj_0) > std::abs(dj_1)) ? dj_0 : dj_1;
 
@@ -116,15 +152,20 @@ namespace xsec {
                  for (auto i = 0; i < nom_a.size(); i++) {
                     for (auto j = 0; j < nom_a.size(); j++) {
                         double v = 0;
-                        for(auto u = 0u; u < shifts_a.size(); u++) {
-                            v += (shifts_a[u](i) - nom_a(i)) *
-                                 (shifts_a[u](j) - nom_a(j));
+                        for(auto u = 0u; u < shifts.size(); u++) {
+                            v += (shifts[u](i) - nom_a(i)) *
+                                 (shifts[u](j) - nom_a(j));
                         }
-                        cov(i, j) = v / shifts_a.size();
+                        cov(i, j) =  v / fContainer.size();
                     }
                 }
             }
-            return cov;
+            auto ret = new TH2D("", "",
+                                nom_a.size()-2, 0, nom_a.size()-2,
+                                nom_a.size()-2, 0, nom_a.size()-2);
+            ret->SetContent(cov.data());
+            ret->SetEntries(cov.size());
+            return ret;
         }
     }
 

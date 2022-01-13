@@ -74,6 +74,11 @@ namespace xsec {
                    std::vector<const T *> & container,
                    SystType_t type);
 
+        Systematic(const Systematic & syst);
+        Systematic(Systematic && syst);
+        Systematic & operator=(Systematic && rhs);
+        Systematic & operator=(const Systematic & rhs);
+
         template<class U>
         Systematic<U> ForEach(ForEachFunction<U, T> for_each, std::string new_name = "");
 
@@ -85,7 +90,7 @@ namespace xsec {
                                                         TDirectory * dir,
                                                         const std::string & subdir);
 
-        Matrix CovarianceMatrix(const T * nominal) const;
+        TH1 * CovarianceMatrix(const T * nominal) const;
 
         const std::vector<const T *> & GetShifts() const;
 
