@@ -12,7 +12,7 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               const T * shift)
+               std::shared_ptr<T> shift)
             : fContainer({shift}),
               fType(kOneSided),
 
@@ -21,8 +21,8 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               const T * up,
-               const T * down)
+               std::shared_ptr<T> up,
+               std::shared_ptr<T> down)
             : fContainer({up, down}),
               fType(kTwoSided),
               fName(std::move(name)) { fContainer.shrink_to_fit(); }
@@ -30,7 +30,7 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               std::vector<const T *> & universes)
+               std::vector<std::shared_ptr<T>> & universes)
             : fContainer(universes),
               fType(kMultiverse),
               fName(std::move(name)) { fContainer.shrink_to_fit(); }
@@ -38,15 +38,17 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(std::string name,
-               std::vector<const T *> & container,
+               std::vector<std::shared_ptr<T>> & container,
                SystType_t type)
             : fContainer(container),
               fType(type),
               fName(std::move(name)) { fContainer.shrink_to_fit(); }
 
+    /*
     template<class T>
     Systematic<T>::
     Systematic(const Systematic<T> & syst) {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
         fContainer = syst.fContainer;
         fType = syst.fType;
         fName = syst.fName;
@@ -55,6 +57,7 @@ namespace xsec {
     template<class T>
     Systematic<T>::
     Systematic(Systematic<T> && syst) {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
         fContainer = std::move(syst.fContainer);
         fType = syst.fType;
         fName = syst.fName;
@@ -64,6 +67,7 @@ namespace xsec {
     Systematic<T> &
     Systematic<T>::
     operator=(Systematic<T> && syst) {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
         fContainer = std::move(syst.fContainer);
         fType = syst.fType;
         fName = syst.fName;
@@ -74,12 +78,13 @@ namespace xsec {
     Systematic<T> &
     Systematic<T>::
     operator=(const Systematic<T> & syst) {
+        std::cout << __PRETTY_FUNCTION__ << std::endl;
         fContainer = syst.fContainer;
         fType = syst.fType;
         fName = syst.fName;
         return *this;
     }
-
+     */
     template<class T>
     SystType_t
     Systematic<T>::
@@ -91,7 +96,7 @@ namespace xsec {
     GetName() const { return fName; }
 
     template<class T>
-    const std::vector<const T *> &
+    const std::vector<std::shared_ptr<T>> &
     Systematic<T>::
     GetShifts() const { return fContainer; }
 
@@ -102,7 +107,7 @@ namespace xsec {
     Systematic<T>::
     ForEach(ForEachFunction<U, T> for_each, std::string new_name) {
         if (new_name == "") new_name = this->fName;
-        std::vector<const U *> container(this->fContainer.size());
+        std::vector<std::shared_ptr<U>> container(this->fContainer.size());
         for (auto i = 0u; i < this->fContainer.size(); i++) {
             container[i] = for_each(this->fContainer[i]);
         }
@@ -121,7 +126,7 @@ namespace xsec {
         } else {
             std::vector<Array> shifts(fContainer.size());
             for(auto i = 0u; i < fContainer.size(); i++) {
-                shifts[i] = root::MapContentsToEigen(fContainer[i]);
+                shifts[i] = root::MapContentsToEigen(fContainer[i].get());
             }
 
             Array nom_a = root::MapContentsToEigen(nominal);
@@ -179,7 +184,7 @@ namespace xsec {
                                      " does not implement Eval. Use ForEach instead");
         } else {
             if (new_name == "") new_name = this->fName;
-            std::vector<const TH1 *> container(this->fContainer.size());
+            std::vector<std::shared_ptr<TH1>> container(this->fContainer.size());
             for (auto i = 0u; i < this->fContainer.size(); i++) {
                 container[i] = this->fContainer[i]->Eval(data);
             }
@@ -190,7 +195,7 @@ namespace xsec {
 
     /////////////////////////////////////////////////////////////////////////
     template<class T>
-    const T *
+    const std::shared_ptr<T>
     Systematic<T>::
     Up() const {
         if (fType == kMultiverse) {
@@ -200,7 +205,7 @@ namespace xsec {
 
     /////////////////////////////////////////////////////////////////////////
     template<class T>
-    const T *
+    const std::shared_ptr<T>
     Systematic<T>::
     Down() const {
         if (fType == kMultiverse || fType == kOneSided) {
@@ -265,9 +270,9 @@ namespace xsec {
         int ftype = std::atoi(((TObjString *) dir->Get("fType"))->GetString().Data());
 
         auto container_dir = dir->GetDirectory("fContainer");
-        std::vector<const T *> container(nshifts);
+        std::vector<std::shared_ptr<T>> container(nshifts);
         for (auto ishift = 0; ishift < nshifts; ishift++) {
-            container[ishift] = load(container_dir, std::to_string(ishift)).release();
+            container[ishift] = std::move(load(container_dir, std::to_string(ishift)));
         }
 
         tmp->cd();

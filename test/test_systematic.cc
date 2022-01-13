@@ -122,9 +122,9 @@ bool run_tests(bool verbose, std::string dir) {
         }
     }
 
-    Array cov = syst_1.CovarianceMatrix(nominal).array().reshaped();
+    TH1 * cov = syst_1.CovarianceMatrix(nominal);
     pass &= TEST_HIST("covariance matrix",
-                      root::ToROOTLike(expected_covariance_matrix, cov),
+                      cov,
                       expected_covariance_matrix,
                       0,
                       verbose);

@@ -199,20 +199,15 @@ namespace xsec {
             Matrix zero = Matrix::Zero(nrows+2, ncols+2);
             zero.block(1, 1, nrows, ncols) = arr;
             h->SetContent(zero.eval().data());
+            h->SetEntries(1);
         }
 
-        //inline void FillTH2Contents(TH2 * h, const Array2D & arr) {
-        //    FillTH2Contents(h, arr.matrix());
-        //}
 
         inline void FillTH1Contents(TH1 * h, const Vector & arr) {
             Vector zero = Vector::Zero(arr.size()+2);
             zero(Eigen::seqN(1,  arr.size())) = arr;
             h->SetContent(zero.eval().data());
         }
-        //inline void FillTH1Contents(TH1 * h, const Array & arr) {
-//            FillTH1Contents(h, arr.matrix());
-        //}
 
 
         inline TH1 * ToROOT(const Array & data,
@@ -312,7 +307,6 @@ namespace xsec {
             return ret;
         }
 
-
         inline void MapToEigen(const TH1 * h, ArrayRef contents, ArrayRef errors, bool overflow=true) {
             if(overflow) contents = MapContentsToEigen(h);
             else contents = MapContentsToEigenInner(h);
@@ -359,6 +353,5 @@ namespace xsec {
         inline Array MapBinWidthsToEigen(const TH1 * h) {
             return MapBinWidthsToEigen(TH1Props(h, ""));
         }
-
     }
 }

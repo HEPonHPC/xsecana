@@ -33,7 +33,7 @@ namespace xsec {
 
             // IFitter overrides
             virtual FitResult Fit(IFitCalculator * fit_calc,
-                                  const Array & data,
+                                  const Vector & data,
                                   std::vector<Vector> seeds = {}) override;
 
             // FCNBase overrides
@@ -47,7 +47,7 @@ namespace xsec {
             int fMnStrategy;
             double fUp;
             bool fMinosErrors;
-            Array fData;
+            Vector fData;
         };
 
     }

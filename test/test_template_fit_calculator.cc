@@ -87,19 +87,20 @@ int main(int argc, char ** argv) {
         background2_templates.row(i) = (i + 1) * Vector::Ones(dims[1]);
     }
 
-    std::vector<Array> templates{
-            signal_templates.reshaped().transpose(),
-            background1_templates.reshaped().transpose(),
-            background2_templates.reshaped().transpose(),
+    std::map<std::string, IReducedTemplateComponent*> templates = {
+            {"a", new ReducedTemplateComponent(new ReducedComponent(signal_templates.reshaped().transpose(), dims[0], dims[1]))},
+            {"b", new ReducedTemplateComponent(new ReducedComponent(background1_templates.reshaped().transpose(), dims[0], dims[1]))},
+            {"c", new ReducedTemplateComponent(new ReducedComponent(background2_templates.reshaped().transpose(), dims[0], dims[1]))},
     };
-    Vector total = templates[0] + templates[1] + templates[2];
+    Vector total = templates["a"]->GetNominal()->GetArray() + templates["b"]->GetNominal()->GetArray() +
+                   templates["c"]->GetNominal()->GetArray();
 
     Matrix inverse_covariance = Matrix::Identity(dims[0] * dims[1],
                                                  dims[0] * dims[1]);
 
     inverse_covariance *= (1 / total.array()).matrix().asDiagonal();
 
-    auto fit_calc = new TemplateFitCalculator(templates, dims, inverse_covariance);
+    auto fit_calc = new TemplateFitCalculator(ReducedComponentCollection(templates), dims, inverse_covariance);
 
     user_params = Vector::Ones(templates.size() * dims[0]);
 

@@ -2,304 +2,210 @@
 // Created by Derek Doyle on 10/9/21.
 //
 #include "XSecAna/TemplateFitSignalEstimator.h"
+#include "XSecAna/SimpleQuadSum.h"
 #include "TGaxis.h"
+#include "TVectorD.h"
+#include "TObjString.h"
+#include "TKey.h"
 
 #include <random>
 #include <iostream>
 #include <iomanip>
 
 namespace xsec {
+    void
+    TemplateFitResult::
+    SaveTo(TDirectory * dir, const std::string & name) const {
+        dir->mkdir(name.c_str());
+        auto subdir = dir->GetDirectory(name.c_str());
 
-    std::vector<std::string>
-    TemplateFitSignalEstimator::
-    GetBackgroundLabels() const {
-        std::vector<std::string> ret;
-        for(auto bkgd : fBackgroundTemplates) {
-            ret.push_back(bkgd.first);
+        subdir->cd();
+        TObjString("TemplateFitResult").Write("type");
+
+        for(const auto & component : component_params) {
+            subdir->mkdir(component.first.c_str());
+            auto component_dir = subdir->GetDirectory(component.first.c_str());
+            component_dir->cd();
+
+            component_params.at(component.first)->Write("params");
+            component_params_error_up.at(component.first)->Write("params_error_up");
+            component_params_error_down.at(component.first)->Write("params_error_down");
+        }
+        subdir->cd();
+        if(covariance) covariance->Write("param_covariance");
+
+        TVectorD _fun_calls(1); _fun_calls[0] = fun_calls;
+        TVectorD _fun_val(1); _fun_val[0] = fun_val;
+
+        _fun_calls.Write("fun_calls");
+        _fun_val.Write("fun_val");
+
+        dir->cd();
+    }
+
+    std::unique_ptr<TemplateFitResult>
+    TemplateFitResult::
+    LoadFrom(TDirectory * dir, const std::string & name) {
+        auto subdir = dir->GetDirectory(name.c_str());
+        auto ptag = (TObjString*) subdir->Get("type");
+        assert(ptag->GetString() == "TemplateFitResult" && "Type does not match TemplateFitResult");
+        delete ptag;
+
+        auto ret = std::make_unique<TemplateFitResult>();
+
+        if(subdir->GetListOfKeys()->Contains("param_covariance")) {
+            ret->covariance = (TH2D *) root::LoadTH1(subdir, "param_covariance").release();
+        }
+        ret->fun_calls = (*((TVectorD*)subdir->Get("fun_calls")))[0];
+        ret->fun_val = (*((TVectorD*)subdir->Get("fun_val")))[0];
+
+        for(const auto&& obj : *subdir->GetListOfKeys()) {
+            if(std::string(((TKey*) obj)->GetClassName()) == "TDirectoryFile") {
+                std::string component(obj->GetName());
+
+                auto component_dir = subdir->GetDirectory(component.c_str());
+                ret->component_params[component] = root::LoadTH1(component_dir, "params").release();
+                ret->component_params_error_up[component] = root::LoadTH1(component_dir, "params_error_up").release();
+                ret->component_params_error_down[component] = root::LoadTH1(component_dir, "params_error_down").release();
+            }
         }
         return ret;
     }
+
 
     std::vector<std::string>
     TemplateFitSignalEstimator::
     GetSystematicLabels() const {
         std::vector<std::string> ret;
-        for(auto syst : fSystematics) {
+        for (auto syst: fSystematics) {
             ret.push_back(syst.first);
         }
         return ret;
     }
 
-    TH1 *
     TemplateFitSignalEstimator::
-    _mask_and_flatten(const TH1 * templ) const {
-        return this->_mask_and_flatten(fMask, templ);
-    }
+    TemplateFitSignalEstimator(const fit::TemplateFitSample & sample,
+                               const TH1 * mask)
+            : fReducer(mask),
+              fUserComponents(sample.components) {
+        fReducedComponents = fUserComponents.Reduce(fReducer);
 
-    TH1 *
-    TemplateFitSignalEstimator::
-    _mask_and_flatten(const TH1 * mask, const TH1 * templ) const {
-        if(templ->GetDimension()==1) {
-            std::cout << "Warning: Attempting to apply to mask 1-dimensional template fit" << std::endl;
-            return (TH1*) templ->Clone();
+        int icomponent = 0;
+        for (const auto & component: fReducedComponents.GetComponents()) {
+            fComponentIdx[component.first] = icomponent;
+            icomponent++;
         }
-        else if(templ->GetDimension()==2) {
-            assert(mask->GetDimension()==1);
-            // not including under/overflow. Some may want to?
-            auto nunmasked = mask->Integral(0, mask->GetNbinsX()+1);
-            auto ret = new TH2D("", "",
-                                templ->GetNbinsY()-2, 1, templ->GetNbinsY(),
-                                nunmasked-2, 1, nunmasked-1);
-            auto ii = 0;
-            for(auto i = 0u; i < mask->GetNbinsX()+2; i++) {
-                if(mask->GetBinContent(i)) {
-                    for(auto j = 1; j <= templ->GetNbinsY(); j++) {
-                        ret->SetBinContent(ii, j-1, templ->GetBinContent(i, j));
-                    }
-                    ii++;
-                }
-            }
-            ret->GetXaxis()->SetTitle("Outer Bins");
-            ret->GetYaxis()->SetTitle("Template Bins");
-            return ret;
-        }
-        else {
-            assert(mask->GetDimension()==2);
-            auto nunmasked = ((TH2*)mask)->Integral(0, mask->GetNbinsX()+1,
-                                                    0, mask->GetNbinsY()+1);
-
-            // using under/overflow bins here in the flattened histogram
-            // for easy un-packing into 1D eigen array that we'll hand to the fitter
-            // We do this instead of converting to Eigen because of limitations imposed by
-            // the current implementation of Systematic
-            auto ret = new TH2D("", "",
-                                templ->GetNbinsZ()-2, 1, templ->GetNbinsZ(),
-                                nunmasked-2, 1, nunmasked-1);
-            // Not sure why we have to loop over y first,
-            // but its necessary for things to get ordered properly
-            // during the un-masking
-            auto ii = 0;
-            for(auto j = 0u; j < mask->GetNbinsY()+2; j++) {
-                for(auto i = 0u; i < mask->GetNbinsX()+2; i++) {
-                    if(mask->GetBinContent(i, j)) {
-                        for(auto k = 1; k <= templ->GetNbinsZ(); k++) {
-                            ret->SetBinContent(k-1, ii, templ->GetBinContent(i, j, k));
-                        }
-                        ii++;
-                    }
-                }
-            }
-            ret->GetXaxis()->SetTitle("Template Bins");
-            ret->GetYaxis()->SetTitle("Outer Bins");
-            return ret;
-        }
-    }
-
-
-    TemplateFitSignalEstimator::
-    TemplateFitSignalEstimator(const TH1 * signal_template,
-                               const std::map<std::string, const TH1 *> & background_templates,
-                               const std::map<std::string, Systematic<TH1>> & systematics,
-                               const TH1 * mask,
-                               fit::TemplateFitCalculator * fit_calc)
-            : fFitCalc(fit_calc),
-              fMask(mask) {
 
         // given original template shapes, determine how to return predictions
-        // set number of inner bins
         TH1 * project_predictions_like;
-        std::vector<Array> templates_1d(background_templates.size()+1);
-        if (signal_template->GetDimension() == 1) {
+        const TH1 * tmp_component = fUserComponents.GetComponents().begin()->second->GetNominal();
+        if (tmp_component->GetDimension() == 1) {
             project_predictions_like = new TH1D("", "",
                                                 1, 0, 1);
-        } else if (signal_template->GetDimension() == 2) {
+        } else if (tmp_component->GetDimension() == 2) {
             project_predictions_like = new TH1D("", "",
-                                                signal_template->GetNbinsX(),
-                                                signal_template->GetXaxis()->GetXbins()->GetArray());
-            project_predictions_like->GetXaxis()->SetTitle(signal_template->GetXaxis()->GetTitle());
-        } else if (signal_template->GetDimension() == 3) {
+                                                tmp_component->GetNbinsX(),
+                                                tmp_component->GetXaxis()->GetXbins()->GetArray());
+            project_predictions_like->GetXaxis()->SetTitle(tmp_component->GetXaxis()->GetTitle());
+        } else if (tmp_component->GetDimension() == 3) {
             project_predictions_like = new TH2D("", "",
-                                                signal_template->GetNbinsX(),
-                                                signal_template->GetXaxis()->GetXbins()->GetArray(),
-                                                signal_template->GetNbinsY(),
-                                                signal_template->GetYaxis()->GetXbins()->GetArray());
-            project_predictions_like->GetXaxis()->SetTitle(signal_template->GetXaxis()->GetTitle());
-            project_predictions_like->GetYaxis()->SetTitle(signal_template->GetYaxis()->GetTitle());
-        }
-        else {
+                                                tmp_component->GetNbinsX(),
+                                                tmp_component->GetXaxis()->GetXbins()->GetArray(),
+                                                tmp_component->GetNbinsY(),
+                                                tmp_component->GetYaxis()->GetXbins()->GetArray());
+            project_predictions_like->GetXaxis()->SetTitle(tmp_component->GetXaxis()->GetTitle());
+            project_predictions_like->GetYaxis()->SetTitle(tmp_component->GetYaxis()->GetTitle());
+        } else {
             throw std::runtime_error("Template fits with greater than 2 outer dimensions not supported");
         }
         // root won't draw histogram unless there are entries
         project_predictions_like->SetEntries(1);
         fProjectPredictionProps = root::TH1Props(project_predictions_like);
-        fPredictionProps = root::TH1Props(signal_template);
+        fPredictionProps = root::TH1Props(tmp_component);
 
-        // construct templates with masked bins removed
-        fSignalTemplate = _mask_and_flatten(mask, signal_template);
-        // root stores as row-major. The calculator assumes column major, so we transpose dimensions
-        // outer bins x inner bins
-        fDims = {fSignalTemplate->GetNbinsY()+2, fSignalTemplate->GetNbinsX()+2};
-        for(auto bkgd_template : background_templates) {
-            fBackgroundTemplates[bkgd_template.first] = _mask_and_flatten(mask,
-                                                                          bkgd_template.second);
-        }
-        // create masked systematics
-        for(auto syst : systematics) {
-            std::vector<const TH1*> masked_shifts(syst.second.GetShifts().size());
-            for(auto ishift = 0u; ishift < syst.second.GetShifts().size(); ishift++) {
-                masked_shifts[ishift] = _mask_and_flatten(mask, syst.second.GetShifts()[ishift]);
-            }
-            fSystematics[syst.first] = Systematic<TH1>(syst.second.GetName(),
-                                                       masked_shifts,
-                                                       syst.second.GetType());
+        // create reduced systematics
+        for (auto syst: sample.shape_only_systematics) {
+            fSystematics[syst.first] = fReducer.Reduce(syst.second);
         }
 
         // masked parameter map
         auto outer_map = root::MapContentsToEigen(mask);
         fOuterBinMap = fit::detail::ParamMap(outer_map);
-        Array2D inner_map = Array2D::Zero(fDims[1]+2, outer_map.size());
-        for(auto i = 0; i < outer_map.size(); i++) {
-            if(outer_map(i)) inner_map.col(i)(Eigen::seqN(1, fDims[1])) = Array::Ones(fDims[1]);
+        Array2D inner_map = Array2D::Zero(fReducedComponents.GetNInnerBins() + 2, outer_map.size());
+        for (auto i = 0; i < outer_map.size(); i++) {
+            if (outer_map(i))
+                inner_map.col(i)(Eigen::seqN(1, fReducedComponents.GetNInnerBins())) = Array::Ones(
+                        fReducedComponents.GetNInnerBins());
         }
         fInnerBinMap = fit::detail::ParamMap(inner_map.reshaped());
 
-
         // initialize all templates as free
-        for (auto temp_it: fBackgroundTemplates) {
-            fIsFreeTemplate[temp_it.first] = true;
+        for (const auto & comp: fReducedComponents.GetComponents()) {
+            fIsFreeTemplate[comp.first] = true;
         }
 
-        // vector of flattened templates for the fit calculator
-        templates_1d[0] = root::MapContentsToEigen(fSignalTemplate); // flatten
-
-        // calculate total in this loop for later covariance matrix calculations
-        fTotalTemplate = (TH1*) fSignalTemplate->Clone();
-        auto itemplate = 1u;
-        for(auto background_template : background_templates) {
-            fComponentLabelIdxMap[background_template.first] = itemplate;
-            templates_1d[itemplate] = root::MapContentsToEigen(fBackgroundTemplates.at(background_template.first));
-            fTotalTemplate->Add(fBackgroundTemplates.at(background_template.first));
-            itemplate++;
+        fTotalTemplate = nullptr;
+        for (const auto & component: fReducedComponents.GetComponents()) {
+            if (!fTotalTemplate) {
+                fTotalTemplate = (TH1 *) component.second->GetNominal()->GetHist()->Clone();
+            } else {
+                fTotalTemplate->Add(component.second->GetNominal()->GetHist());
+            }
         }
 
         // calculate and store covariance matrices
-        fTotalCovariance = Matrix::Zero(fDims[0]*fDims[1], fDims[0]*fDims[1]);
-        for(auto systematic : fSystematics) {
+        fTotalCovariance = 0;
+        for (auto systematic: fSystematics) {
             fCovarianceMatrices[systematic.first] = systematic.second.CovarianceMatrix(fTotalTemplate);
-            fTotalCovariance += fCovarianceMatrices.at(systematic.first);
+            fCovarianceMatrices.at(systematic.first)->GetXaxis()->SetTitle("Template Bins");
+            fCovarianceMatrices.at(systematic.first)->GetYaxis()->SetTitle("Template Bins");
+            fCovarianceMatrices.at(systematic.first)->SetTitle((systematic.first + " Covariance").c_str());
+            if (!fTotalCovariance) {
+                fTotalCovariance = (TH1 *) fCovarianceMatrices.at(systematic.first)->Clone();
+                fTotalCovariance->SetTitle("Total Covariance");
+            } else {
+                fTotalCovariance->Add(fCovarianceMatrices.at(systematic.first));
+            }
         }
-        fFitCalc = new fit::TemplateFitCalculator(templates_1d,
-                                                  fDims,
-                                                  fTotalCovariance);
 
-    }
+        Matrix total_covariance = root::MapContentsToEigenInner(fTotalCovariance)
+                .matrix().reshaped(fTotalCovariance->GetNbinsX(),
+                                   fTotalCovariance->GetNbinsX());
+        fInvTotalCovariance = (TH1 *) fTotalCovariance->Clone();
+        fInvTotalCovariance->SetTitle("Inverse Total Covariance");
+        root::FillTH2Contents((TH2 *) fInvTotalCovariance, total_covariance.inverse());
 
+        fFitCalc = new fit::TemplateFitCalculator(fReducedComponents,
+                                                  {fReducedComponents.GetNOuterBins(),
+                                                   fReducedComponents.GetNInnerBins()},
+                                                  total_covariance);
 
-    void
-    TemplateFitSignalEstimator::
-    _eval_impl(const Array & data, const Array & error,
-                                ArrayRef result, ArrayRef rerror) const {
-        throw std::runtime_error(__PRETTY_FUNCTION__);
-    }
-
-    TH1D *
-    TemplateFitSignalEstimator::
-    GetReducedSignalTemplate() const {
-        auto n = (fSignalTemplate->GetNbinsX()+2) *
-                 (fSignalTemplate->GetNbinsY()+2);
-        auto ret = new TH1D("", "",
-                            n, 0, n);
-        Array arr(n+2);
-        arr(Eigen::seqN(1, n)) = root::MapContentsToEigen(fSignalTemplate);
-        ret->SetContent(arr.data());
-        ret->SetEntries(1);
-        ret->GetXaxis()->SetTitle("Template Bins");
-        ret->GetYaxis()->SetTitle("Events");
-        return ret;
-    }
-
-    TH1D *
-    TemplateFitSignalEstimator::
-    GetReducedTotalTemplate() const {
-        auto n = (fTotalTemplate->GetNbinsX()+2) *
-                 (fTotalTemplate->GetNbinsY()+2);
-        auto ret = new TH1D("", "",
-                            n, 0, n);
-        Array arr(n+2);
-        arr(Eigen::seqN(1, n)) = root::MapContentsToEigen(fTotalTemplate);
-        ret->SetContent(arr.data());
-        ret->SetEntries(1);
-        ret->GetXaxis()->SetTitle("Template Bins");
-        ret->GetYaxis()->SetTitle("Events");
-        return ret;
-    }
-
-    TH1D *
-    TemplateFitSignalEstimator::
-    GetReducedBackgroundTemplate(const std::string & bkgd_label) const {
-        auto n = (fBackgroundTemplates.at(bkgd_label)->GetNbinsX()+2) *
-                 (fBackgroundTemplates.at(bkgd_label)->GetNbinsY()+2);
-        auto ret = new TH1D("", "",
-                            n, 0, n);
-        Array arr(n+2);
-        arr(Eigen::seqN(1, n)) =
-                root::MapContentsToEigen(fBackgroundTemplates.at(bkgd_label));
-        ret->SetContent(arr.data());
-        ret->SetEntries(1);
-        ret->GetXaxis()->SetTitle("Template Bins");
-        ret->GetYaxis()->SetTitle("Events");
-        return ret;
     }
 
     TH2D *
     TemplateFitSignalEstimator::
     GetTotalCovariance() const {
-        auto nrows = fTotalCovariance.rows();
-        auto ncols = fTotalCovariance.rows();
-        auto ret = new TH2D("", "Total Covariance",
-                            nrows, 0, nrows,
-                            ncols, 0, ncols);
-        root::FillTH2Contents(ret, fTotalCovariance);
-        ret->GetXaxis()->SetTitle("Template Bins");
-        ret->GetYaxis()->SetTitle("Template Bins");
-        return ret;
+        return (TH2D *) fTotalCovariance;
     }
 
     TH2D *
     TemplateFitSignalEstimator::
     GetInverseCovariance() const {
-        auto nrows = fTotalCovariance.rows();
-        auto ncols = fTotalCovariance.rows();
-        auto ret = new TH2D("", "Inverse Total Covariance",
-                            nrows, 0, nrows,
-                            ncols, 0, ncols);
-        root::FillTH2Contents(ret, fInverseCovariance);
-        ret->GetXaxis()->SetTitle("Template Bins");
-        ret->GetYaxis()->SetTitle("Template Bins");
-        return ret;
+        return (TH2D *) fInvTotalCovariance;
     }
 
     TH2D *
     TemplateFitSignalEstimator::
     GetCovariance(const std::string & systematic_name) const {
-        auto nrows = fTotalCovariance.rows();
-        auto ncols = fTotalCovariance.rows();
-        auto ret = new TH2D("", TString::Format("%s Covariance",
-                                                systematic_name.c_str()).Data(),
-                            nrows, 0, nrows,
-                            ncols, 0, ncols);
-        root::FillTH2Contents(ret, fCovarianceMatrices.at(systematic_name));
-        ret->GetXaxis()->SetTitle("Template Bins");
-        ret->GetYaxis()->SetTitle("Template Bins");
-        return ret;
+        return (TH2D *) fCovarianceMatrices.at(systematic_name);
     }
 
     void
     TemplateFitSignalEstimator::
     FixComponent(const std::string & component_label, const double & val) {
-        auto idx = fComponentLabelIdxMap.at(component_label);
-        for(auto o = 0u; o < fDims[0]; o++) {
-            fFitCalc->FixTemplate(idx*fDims[0] + o, val);
+        auto idx = fReducedComponents.GetComponentIdx(component_label);
+        for (auto o = 0u; o < fReducedComponents.GetNOuterBins(); o++) {
+            fFitCalc->FixTemplate(idx * fReducedComponents.GetNOuterBins() + o, val);
         }
         fIsFreeTemplate.at(component_label) = false;
     }
@@ -307,23 +213,11 @@ namespace xsec {
     void
     TemplateFitSignalEstimator::
     ReleaseComponent(const std::string & component_label) {
-        auto idx = fComponentLabelIdxMap.at(component_label);
-        for(auto o = 0u; o < fDims[0]; o++) {
-            fFitCalc->ReleaseTemplate(idx*fDims[0] + o);
+        auto idx = fReducedComponents.GetComponentIdx(component_label);
+        for (auto o = 0u; o < fReducedComponents.GetNOuterBins(); o++) {
+            fFitCalc->ReleaseTemplate(idx * fReducedComponents.GetNOuterBins() + o);
         }
         fIsFreeTemplate.at(component_label) = true;
-    }
-
-    TH1 *
-    TemplateFitSignalEstimator::
-    Background(const TH1 * data) const {
-        return 0;
-    }
-
-    TH1 *
-    TemplateFitSignalEstimator::
-    Signal(const TH1 * data) const {
-        return 0;
     }
 
     void
@@ -334,14 +228,11 @@ namespace xsec {
 
     fit::Vector
     TemplateFitSignalEstimator::
-    ToCalculatorParams(const TH1 * signal_params,
-                       const std::map<std::string, TH1*> & bkgd_params) const {
-
-        Matrix calc_params(fDims[0], bkgd_params.size()+1);
-        calc_params.col(0) = fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(signal_params));
-        for(auto label_idx : fComponentLabelIdxMap) {
+    ToCalculatorParams(const std::map<std::string, TH1 *> & params) const {
+        Matrix calc_params(fReducedComponents.GetNOuterBins(), fReducedComponents.size());
+        for (auto label_idx: fComponentIdx) {
             calc_params.col(label_idx.second) = fOuterBinMap.ToMinimizerParams(
-                    root::MapContentsToEigen(bkgd_params.at(label_idx.first))
+                    root::MapContentsToEigen(params.at(label_idx.first))
             );
         }
         return calc_params.reshaped();
@@ -350,15 +241,11 @@ namespace xsec {
     void
     TemplateFitSignalEstimator::
     ToUserParams(const fit::Vector & calc_params,
-                 TH1 * signal_params,
-                 std::map<std::string, TH1*> & bkgd_params) const {
-
-        Matrix calc_param_m = calc_params.reshaped(fDims[0],
-                                                   fBackgroundTemplates.size()+1);
-
-        signal_params->SetContent(fOuterBinMap.ToUserParams(calc_param_m.col(0)).data());
-        for(auto label_idx : fComponentLabelIdxMap) {
-            bkgd_params.at(label_idx.first)->SetContent(
+                 std::map<std::string, TH1 *> & params) const {
+        Matrix calc_param_m = calc_params.reshaped(fReducedComponents.GetNOuterBins(),
+                                                   fReducedComponents.size());
+        for (auto label_idx: fComponentIdx) {
+            params.at(label_idx.first)->SetContent(
                     fOuterBinMap.ToUserParams(
                             calc_param_m.col(label_idx.second)
                     ).data()
@@ -369,119 +256,87 @@ namespace xsec {
     TH1 *
     TemplateFitSignalEstimator::
     _to_template_binning(const Array & reduced_templates) const {
+        Array expanded = fInnerBinMap.ToUserParams(reduced_templates);
+        Array transposed = expanded
+                        .reshaped(fReducedComponents.GetNInnerBins() + 2,
+                                  fInnerBinMap.GetMatrix().rows() / (fReducedComponents.GetNInnerBins() + 2))
+                        .transpose().reshaped();
         return root::ToROOT(
                 fInnerBinMap.ToUserParams(reduced_templates)
-                        .reshaped(fDims[1] + 2, fInnerBinMap.GetMatrix().rows() / (fDims[1] + 2))
+                        .reshaped(fReducedComponents.GetNInnerBins() + 2,
+                                  fInnerBinMap.GetMatrix().rows() / (fReducedComponents.GetNInnerBins() + 2))
                         .transpose().reshaped(),
                 fPredictionProps
         );
     }
 
-    Array
+    TH1 *
     TemplateFitSignalEstimator::
-    _predict_component(const TH1 * component_templates, const TH1 * params) const {
-        return (root::MapContentsToEigen(component_templates)
-                         .reshaped(fDims[1], fDims[0]) // TODO row-major
-                         .matrix() *
-               fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(params))
-                       .asDiagonal()).reshaped();
+    PredictTotal(const std::map<std::string, TH1 *> & params) const {
+        return _to_template_binning(fFitCalc->Predict(ToCalculatorParams(params)));
     }
 
     TH1 *
     TemplateFitSignalEstimator::
-    PredictTotal(const TH1 * signal_params,
-                 const std::map<std::string, TH1*> & bkgd_params) const {
-        return _to_template_binning(fFitCalc->Predict(ToCalculatorParams(signal_params, bkgd_params)));
-    }
-
-
-    TH1 *
-    TemplateFitSignalEstimator::
-    PredictSignal(const TH1 * signal_params) const {
-        return _to_template_binning(
-                fFitCalc->PredictComponent(
-                        0,
-                        fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(signal_params))
-                )
-        );
+    PredictProjectedTotal(const std::map<std::string, TH1 *> & params) const {
+        return _project_prediction(fFitCalc->Predict(ToCalculatorParams(params)));
     }
 
     TH1 *
     TemplateFitSignalEstimator::
-    PredictBackground(const std::string & background_label,
-                      const TH1 * bkgd_params) const {
-        return _to_template_binning(
-                fFitCalc->PredictComponent(
-                        fComponentLabelIdxMap.at(background_label),
-                        fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(bkgd_params))
-                )
-        );
-    }
-
-    TH1 *
-    TemplateFitSignalEstimator::
-    PredictProjectedTotal(const TH1 * signal_params,
-                          const std::map<std::string, TH1*> & bkgd_params) const {
+    _project_prediction(const Array & prediction) const {
         Array padded_projection = Array::Zero(fProjectPredictionProps.nbins_and_uof);
-        auto prediction = fFitCalc->Predict(ToCalculatorParams(signal_params, bkgd_params));
-        if(fDims[0]==1) { // single analysis bin
+        if (fReducedComponents.GetNOuterBins() == 1) { // single analysis bin
             padded_projection(1) = prediction.sum();
-        }
-        else { // two-dimensional analysis binning
-            padded_projection = fOuterBinMap.ToUserParams(prediction.reshaped(fDims[1], fDims[0])
-                                                               .colwise()
-                                                               .sum());
+        } else { // two-dimensional analysis binning
+            padded_projection = fOuterBinMap.ToUserParams(prediction.reshaped(fFitCalc->GetNInnerBins(),
+                                                                              fFitCalc->GetNOuterBins())
+                                                                  .colwise()
+                                                                  .sum().reshaped());
         }
         return root::ToROOT(padded_projection,
                             fProjectPredictionProps);
     }
 
+
     TH1 *
     TemplateFitSignalEstimator::
-    PredictProjectedSignal(const TH1 * signal_params) const {
-        Array padded_projection = Array::Zero(fProjectPredictionProps.nbins_and_uof);
-        auto prediction = fFitCalc->PredictComponent(
-                0, fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(signal_params))
-        );
-        if(fDims[0]==1) {
-            padded_projection(0) = prediction.sum();
-        }
-        else {
-            padded_projection = fOuterBinMap.ToUserParams(prediction.reshaped(fDims[1], fDims[0])
-                                                                  .colwise()
-                                                                  .sum());
-        }
-        return root::ToROOT(padded_projection,
-                            fProjectPredictionProps);
+    NominalProjectedTotal() const {
+        Array ones = Array::Ones(fFitCalc->GetNOuterBins() *
+                                 fFitCalc->GetNComponents());
+        return _project_prediction(fFitCalc->Predict(ones));
     }
 
     TH1 *
     TemplateFitSignalEstimator::
-    PredictProjectedBackground(const std::string & background_label, const TH1 * bkgd_params) const {
-        Array padded_projection = Array::Zero(fProjectPredictionProps.nbins_and_uof);
-        auto prediction = fFitCalc->PredictComponent(
-                fComponentLabelIdxMap.at(background_label),
-                fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(bkgd_params))
-        );
-        if(fDims[0]==1) {
-            padded_projection(0) = prediction.sum();
-        }
-        else {
-            padded_projection = fOuterBinMap.ToUserParams(prediction.reshaped(fDims[1], fDims[0])
-                                                                  .colwise()
-                                                                  .sum());
-        }
-        return root::ToROOT(padded_projection,
-                            fProjectPredictionProps);
+    NominalTotal() const {
+        Array ones = Array::Ones(fFitCalc->GetNOuterBins() *
+                                 fFitCalc->GetNComponents());
+        return _to_template_binning(fFitCalc->Predict(ones));
+    }
+
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    PredictComponent(const std::string & component_label, const TH1 * params) const {
+        Vector mparams = fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(params));
+        return _to_template_binning(fReducedComponents.PredictComponent(component_label, mparams));
+    }
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    PredictProjectedComponent(const std::string & component_label, const TH1 * params) const {
+        Vector mparams = fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(params));
+        return _project_prediction(fReducedComponents.PredictComponent(component_label, mparams));
     }
 
     double
     TemplateFitSignalEstimator::
     Chi2(const TH1 * data,
-         const TH1 * signal_params,
-         const std::map<std::string, TH1*> & bkgd_params) const {
-        auto data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
-        return fFitCalc->fun(ToCalculatorParams(signal_params, bkgd_params), data_arr);
+         const std::map<std::string, TH1 *> & params) const {
+        Array mparams = ToCalculatorParams(params);
+        Array mdata = fReducer.Reduce(data)->GetArray();
+        return fFitCalc->Chi2(ToCalculatorParams(params), fReducer.Reduce(data)->GetArray());
     }
 
     void
@@ -509,20 +364,18 @@ namespace xsec {
             // no random seeds
             // seed at all parameters equal to 1
             return this->_fit(data, {Array::Ones(fFitCalc->GetNMinimizerParams())});
-        }
-        else {
+        } else {
             // throw 100 random seed configurations
             // evaluate fit calc at seed set and take the best nrandom_seeds
             // seed fit with these
-            auto data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
             int nrandom_throws = 100;
-            if(nrandom_seeds > nrandom_throws) {
+            if (nrandom_seeds > nrandom_throws) {
                 nrandom_throws = nrandom_seeds;
             }
             return this->_fit(
                     data,
                     fFitCalc->GetBestSeeds(
-                            data_arr,
+                            fReducer.Reduce(data)->GetArray(),
                             fFitCalc->GetRandomSeeds(nrandom_throws, -0.5, 0.5),
                             nrandom_seeds
                     )
@@ -533,11 +386,25 @@ namespace xsec {
     TemplateFitResult
     TemplateFitSignalEstimator::
     _fit(const TH1 * data, const std::vector<Vector> & seeds) const {
-        if(!fFitter) {
+        if (!fFitter) {
             throw std::runtime_error("This TemplateFitSignalEstimator does not have an active IFitter");
         }
-        auto data_arr = root::MapContentsToEigen(_mask_and_flatten(fMask, data));
-        return this->_template_fit_result(fFitter->Fit(fFitCalc, data_arr, seeds));
+        return this->_template_fit_result(fFitter->Fit(fFitCalc, fReducer.Reduce(data)->GetArray(), seeds));
+    }
+
+    Systematic<TH1>
+    TemplateFitSignalEstimator::
+    _prefit_component_uncertainty(const std::string & component_label) const {
+        const auto component = fUserComponents.GetComponents().at(component_label);
+        std::map<std::string, Systematic<TH1>> projected_systematics;
+        for(const auto & syst : component->GetSystematics()) {
+            projected_systematics[syst.first] = fit::ComponentReducer::Project(syst.second);
+        }
+        TH1 * nominal = fit::ComponentReducer::Project(component->GetNominal());
+        TH1 * up = (TH1*) std::get<1>(SimpleQuadSum::TotalFractionalUncertainty(nominal, projected_systematics)).Up()->Clone();
+        TH1 * down = (TH1*) up->Clone();
+        down->Scale(-1);
+        return Systematic<TH1>("", up, down);
     }
 
     TemplateFitResult
@@ -550,64 +417,62 @@ namespace xsec {
     TemplateFitResult
     TemplateFitSignalEstimator::
     _template_fit_result(const fit::FitResult & result) const {
-        auto signal_params = (TH1 *) fMask->Clone();
-        auto signal_params_error_up = (TH1 *) fMask->Clone();
-        auto signal_params_error_down = (TH1 *) fMask->Clone();
-        root::CopyAxisLabels(fProjectPredictionProps, signal_params);
-        root::CopyAxisLabels(fProjectPredictionProps, signal_params_error_up);
-        root::CopyAxisLabels(fProjectPredictionProps, signal_params_error_down);
+        std::map<std::string, TH1 *> component_params;
+        std::map<std::string, TH1 *> component_params_error_up;
+        std::map<std::string, TH1 *> component_params_error_down;
+        for (auto component: fReducedComponents.GetComponents()) {
+            component_params[component.first] = (TH1 *) fReducer.GetMask()->Clone();
+            component_params_error_up[component.first] = (TH1 *) fReducer.GetMask()->Clone();
+            component_params_error_down[component.first] = (TH1 *) fReducer.GetMask()->Clone();
+            
+            component_params.at(component.first)->Reset("ICESM");
+            component_params_error_up.at(component.first)->Reset("ICESM");
+            component_params_error_down.at(component.first)->Reset("ICESM");
 
-        signal_params->SetTitle("Normalization Parameters: Signal");
-        signal_params_error_up->SetTitle("Parameters Error Up: Signal");
-        signal_params_error_down->SetTitle("Parameters Error Down: Signal");
-
-        std::map<std::string, TH1 *> background_params;
-        std::map<std::string, TH1 *> background_params_error_up;
-        std::map<std::string, TH1 *> background_params_error_down;
-        for (auto bkgd: fBackgroundTemplates) {
-            background_params[bkgd.first] = (TH1 *) fMask->Clone();
-            background_params_error_up[bkgd.first] = (TH1 *) fMask->Clone();
-            background_params_error_down[bkgd.first] = (TH1 *) fMask->Clone();
-
-            root::CopyAxisLabels(fProjectPredictionProps, background_params.at(bkgd.first));
-            root::CopyAxisLabels(fProjectPredictionProps, background_params_error_up.at(bkgd.first));
-            root::CopyAxisLabels(fProjectPredictionProps, background_params_error_down.at(bkgd.first));
-            background_params.at(bkgd.first)->SetTitle(("Normalization Parameters: " + bkgd.first).c_str());
-            background_params_error_up.at(bkgd.first)->SetTitle(("Parameters Error Up: " + bkgd.first).c_str());
-            background_params_error_down.at(bkgd.first)->SetTitle(("Parameters Error Down: " + bkgd.first).c_str());
+            root::CopyAxisLabels(fProjectPredictionProps, component_params.at(component.first));
+            root::CopyAxisLabels(fProjectPredictionProps, component_params_error_up.at(component.first));
+            root::CopyAxisLabels(fProjectPredictionProps, component_params_error_down.at(component.first));
+            component_params.at(component.first)->SetTitle(("Normalization Parameters: " + component.first).c_str());
+            component_params_error_up.at(component.first)->SetTitle(
+                    ("Parameters Error Up: " + component.first).c_str());
+            component_params_error_down.at(component.first)->SetTitle(
+                    ("Parameters Error Down: " + component.first).c_str());
         }
-        ToUserParams(result.params, signal_params, background_params);
-        ToUserParams(result.params_error_up, signal_params_error_up, background_params_error_up);
-        ToUserParams(result.params_error_down, signal_params_error_down, background_params_error_down);
-
+        ToUserParams(result.params, component_params);
+        ToUserParams(result.params_error_up, component_params_error_up);
+        ToUserParams(result.params_error_down, component_params_error_down);
+        for (auto component: fReducedComponents.GetComponents()) {
+            if (!fIsFreeTemplate.at(component.first)) {
+                Systematic<TH1> prefit_uncertainty = _prefit_component_uncertainty(component.first);
+                component_params_error_up[component.first] = (TH1*) prefit_uncertainty.Up()->Clone();
+                component_params_error_down[component.first] = (TH1*) prefit_uncertainty.Down()->Clone();
+            }
+        }
         auto covariance = new TH2D("", "",
                                    result.covariance.rows(), 0, result.covariance.rows(),
                                    result.covariance.rows(), 0, result.covariance.rows());
         root::FillTH2Contents(covariance, result.covariance);
 
         return {result.fun_val,
-                signal_params,
-                signal_params_error_up,
-                signal_params_error_down,
-                background_params,
-                background_params_error_up,
-                background_params_error_down,
+                component_params,
+                component_params_error_up,
+                component_params_error_down,
                 covariance,
                 result.fun_calls};
     }
 
-    
+
     TCanvas *
     TemplateFitSignalEstimator::
     DrawParameterCorrelation(const TemplateFitResult & fit_result) const {
         auto c = new TCanvas("parameter_correlation");
-        auto tmp_cor = (TH2D*) fit_result.covariance->Clone();
-        for(auto i = 1; i <= tmp_cor->GetNbinsX(); i++) {
-            for(auto j = 1; j <= tmp_cor->GetNbinsY(); j++) {
-                double cov = fit_result.covariance->GetBinContent(i,j);
-                double dii = fit_result.covariance->GetBinContent(i,i);
-                double djj = fit_result.covariance->GetBinContent(j,j);
-                tmp_cor->SetBinContent(i,j, cov / std::sqrt(dii * djj));
+        auto tmp_cor = (TH2D *) fit_result.covariance->Clone();
+        for (auto i = 1; i <= tmp_cor->GetNbinsX(); i++) {
+            for (auto j = 1; j <= tmp_cor->GetNbinsY(); j++) {
+                double cov = fit_result.covariance->GetBinContent(i, j);
+                double dii = fit_result.covariance->GetBinContent(i, i);
+                double djj = fit_result.covariance->GetBinContent(j, j);
+                tmp_cor->SetBinContent(i, j, cov / std::sqrt(dii * djj));
             }
         }
 
@@ -619,7 +484,7 @@ namespace xsec {
     TemplateFitSignalEstimator::
     DrawParameterCovariance(const TemplateFitResult & fit_result) const {
         auto c = new TCanvas("parameter_covariance");
-        auto tmp_cov = (TH2D*) fit_result.covariance->Clone();
+        auto tmp_cov = (TH2D *) fit_result.covariance->Clone();
         this->_draw_covariance_helper(c, tmp_cov, fit_result);
         return c;
     }
@@ -627,21 +492,19 @@ namespace xsec {
     void
     TemplateFitSignalEstimator::
     _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const {
-        auto xmax = fit_result.covariance->GetXaxis()->GetBinLowEdge(fit_result.covariance->GetNbinsX()+1);
-        auto xaxis = new TGaxis(0, 0, xmax, 0, 0.001, fBackgroundTemplates.size()+1);
-        auto yaxis = new TGaxis(0, 0, 0, xmax, 0.001, fBackgroundTemplates.size()+1);
-        xaxis->SetNdivisions(fBackgroundTemplates.size()+1);
-        yaxis->SetNdivisions(fBackgroundTemplates.size()+1);
+        auto xmax = fit_result.covariance->GetXaxis()->GetBinLowEdge(fit_result.covariance->GetNbinsX() + 1);
+        auto xaxis = new TGaxis(0, 0, xmax, 0, 0.001, fReducedComponents.size());
+        auto yaxis = new TGaxis(0, 0, 0, xmax, 0.001, fReducedComponents.size());
+        xaxis->SetNdivisions(fReducedComponents.size());
+        yaxis->SetNdivisions(fReducedComponents.size());
 
-        xaxis->ChangeLabel(1, 40, -1, 33, -1, -1, "Signal");
-        yaxis->ChangeLabel(1, 40, -1, 33, -1, -1, "Signal");
-        for(auto bkgd : fComponentLabelIdxMap) {
-            xaxis->ChangeLabel(bkgd.second+1, 40, -1, 33, -1, -1, bkgd.first.c_str());
-            yaxis->ChangeLabel(bkgd.second+1, 40, -1, 33, -1, -1, bkgd.first.c_str());
+        for (auto component: fComponentIdx) {
+            xaxis->ChangeLabel(component.second, 40, -1, 33, -1, -1, component.first.c_str());
+            yaxis->ChangeLabel(component.second, 40, -1, 33, -1, -1, component.first.c_str());
         }
-        mat->GetXaxis()->SetNdivisions(fBackgroundTemplates.size()+1, false);
-        mat->GetYaxis()->SetNdivisions(fBackgroundTemplates.size()+1, false);
-        double zlim = std::max(std::abs(mat->GetMaximum()),std::abs(mat->GetMinimum()));
+        mat->GetXaxis()->SetNdivisions(fReducedComponents.size(), false);
+        mat->GetYaxis()->SetNdivisions(fReducedComponents.size(), false);
+        double zlim = std::max(std::abs(mat->GetMaximum()), std::abs(mat->GetMinimum()));
         mat->GetZaxis()->SetRangeUser(-zlim, zlim);
         mat->GetXaxis()->SetTickLength(0);
         mat->GetYaxis()->SetTickLength(0);

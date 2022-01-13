@@ -20,7 +20,7 @@ namespace xsec {
     };
 
     template<class U, class T>
-    using ForEachFunction = std::function<U *(const T *)>;
+    using ForEachFunction = std::function<std::shared_ptr<U> (const std::shared_ptr<T>)>;
 
 
     namespace exceptions {
@@ -61,24 +61,25 @@ namespace xsec {
         Systematic() = default;
 
         Systematic(std::string name,
-                   const T * shift);
+                   std::shared_ptr<T> shift);
 
         Systematic(std::string name,
-                   const T * up,
-                   const T * down);
+                   std::shared_ptr<T> up,
+                   std::shared_ptr<T> down);
 
         Systematic(std::string name,
-                   std::vector<const T *> & universes);
+                   std::vector<std::shared_ptr<T>> & universes);
 
         Systematic(std::string name,
-                   std::vector<const T *> & container,
+                   std::vector<std::shared_ptr<T>> & container,
                    SystType_t type);
 
+        /*
         Systematic(const Systematic & syst);
         Systematic(Systematic && syst);
         Systematic & operator=(Systematic && rhs);
         Systematic & operator=(const Systematic & rhs);
-
+*/
         template<class U>
         Systematic<U> ForEach(ForEachFunction<U, T> for_each, std::string new_name = "");
 
@@ -92,18 +93,18 @@ namespace xsec {
 
         TH1 * CovarianceMatrix(const T * nominal) const;
 
-        const std::vector<const T *> & GetShifts() const;
+        const std::vector<std::shared_ptr<T>> & GetShifts() const;
 
-        const T * Up() const;
+        const std::shared_ptr<T> Up() const;
 
-        const T * Down() const;
+        const std::shared_ptr<T> Down() const;
 
-        [[nodiscard]] SystType_t GetType() const;
+        SystType_t GetType() const;
 
-        [[nodiscard]] std::string GetName() const;
+        std::string GetName() const;
 
     private:
-        std::vector<const T *> fContainer;
+        std::vector<std::shared_ptr<T>> fContainer;
         SystType_t fType;
         std::string fName;
     };

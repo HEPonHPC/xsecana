@@ -142,13 +142,14 @@ int main(int argc, char ** argv) {
                                                             syst_mv,
                                                             data);
 
-    // index of universe representing minus 1 sigma shift
-    int m1_idx = (0.5 - std::erf(1 / std::sqrt(2)) / 2.0) * (nuniverses - 1) + 1;
-
-    auto target_minus_1_sigma_multiverse = MultiverseShift(syst_mv_hist, hnominal, 1);
-    pass &= TEST_HIST("minus 1 sigma multiverse",
+    TH1 * target_plus_1_sigma_multiverse = MultiverseShift(syst_mv_hist, hnominal, 1);
+    target_plus_1_sigma_multiverse->Add(hnominal, -1);
+    for(auto i = 0; i < target_plus_1_sigma_multiverse->GetNbinsX()+2; i++) {
+        target_plus_1_sigma_multiverse->SetBinError(i, 0);
+    }
+    pass &= TEST_HIST("plus 1 sigma multiverse",
                       std::get<1>(abs_uncert_mv).Up(),
-                      target_minus_1_sigma_multiverse,
+                      target_plus_1_sigma_multiverse,
                       1e-14,
                       verbose);
 

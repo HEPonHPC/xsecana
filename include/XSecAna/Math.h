@@ -6,7 +6,9 @@ namespace xsec {
 
     inline TH2D *
     CorrelationFromCovariance(const TH2D * cov) {
-        auto cor = (TH2D*) cov->Clone();
+        auto cor = new TH2D("", "",
+                            cov->GetNbinsX(), 0, cov->GetNbinsX(),
+                            cov->GetNbinsY(), 0, cov->GetNbinsY());
         for (auto i = 1u; i <= cov->GetNbinsX(); i++) {
             for (auto j = 1u; j <= cov->GetNbinsY(); j++) {
                 auto cov_ij = cov->GetBinContent(i,j);
@@ -20,6 +22,7 @@ namespace xsec {
                 }
             }
         }
+
         return cor;
     }
 

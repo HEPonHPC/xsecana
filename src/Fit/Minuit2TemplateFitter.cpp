@@ -33,7 +33,7 @@ namespace xsec {
         FitResult
         Minuit2TemplateFitter::
         Fit(IFitCalculator * fit_calc,
-            const Array & data,
+            const Vector & data,
             std::vector<Vector> seeds) {
             // maintain internal copies in order to implement ROOT::FcnBase::operator()
             fData = data;

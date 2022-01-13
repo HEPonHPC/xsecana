@@ -27,7 +27,7 @@ namespace xsec {
         class IFitCalculator {
         public:
             virtual double fun(const Vector & params,
-                               const Array & data) const = 0;
+                               const Vector & data) const = 0;
             virtual unsigned int GetNMinimizerParams() const = 0;
             virtual unsigned int GetNUserParams() const = 0;
             virtual unsigned int GetNFunCalls() const = 0;
@@ -48,7 +48,7 @@ namespace xsec {
                 return seeds;
             }
 
-            std::vector<Vector> GetBestSeeds(const Array & data,
+            std::vector<Vector> GetBestSeeds(const Vector & data,
                                              const std::vector<Array> & seeds,
                                              int take) const {
                 std::vector<double> chi2(seeds.size());
@@ -67,12 +67,13 @@ namespace xsec {
                 std::cout << "Seeding fit with the following parameter configurations:" << std::endl;
                 std::cout << "--------------------------------------------------------" << std::endl;
                 std::cout << std::left;
-                std::cout << std::setw(20) << "chi-squared" << "|" << " seed" << std::endl;
+                std::cout << std::setw(20) << "chi-squared" << "|" << " (seed - 1) l^2 norm" << std::endl;
                 std::cout << "--------------------------------------------------------" << std::endl;
                 std::vector<Vector> best_seeds(take);
                 for (auto iseed = 0u; iseed < take; iseed++) {
                     best_seeds[iseed] = seeds[seed_idx[iseed]];
-                    std::cout << std::setw(20) << chi2[seed_idx[iseed]] << "| " << best_seeds[iseed].transpose() << std::endl;
+                    std::cout << std::setw(20) << chi2[seed_idx[iseed]] << "| ";
+                    std::cout << (best_seeds[iseed] - Vector::Ones(best_seeds[iseed].size())).lpNorm<2>() << std::endl;
                 }
                 return best_seeds;
             }
@@ -81,7 +82,7 @@ namespace xsec {
         class IFitter {
         public:
             virtual FitResult Fit(IFitCalculator * fit_calc,
-                                  const Array & data,
+                                  const Vector & data,
                                   const std::vector<Vector> seeds={}) = 0;
         };
 
