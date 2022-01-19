@@ -121,7 +121,7 @@ namespace xsec {
 
             TemplateFitSample
             _join(const std::map<std::string, TemplateFitSample> & samples) {
-                std::map<std::string, IUserTemplateComponent *> joined_components;
+                std::map<std::string, const IUserTemplateComponent *> joined_components;
                 // join components
                 for (const auto & component: samples.begin()->second.components.GetComponents()) {
                     std::map<std::string, const UserTemplateComponent*> tmp_comp;
@@ -261,7 +261,9 @@ namespace xsec {
             // project sample means
             std::vector<std::shared_ptr<TH1>> projected_sample_means;
             for (const auto & sample: sample_components) {
-                fSampleNormalizations[sample.first] = _to1d(ComponentReducer::Project(sample.second->GetNominal()));
+                fSampleNormalizations[sample.first] = _to1d(
+                        std::shared_ptr<TH1>(ComponentReducer::Project(sample.second->GetNominal()))
+                );
                 projected_sample_means.push_back(fSampleNormalizations.at(sample.first));
             }
 
@@ -276,7 +278,7 @@ namespace xsec {
                 for (const auto & sample: sample_components) {
                     fSampleNormSystematics[sample.first][syst.first] =
                             ComponentReducer::Project(sample_components.at(sample.first)->GetSystematics().at(syst.first));
-                    systematics1d.push_back(fSampleNormSystematics.at(sample.first).at(syst.first));
+                    systematics1d.push_back(_to1d(fSampleNormSystematics.at(sample.first).at(syst.first)));
                 }
 
                 fJointNormSystematics[syst.first] = detail::_join(systematics1d);
@@ -339,8 +341,8 @@ namespace xsec {
                     for (auto i = 0u;
                          i < fSampleNormSystematics.at(sample.first).at(syst.first).GetShifts().size(); i++) {
                         compressed_shifts.push_back(
-                                reducer.Compress1D(
-                                        fSampleNormSystematics.at(sample.first).at(syst.first).GetShifts()[i])
+                                std::shared_ptr<TH1>(reducer.Compress1D(
+                                        fSampleNormSystematics.at(sample.first).at(syst.first).GetShifts()[i]))
                         );
                     }
                     systematics1d.emplace_back(fSampleNormSystematics.at(sample.first).at(syst.first).GetName(),
@@ -353,7 +355,7 @@ namespace xsec {
             std::vector<std::shared_ptr<TH1>> compressed_norm_means_to_join;
             std::map<std::string, std::shared_ptr<TH1>> compressed_sample_norm_means;
             for (const auto & sample: fSampleNormalizations) {
-                compressed_sample_norm_means[sample.first] = reducer.Compress1D(sample.second);
+                compressed_sample_norm_means[sample.first] = std::shared_ptr<TH1>(reducer.Compress1D(sample.second));
                 compressed_norm_means_to_join.push_back(compressed_sample_norm_means.at(sample.first));
             }
 

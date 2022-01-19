@@ -33,7 +33,7 @@ namespace xsec {
 
     inline Array
     QuadSum(const std::vector<Array> & deltas) {
-        auto ret = deltas[0];
+        Array ret = deltas[0];
         for (auto i = 1u; i < deltas.size(); i++) {
             _QuadSum(ret, deltas[i]);
         }
@@ -41,20 +41,30 @@ namespace xsec {
     }
 
 
-    inline std::shared_ptr<TH1>
-    QuadSum(const std::vector<std::shared_ptr<TH1>> & deltas) {
+    inline TH1 *
+    QuadSum(const std::vector<TH1*> & deltas) {
         std::vector<Array> _deltas_c(deltas.size());
         std::vector<Array> _deltas_e(deltas.size());
         for (auto i = 0u; i < deltas.size(); i++) {
-            _deltas_c[i] = root::MapContentsToEigen(deltas[i].get());
-            _deltas_e[i] = root::MapErrorsToEigen(deltas[i].get());
+            _deltas_c[i] = root::MapContentsToEigen(deltas[i]);
+            _deltas_e[i] = root::MapErrorsToEigen(deltas[i]);
 
         }
-        return std::shared_ptr<TH1>(root::ToROOT(QuadSum(_deltas_c),
-                                                 QuadSum(_deltas_e),
-                                                 root::TH1Props(deltas[0].get(),
-                                                                root::MakeUnique(std::string(__FUNCTION__)).c_str())));
+        return root::ToROOT(QuadSum(_deltas_c),
+                            QuadSum(_deltas_e),
+                            root::TH1Props(deltas[0],
+                                           root::MakeUnique(std::string(__FUNCTION__)).c_str()));
     }
+
+    inline std::shared_ptr<TH1>
+    QuadSum(const std::vector<std::shared_ptr<TH1>> deltas) {
+        std::vector<TH1*> raw_ptrs(deltas.size());
+        for(auto i = 0u; i < deltas.size(); i++) {
+            raw_ptrs[i] = deltas[i].get();
+        }
+        return std::shared_ptr<TH1>(QuadSum(raw_ptrs));
+    }
+
 
     inline Array
     QuadSum(const Array & d1, const Array & d2) {
@@ -84,7 +94,18 @@ namespace xsec {
         return QuadSum(std::vector<std::shared_ptr<TH1>>{d1, d2, d3});
     }
 
+    inline TH1 *
+    QuadSum(TH1 * d1,
+            TH1 * d2) {
+        return QuadSum(std::vector<TH1*>{d1, d2});
+    }
 
+    inline TH1 *
+    QuadSum(TH1 * d1,
+            TH1 * d2,
+            TH1 * d3) {
+        return QuadSum(std::vector<TH1*>{d1, d2, d3});
+    }
 
     // inline some common functions
     inline Array

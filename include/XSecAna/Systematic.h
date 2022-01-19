@@ -74,12 +74,14 @@ namespace xsec {
                    std::vector<std::shared_ptr<T>> & container,
                    SystType_t type);
 
+
         /*
         Systematic(const Systematic & syst);
         Systematic(Systematic && syst);
         Systematic & operator=(Systematic && rhs);
         Systematic & operator=(const Systematic & rhs);
-*/
+        */
+
         template<class U>
         Systematic<U> ForEach(ForEachFunction<U, T> for_each, std::string new_name = "");
 
@@ -112,4 +114,5 @@ namespace xsec {
     TH1 * MultiverseShift(Systematic<TH1> multiverse,
                           const TH1 * nominal,
                           double nsigma = 1);
+
 }

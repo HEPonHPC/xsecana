@@ -149,6 +149,13 @@ namespace xsec {
             }
         }
 
+        Array
+        ReducedComponent::
+        Project() const {
+            return fArray.reshaped(fNInnerBins, fNOuterBins).colwise().sum();
+        }
+
+
         Vector
         ReducedTemplateComponent::
         Predict(const Vector & component_params) const {
@@ -182,28 +189,31 @@ namespace xsec {
             return Systematic<TH1>(syst.GetName(), reduced, syst.GetType());
         }
 
-        std::shared_ptr<TH1>
+        TH1 *
         ComponentReducer::
         Project(const std::shared_ptr<TH1> templ) {
+            TH1 * ret;
             if (templ->GetDimension() == 1) {
-                auto ret = std::make_shared<TH1D>("", "", 1, 0, 1);
+                ret = new TH1D("", "", 1, 0, 1);
                 double error;
                 double integral = templ->IntegralAndError(1, templ->GetNbinsX(), error);
                 ret->SetBinContent(1, integral);
                 ret->SetBinError(1, error);
-                return ret;
             } else if (templ->GetDimension() == 2) {
-                return std::shared_ptr<TH1>(((TH2 *) templ.get())->ProjectionX("",
-                                                                               1,
-                                                                               templ->GetNbinsY(),
-                                                                               "e"));
+                ret = ((TH2 *) templ.get())->ProjectionX("",
+                                                         1,
+                                                         templ->GetNbinsY(),
+                                                         "e");
             } else {
                 // project into xy plane
                 // NOF: no over flow
                 // NUF: no under flow
                 // e: calculate errors
-                return std::shared_ptr<TH1>(((TH3 *) templ.get())->Project3D("yx NOF NUF e"));
+                ret = ((TH3 *) templ.get())->Project3D("yx NOF NUF e");
             }
+            // set new name or else ROOT will delete the histogram under our feet
+            ret->SetName(root::MakeUnique("templ_project").c_str());
+            return ret;
         }
 
         Systematic<TH1>
@@ -211,12 +221,12 @@ namespace xsec {
         Project(const Systematic<TH1> & syst) {
             std::vector<std::shared_ptr<TH1>> projected(syst.GetShifts().size());
             for(auto i = 0u; i < syst.GetShifts().size(); i++) {
-                projected[i] = ComponentReducer::Project(syst.GetShifts()[i]);
+                projected[i] = std::shared_ptr<TH1>(ComponentReducer::Project(syst.GetShifts()[i]));
             }
             return Systematic<TH1>(syst.GetName(), projected, syst.GetType());
         }
 
-        std::shared_ptr<TH1>
+        TH1 *
         ComponentReducer::
         Compress1D(const std::shared_ptr<TH1> component) const {
             Array compressed_c = Array::Zero(fMap.GetNMinimizerParams()+2);
@@ -227,7 +237,7 @@ namespace xsec {
                     fMap.ToMinimizerParams(root::MapErrorsToEigen(component.get()));
 
             auto ret = new TH1D("", "", fMap.GetNMinimizerParams(), 0, fMap.GetNMinimizerParams());
-            return std::shared_ptr<TH1>(root::ToROOTLike(ret, compressed_c, compressed_e));
+            return root::ToROOTLike(ret, compressed_c, compressed_e);
         }
 
         ReducedComponent *
@@ -302,15 +312,63 @@ namespace xsec {
         ReducedComponentCollection
         UserComponentCollection::
         Reduce(const ComponentReducer & reducer) const {
-            std::map<std::string, IReducedTemplateComponent *> reduced_components;
+            std::map<std::string, const IReducedTemplateComponent *> reduced_components;
             for (const auto & component: fComponents) {
                 reduced_components[component.first] = component.second->Reduce(reducer);
             }
             return ReducedComponentCollection(reduced_components);
         }
 
+        TH1 *
+        UserComponentCollection::
+        NominalProjectedTotal() const {
+            TH1 * total = nullptr;
+            for(const auto & component : fComponents) {
+                if(!total) {
+                    total = component.second->ProjectNominal();
+                }
+                else {
+                    total->Add(component.second->ProjectNominal());
+                }
+            }
+            return total;
+        }
+
+        Systematic<TH1>
+        UserComponentCollection::
+        SystematicProjectedTotal(std::string syst_label) const {
+            std::vector<std::shared_ptr<TH1>> projected_total_shifted(
+                    fComponents.begin()->second->GetSystematics().at(syst_label).GetShifts().size(), nullptr
+            );
+            for(auto const & component : fComponents) {
+                auto projected_component_shifts = component.second->ProjectSystematic(syst_label).GetShifts();
+                for(auto i = 0u; i < projected_total_shifted.size(); i++) {
+                    if(!projected_total_shifted[i]) {
+                        projected_total_shifted[i] = std::shared_ptr<TH1>((TH1*) projected_component_shifts[i]->Clone());
+                    }
+                    else {
+                        projected_total_shifted[i]->Add(projected_component_shifts[i].get());
+                    }
+                }
+            }
+            return Systematic<TH1>(fComponents.begin()->second->GetSystematics().at(syst_label).GetName(),
+                                   projected_total_shifted,
+                                   fComponents.begin()->second->GetSystematics().at(syst_label).GetType());
+        }
+
+        std::map<std::string, Systematic<TH1>>
+        UserComponentCollection::
+        ProjectedTotalSystematics() const {
+            std::map<std::string, Systematic<TH1>> ret;
+            for(const auto & syst : fComponents.begin()->second->GetSystematics()) {
+                ret[syst.first] = this->SystematicProjectedTotal(syst.first);
+            }
+            return ret;
+        }
+
+
         ReducedComponentCollection::
-        ReducedComponentCollection(std::map<std::string, IReducedTemplateComponent *> components)
+        ReducedComponentCollection(std::map<std::string, const IReducedTemplateComponent *> components)
                 : fComponents(components),
                   fNInnerBins(components.begin()->second->GetNominal()->GetNInnerBins()),
                   fNOuterBins(components.begin()->second->GetNominal()->GetNOuterBins()) {
@@ -348,7 +406,7 @@ namespace xsec {
             return fComponents.at(component_label)->Predict(component_params);
         }
 
-        std::shared_ptr<TH1>
+        TH1*
         IUserTemplateComponent::
         ProjectNominal() const {
             return ComponentReducer::Project(this->GetNominal());
@@ -362,6 +420,68 @@ namespace xsec {
                 projected_systs[syst.first] = ComponentReducer::Project(syst.second);
             }
             return projected_systs;
+        }
+
+        Systematic<TH1>
+        IUserTemplateComponent::
+        ProjectSystematic(std::string syst_label) const {
+            return ComponentReducer::Project(this->GetSystematics().at(syst_label));
+        }
+
+        Array
+        IReducedTemplateComponent::
+        ProjectNominal() const {
+            return this->GetNominal()->Project();
+        }
+
+        std::map<std::string, Systematic<TH1>>
+        IReducedTemplateComponent::
+        ProjectSystematics() const {
+            std::map<std::string, Systematic<TH1>> ret;
+            for(const auto & syst : this->GetSystematics()) {
+                ret[syst.first] = this->ProjectSystematic(syst.first);
+            }
+            return ret;
+        }
+
+        Systematic<TH1>
+        IReducedTemplateComponent::
+        ProjectSystematic(std::string syst_label) const {
+            auto project_like = new TH1D("", "",
+                                         this->GetNominal()->GetNOuterBins()-2,
+                                         0, this->GetNominal()->GetNOuterBins()-2);
+            const Systematic<TH1> & systematic = this->GetSystematics().at(syst_label);
+            std::vector<std::shared_ptr<TH1>> projected_shifts(systematic.GetShifts().size());
+            for(auto i = 0u; i < systematic.GetShifts().size(); i++) {
+                Array projection = root::MapContentsToEigenInner(systematic.GetShifts()[i].get())
+                        .reshaped(this->GetNominal()->GetNInnerBins(), this->GetNominal()->GetNOuterBins())
+                        .colwise().sum();
+                projected_shifts[i] = std::shared_ptr<TH1>(root::ToROOTLike(project_like, projection));
+            }
+            return Systematic<TH1>(systematic.GetName(),
+                                   projected_shifts,
+                                   systematic.GetType());
+
+        }
+
+        std::vector<std::string>
+        ReducedComponentCollection::
+        GetSystematicLabels() const {
+            std::vector<std::string> labels;
+            for(const auto & syst : fComponents.begin()->second->GetSystematics()) {
+                labels.push_back(syst.first);
+            }
+            return labels;
+        }
+
+        std::vector<std::string>
+        UserComponentCollection::
+        GetSystematicLabels() const {
+            std::vector<std::string> labels;
+            for(const auto & syst : fComponents.begin()->second->GetSystematics()) {
+                labels.push_back(syst.first);
+            }
+            return labels;
         }
     }
 }

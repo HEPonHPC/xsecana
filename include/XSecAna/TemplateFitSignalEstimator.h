@@ -36,7 +36,7 @@ namespace xsec {
         void FixComponent(const std::string & template_name, const double & val=1);
         void ReleaseComponent(const std::string & template_name);
 
-        fit::IUserTemplateComponent * GetUserComponent(const std::string & component_label) const
+        const fit::IUserTemplateComponent * GetUserComponent(const std::string & component_label) const
         { return fUserComponents.GetComponents().at(component_label); }
 
         /// \brief given params, predict the number of signal events
@@ -61,22 +61,24 @@ namespace xsec {
         TCanvas * DrawParameterCorrelation(const TemplateFitResult & fit_result) const;
 
         std::vector<std::string> GetSystematicLabels() const;
-
         const fit::UserComponentCollection & GetUserComponentCollection() { return fUserComponents; }
         const fit::ReducedComponentCollection & GetReducedComponentCollection() { return fReducedComponents; }
-        const std::map<std::string, fit::IUserTemplateComponent*> & GetUserComponents() { return fUserComponents.GetComponents(); }
-        const std::map<std::string, fit::IReducedTemplateComponent*> & GetReducedComponents() { return fReducedComponents.GetComponents(); }
+        const std::map<std::string, const fit::IUserTemplateComponent*> & GetUserComponents() { return fUserComponents.GetComponents(); }
+        const std::map<std::string, const fit::IReducedTemplateComponent*> & GetReducedComponents() { return fReducedComponents.GetComponents(); }
 
-        fit::IReducedTemplateComponent * GetReducedComponent(const std::string & component_label)
+        const fit::IReducedTemplateComponent * GetReducedComponent(const std::string & component_label)
         { return fReducedComponents.GetComponents().at(component_label); }
-
+        
+        Systematic<TH1> PrefitComponentUncertainty(const std::string & component_label) const;
+        TH1 * PostfitTotalUncertainty(const TemplateFitResult & fit_result) const;
     protected:
+        bool _is_component_fixed(std::string label) const;
         void _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const;
         TemplateFitResult _template_fit_result(const fit::FitResult & fit_result) const;
         TemplateFitResult _fit(const std::shared_ptr<TH1> data, const std::vector<Vector> & seeds) const;
         TH1 * _to_template_binning(const Array & reduced_templates) const;
         TH1 * _project_prediction(const Array & prediction) const;
-        Systematic<TH1> _prefit_component_uncertainty(const std::string & component_label) const;
+
 
         fit::Vector ToCalculatorParams(const std::map<std::string, TH1*> & params) const;
 
@@ -89,7 +91,7 @@ namespace xsec {
         std::map<std::string, Systematic<TH1>> fSystematics;
         TH1 * fTotalTemplate = nullptr;
 
-        std::map<std::string, bool> fIsFreeTemplate;
+        std::map<std::string, const fit::IUserTemplateComponent*> fFixedUserComponents;
         fit::TemplateFitCalculator * fFitCalc;
 
         std::map<std::string, TH1*> fCovarianceMatrices;

@@ -70,11 +70,16 @@ namespace xsec {
             [[nodiscard]] IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
 
             std::shared_ptr<TH1> GetNominal() const override { return fJointTemplateMean; }
-            const std::map<std::string, Systematic<TH1>> & GetSystematics() const override { return fJointTemplateSystematics; }
+
+            const std::map<std::string, Systematic<TH1>> & GetSystematics() const override
+            { return fJointTemplateSystematics; }
+
             const std::shared_ptr<TH1> GetSampleNormalization(const std::string & sample_name) const
             { return fSampleNormalizations.at(sample_name); }
+
             const std::shared_ptr<TH1> GetJointNormalization() const
             { return fJointNormalization; }
+
             const std::map<std::string, const UserTemplateComponent *> & GetUserTemplateComponents() const
             { return fSamples; }
 

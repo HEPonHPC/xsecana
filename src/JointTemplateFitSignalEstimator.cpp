@@ -1,6 +1,8 @@
 #include "XSecAna/JointTemplateFitSignalEstimator.h"
 #include "XSecAna/Fit/JointTemplateFitComponent.h"
 #include "XSecAna/Utils.h"
+#include <algorithm>
+
 namespace xsec {
     JointTemplateFitSignalEstimator::
     JointTemplateFitSignalEstimator(const std::map<std::string, fit::TemplateFitSample> & samples,
@@ -15,12 +17,20 @@ namespace xsec {
     void
     JointTemplateFitSignalEstimator::
     FixComponent(const std::string & template_name, const double & val) {
+        fFixedComponentLabels.insert(template_name);
+        for(auto & sample : fSampleEstimators) {
+            sample.second->FixComponent(template_name, val);
+        }
         fJointEstimator->FixComponent(template_name, val);
     }
 
     void
     JointTemplateFitSignalEstimator::
     ReleaseComponent(const std::string & template_name) {
+        fFixedComponentLabels.erase(template_name);
+        for(auto & sample : fSampleEstimators) {
+            sample.second->ReleaseComponent(template_name);
+        }
         fJointEstimator->ReleaseComponent(template_name);
     }
 
@@ -99,8 +109,26 @@ namespace xsec {
     _joint_fit_result(const TemplateFitResult & condi_sample_fit_result) const {
         std::map<std::string, TemplateFitResult> joint_results;
 
+
         auto sample_it = fSampleEstimators.begin();
         joint_results[sample_it->first] = condi_sample_fit_result;
+        // Normalization uncertainty for fixed components need to be re-calculated
+        // since the joint template fitter projects all samples into the phase space,
+        // but we calculate this separately for each sample
+        for(const auto & fixed_component_label : fFixedComponentLabels) {
+            auto prefit_uncertainty = fSampleEstimators.at(sample_it->first)->PrefitComponentUncertainty(fixed_component_label);
+            joint_results[sample_it->first].component_params_error_up.at(fixed_component_label) =
+                    (TH1*) prefit_uncertainty.Up()->Clone();
+            joint_results[sample_it->first].component_params_error_down.at(fixed_component_label) =
+                    (TH1*) prefit_uncertainty.Down()->Clone();
+            joint_results[sample_it->first].component_params_error_up.at(fixed_component_label)->Multiply(
+                    joint_results[sample_it->first].component_params.at(fixed_component_label)
+            );
+            joint_results[sample_it->first].component_params_error_down.at(fixed_component_label)->Multiply(
+                    joint_results[sample_it->first].component_params.at(fixed_component_label)
+            );
+        }
+
         std::map<std::string, TH1*> comp_params;
         std::map<std::string, TH1*> comp_params_error_up;
         std::map<std::string, TH1*> comp_params_error_down;

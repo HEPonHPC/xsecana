@@ -139,11 +139,6 @@ namespace xsec {
         }
         fInnerBinMap = fit::detail::ParamMap(inner_map.reshaped());
 
-        // initialize all templates as free
-        for (const auto & comp: fReducedComponents.GetComponents()) {
-            fIsFreeTemplate[comp.first] = true;
-        }
-
         fTotalTemplate = nullptr;
         for (const auto & component: fReducedComponents.GetComponents()) {
             if (!fTotalTemplate) {
@@ -200,6 +195,13 @@ namespace xsec {
         return (TH2D *) fCovarianceMatrices.at(systematic_name);
     }
 
+    bool
+    TemplateFitSignalEstimator::
+    _is_component_fixed(std::string label) const {
+        auto pos = fFixedUserComponents.find(label);
+        return pos != fFixedUserComponents.end();
+    }
+
     void
     TemplateFitSignalEstimator::
     FixComponent(const std::string & component_label, const double & val) {
@@ -207,17 +209,21 @@ namespace xsec {
         for (auto o = 0u; o < fReducedComponents.GetNOuterBins(); o++) {
             fFitCalc->FixTemplate(idx * fReducedComponents.GetNOuterBins() + o, val);
         }
-        fIsFreeTemplate.at(component_label) = false;
+        fFixedUserComponents[component_label] = fUserComponents.GetComponent(component_label);
     }
 
     void
     TemplateFitSignalEstimator::
     ReleaseComponent(const std::string & component_label) {
+        // if this component isn't fixed, do nothing
+        if(!_is_component_fixed(component_label)) return;
+        else {
+            fFixedUserComponents.erase(component_label);
+        }
         auto idx = fReducedComponents.GetComponentIdx(component_label);
         for (auto o = 0u; o < fReducedComponents.GetNOuterBins(); o++) {
             fFitCalc->ReleaseTemplate(idx * fReducedComponents.GetNOuterBins() + o);
         }
-        fIsFreeTemplate.at(component_label) = true;
     }
 
     void
@@ -394,17 +400,63 @@ namespace xsec {
 
     Systematic<TH1>
     TemplateFitSignalEstimator::
-    _prefit_component_uncertainty(const std::string & component_label) const {
-        const auto component = fUserComponents.GetComponents().at(component_label);
+    PrefitComponentUncertainty(const std::string & component_label) const {
+        const auto component = fUserComponents.GetComponent(component_label);
         std::map<std::string, Systematic<TH1>> projected_systematics;
         for(const auto & syst : component->GetSystematics()) {
             projected_systematics[syst.first] = fit::ComponentReducer::Project(syst.second);
         }
-        auto nominal = fit::ComponentReducer::Project(component->GetNominal());
-        auto up = std::get<1>(SimpleQuadSum::TotalFractionalUncertainty(nominal.get(), projected_systematics)).Up();
+        TH1 * nominal = fit::ComponentReducer::Project(component->GetNominal());
+        auto up = std::get<1>(SimpleQuadSum::TotalFractionalUncertainty(nominal, projected_systematics)).Up();
         auto down = std::shared_ptr<TH1>((TH1*) up->Clone());
         down->Scale(-1);
         return Systematic<TH1>("", up, down);
+    }
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    PostfitTotalUncertainty(const TemplateFitResult & fit_result) const {
+        Matrix a(fReducedComponents.GetNOuterBins(), fReducedComponents.size());
+        for (const auto & reduced_component: fReducedComponents.GetComponents()) {
+            a.col(fReducedComponents.GetComponentIdx(reduced_component.first)) =
+                    reduced_component.second->GetNominal()->Project();
+        }
+        Matrix cov_matrix = root::MapContentsToEigenInner(fit_result.covariance).
+                reshaped(fit_result.covariance->GetNbinsX(),
+                         fit_result.covariance->GetNbinsY());
+
+        // calculate correlated variance on total number of selected signal events
+        // from the fitted template parameters
+        Array fitted_variance = Array::Zero(fReducedComponents.GetNOuterBins());
+        for(int outer_bin = 0; outer_bin < a.rows(); outer_bin++) {
+
+            for(int icomponent = 0; icomponent < a.cols(); icomponent++) {
+                for(int jcomponent = 0; jcomponent < a.cols(); jcomponent++) {
+                    fitted_variance(outer_bin) += a(outer_bin, icomponent) * a(outer_bin, jcomponent) *
+                                                  cov_matrix(fReducedComponents.GetNOuterBins() * icomponent + outer_bin,
+                                                             fReducedComponents.GetNOuterBins() * jcomponent + outer_bin);
+                }
+            }
+
+        }
+
+        // calculate variance on total number of selected signal events
+        // from MC uncertainty for the components that were not fit and treat them
+        // as uncorrelated with the fitted parameters
+        //Array mc_variance = Array::Zero(fReducedComponents.GetNOuterBins());
+        fit::UserComponentCollection fixed_components(fFixedUserComponents);
+        auto fixed_total_systematics = fixed_components.ProjectedTotalSystematics();
+        auto fixed_total = fixed_components.NominalProjectedTotal();
+        Array mc_variance = fOuterBinMap.ToMinimizerParams(
+                root::MapContentsToEigen(
+                        std::get<1>(SimpleQuadSum::TotalAbsoluteUncertainty(fixed_total, fixed_total_systematics)).Up().get()
+                ).pow(2)
+        );
+
+        Array total_stdev = (fitted_variance + mc_variance).abs().sqrt();
+        TH1 * htotal_variance = root::ToROOT(fOuterBinMap.ToUserParams(total_stdev), fProjectPredictionProps);
+        htotal_variance->Divide(this->PredictProjectedTotal(fit_result.component_params));
+        return htotal_variance;
     }
 
     TemplateFitResult
@@ -441,12 +493,15 @@ namespace xsec {
         ToUserParams(result.params, component_params);
         ToUserParams(result.params_error_up, component_params_error_up);
         ToUserParams(result.params_error_down, component_params_error_down);
-        for (auto component: fReducedComponents.GetComponents()) {
-            if (!fIsFreeTemplate.at(component.first)) {
-                Systematic<TH1> prefit_uncertainty = _prefit_component_uncertainty(component.first);
-                component_params_error_up[component.first] = (TH1*) prefit_uncertainty.Up()->Clone();
-                component_params_error_down[component.first] = (TH1*) prefit_uncertainty.Down()->Clone();
-            }
+        for (const auto & component : fFixedUserComponents) {
+            component_params_error_up.at(component.first)->Reset("ICESM");
+            component_params_error_down.at(component.first)->Reset("ICESM");
+
+            Systematic<TH1> prefit_uncertainty = PrefitComponentUncertainty(component.first);
+            component_params_error_up.at(component.first) = (TH1 *) prefit_uncertainty.Up()->Clone();
+            component_params_error_down.at(component.first) = (TH1 *) prefit_uncertainty.Down()->Clone();
+            component_params_error_up.at(component.first)->Multiply(component_params.at(component.first));
+            component_params_error_down.at(component.first)->Multiply(component_params.at(component.first));
         }
         auto covariance = new TH2D("", "",
                                    result.covariance.rows(), 0, result.covariance.rows(),
@@ -466,17 +521,8 @@ namespace xsec {
     TemplateFitSignalEstimator::
     DrawParameterCorrelation(const TemplateFitResult & fit_result) const {
         auto c = new TCanvas("parameter_correlation");
-        auto tmp_cor = (TH2D *) fit_result.covariance->Clone();
-        for (auto i = 1; i <= tmp_cor->GetNbinsX(); i++) {
-            for (auto j = 1; j <= tmp_cor->GetNbinsY(); j++) {
-                double cov = fit_result.covariance->GetBinContent(i, j);
-                double dii = fit_result.covariance->GetBinContent(i, i);
-                double djj = fit_result.covariance->GetBinContent(j, j);
-                tmp_cor->SetBinContent(i, j, cov / std::sqrt(dii * djj));
-            }
-        }
-
-        this->_draw_covariance_helper(c, tmp_cor, fit_result);
+        auto corr = CorrelationFromCovariance(fit_result.covariance);
+        this->_draw_covariance_helper(c, corr, fit_result);
         return c;
     }
 
@@ -499,8 +545,8 @@ namespace xsec {
         yaxis->SetNdivisions(fReducedComponents.size());
 
         for (auto component: fComponentIdx) {
-            xaxis->ChangeLabel(component.second, 40, -1, 33, -1, -1, component.first.c_str());
-            yaxis->ChangeLabel(component.second, 40, -1, 33, -1, -1, component.first.c_str());
+            xaxis->ChangeLabel(component.second+1, 40, -1, 33, -1, -1, component.first.c_str());
+            yaxis->ChangeLabel(component.second+1, 40, -1, 33, -1, -1, component.first.c_str());
         }
         mat->GetXaxis()->SetNdivisions(fReducedComponents.size(), false);
         mat->GetYaxis()->SetNdivisions(fReducedComponents.size(), false);

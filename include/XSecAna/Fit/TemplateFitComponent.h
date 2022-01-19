@@ -40,6 +40,7 @@ namespace xsec {
             const Vector & GetArray() const { return fArray; };
             int GetNInnerBins() const { return fNInnerBins; }
             int GetNOuterBins() const { return fNOuterBins; }
+            Array Project() const;
 
         private:
             std::shared_ptr<TH1> fHist;
@@ -57,8 +58,8 @@ namespace xsec {
             explicit ComponentReducer(const TH1 * mask);
             [[nodiscard]] ReducedComponent * Reduce(const std::shared_ptr<TH1> component) const;
             [[nodiscard]] Systematic<TH1> Reduce(const Systematic<TH1> & syst) const;
-            [[nodiscard]] std::shared_ptr<TH1> Compress1D(const std::shared_ptr<TH1> component) const;
-            static std::shared_ptr<TH1> Project(const std::shared_ptr<TH1> templ);
+            [[nodiscard]] TH1 * Compress1D(const std::shared_ptr<TH1> component) const;
+            static TH1 * Project(const std::shared_ptr<TH1> templ);
             static Systematic<TH1> Project(const Systematic<TH1> & syst);
 
             const TH1 * GetMask() const { return fMask; }
@@ -76,6 +77,9 @@ namespace xsec {
             [[nodiscard]] virtual Vector Predict(const Vector & component_params) const = 0;
             virtual const ReducedComponent * GetNominal() const = 0;
             virtual const std::map<std::string, Systematic<TH1>> & GetSystematics() const = 0;
+            virtual Array ProjectNominal() const final;
+            virtual std::map<std::string, Systematic<TH1>> ProjectSystematics() const final;
+            virtual Systematic<TH1> ProjectSystematic(std::string syst_label) const final;
         };
 
         ///\brief The user level representation of a template fit component
@@ -85,52 +89,60 @@ namespace xsec {
             [[nodiscard]] virtual IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const = 0;
             virtual std::shared_ptr<TH1> GetNominal() const = 0;
             virtual const std::map<std::string, Systematic<TH1>> & GetSystematics() const = 0;
-            virtual std::shared_ptr<TH1> ProjectNominal() const final;
+            virtual TH1 * ProjectNominal() const final;
             virtual std::map<std::string, Systematic<TH1>> ProjectSystematics() const final;
+            virtual Systematic<TH1> ProjectSystematic(std::string syst_label) const final;
         };
 
         ///\brief a collection of components that when summed together, give the total prediction
         class ReducedComponentCollection {
         public:
             ReducedComponentCollection() = default;
-            explicit ReducedComponentCollection(std::map<std::string, IReducedTemplateComponent *> components);
+            explicit ReducedComponentCollection(std::map<std::string, const IReducedTemplateComponent *> components);
 
             [[nodiscard]] Vector Predict(const Vector & user_params) const;
             [[nodiscard]] Vector PredictComponent(std::string component_label, const Vector & user_params) const;
             int GetNOuterBins() const { return fComponents.begin()->second->GetNominal()->GetNOuterBins(); }
             int GetNInnerBins() const { return fComponents.begin()->second->GetNominal()->GetNInnerBins(); }
             size_t size() const { return fComponents.size(); }
-            const std::map<std::string, IReducedTemplateComponent*> & GetComponents() const { return fComponents; }
+            const std::map<std::string, const IReducedTemplateComponent*> & GetComponents() const { return fComponents; }
+            const IReducedTemplateComponent * GetComponent(std::string label) const { return fComponents.at(label); }
             int GetComponentIdx(const std::string & component_label) const { return fComponentIdx.at(component_label); }
+            [[nodiscard]] std::vector<std::string> GetSystematicLabels() const;
 
         private:
             int fNInnerBins;
             int fNOuterBins;
-            std::map<std::string, IReducedTemplateComponent *> fComponents;
+            std::map<std::string, const IReducedTemplateComponent *> fComponents;
             std::map<std::string, int> fComponentIdx;
         };
 
         class UserComponentCollection {
         public:
             UserComponentCollection() = default;
-            explicit UserComponentCollection(std::map<std::string, IUserTemplateComponent*> components)
+            explicit UserComponentCollection(std::map<std::string, const IUserTemplateComponent*> components)
                     : fComponents(components) {}
 
-            const std::map<std::string, IUserTemplateComponent*> & GetComponents() const { return fComponents; }
-            ReducedComponentCollection Reduce(const ComponentReducer & reducer) const;
-            [[nodiscard]] TH1 * Predict(std::map<std::string, TH1 *> params) const;
-            [[nodiscard]] TH1 * PredictComponent(std::string component_label, const TH1 * user_params) const;
+            const std::map<std::string, const IUserTemplateComponent*> & GetComponents() const { return fComponents; }
+            [[nodiscard]] ReducedComponentCollection Reduce(const ComponentReducer & reducer) const;
+            [[nodiscard]] TH1 * NominalProjectedTotal() const;
+            [[nodiscard]] Systematic<TH1> SystematicProjectedTotal(std::string syst_label) const;
+            [[nodiscard]] std::map<std::string, Systematic<TH1>> ProjectedTotalSystematics() const;
+            [[nodiscard]] std::vector<std::string> GetSystematicLabels() const;
+            const IUserTemplateComponent * GetComponent(std::string label) const { return fComponents.at(label); }
+            //[[nodiscard]] TH1 * Predict(std::map<std::string, TH1 *> params) const;
+            //[[nodiscard]] TH1 * PredictComponent(std::string component_label, const TH1 * user_params) const;
 
         private:
-            std::map<std::string, IUserTemplateComponent*> fComponents;
+            std::map<std::string, const IUserTemplateComponent*> fComponents;
         };
 
         ///\brief Basic user-level template component object for single-sample template fitting
         class UserTemplateComponent : public IUserTemplateComponent {
         public:
             explicit UserTemplateComponent(const std::shared_ptr<TH1> mean,
-                                           const std::map<std::string, Systematic<TH1>> & systematics = std::map<std::string, Systematic<TH1>>())
-                    : fMean(mean), fSystematics(std::move(systematics)) {}
+                                           std::map<std::string, Systematic<TH1>> systematics = std::map<std::string, Systematic<TH1>>())
+                    : fMean(mean), fSystematics(systematics) {}
 
             [[nodiscard]] IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
             std::shared_ptr<TH1> GetNominal() const override { return fMean; }
@@ -138,15 +150,15 @@ namespace xsec {
 
         private:
             const std::shared_ptr<TH1> fMean;
-            const std::map<std::string, Systematic<TH1>> & fSystematics;
+            const std::map<std::string, Systematic<TH1>> fSystematics;
         };
 
         ///\brief Basic fitter-level template component object for single-sample template fitting
         class ReducedTemplateComponent : public IReducedTemplateComponent {
         public:
             explicit ReducedTemplateComponent(const ReducedComponent * mean,
-                                              const std::map<std::string, Systematic<TH1>> & systematics = std::map<std::string, Systematic<TH1>>())
-                    : fMean(mean), fSystematics(std::move(systematics)) {}
+                                              const std::map<std::string, Systematic<TH1>> systematics = std::map<std::string, Systematic<TH1>>())
+                    : fMean(mean), fSystematics(systematics) {}
 
             [[nodiscard]] Vector Predict(const Vector & component_params) const override;
             const ReducedComponent * GetNominal() const override { return fMean; }
@@ -154,13 +166,13 @@ namespace xsec {
 
         private:
             const ReducedComponent * fMean;
-            const std::map<std::string, Systematic<TH1>> & fSystematics;
+            const std::map<std::string, Systematic<TH1>> fSystematics;
         };
 
         struct TemplateFitSample {
             TemplateFitSample() = default;
 
-            TemplateFitSample(std::map<std::string, IUserTemplateComponent*> & _components,
+            TemplateFitSample(std::map<std::string, const IUserTemplateComponent*> & _components,
                               std::map<std::string, Systematic<TH1>> _shape_only_systematics)
                     : components(_components), shape_only_systematics(_shape_only_systematics) {}
 

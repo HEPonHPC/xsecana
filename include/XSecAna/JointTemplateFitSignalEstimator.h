@@ -2,6 +2,7 @@
 
 #include "XSecAna/TemplateFitSignalEstimator.h"
 #include "XSecAna/Fit/JointTemplateFitComponent.h"
+#include <set>
 namespace xsec {
 
     class JointTemplateFitSignalEstimator {
@@ -35,7 +36,7 @@ namespace xsec {
         TH1 * _condi_params_to_comp_params(const std::string & name, const TH1 * condi) const;
         TemplateFitSignalEstimator * fJointEstimator;
         std::map<std::string, TemplateFitSignalEstimator*> fSampleEstimators;
-
+        std::set<std::string> fFixedComponentLabels;
         fit::ComponentReducer fReducer;
 
     };

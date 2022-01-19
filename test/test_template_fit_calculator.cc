@@ -87,7 +87,7 @@ int main(int argc, char ** argv) {
         background2_templates.row(i) = (i + 1) * Vector::Ones(dims[1]);
     }
 
-    std::map<std::string, IReducedTemplateComponent*> templates = {
+    std::map<std::string, const IReducedTemplateComponent*> templates = {
             {"a", new ReducedTemplateComponent(new ReducedComponent(signal_templates.reshaped().transpose(), dims[0], dims[1]))},
             {"b", new ReducedTemplateComponent(new ReducedComponent(background1_templates.reshaped().transpose(), dims[0], dims[1]))},
             {"c", new ReducedTemplateComponent(new ReducedComponent(background2_templates.reshaped().transpose(), dims[0], dims[1]))},
