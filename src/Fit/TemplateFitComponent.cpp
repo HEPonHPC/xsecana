@@ -321,6 +321,21 @@ namespace xsec {
 
         TH1 *
         UserComponentCollection::
+        NominalTotal() const {
+            TH1 * total = nullptr;
+            for(const auto & component : fComponents) {
+                if (!total) {
+                    total = (TH1*) component.second->GetNominal()->Clone();
+                }
+                else {
+                    total->Add(component.second->GetNominal().get());
+                }
+            }
+            return total;
+        }
+
+        TH1 *
+        UserComponentCollection::
         NominalProjectedTotal() const {
             TH1 * total = nullptr;
             for(const auto & component : fComponents) {
@@ -354,6 +369,16 @@ namespace xsec {
             return Systematic<TH1>(fComponents.begin()->second->GetSystematics().at(syst_label).GetName(),
                                    projected_total_shifted,
                                    fComponents.begin()->second->GetSystematics().at(syst_label).GetType());
+        }
+
+        std::map<std::string, Systematic<TH1>>
+        UserComponentCollection::
+        TotalSystematics() const {
+            std::map<std::string, Systematic<TH1>> ret;
+            for(const auto & syst : fComponents.begin()->second->GetSystematics()) {
+                ret[syst.first] = this->SystematicTotal(syst.first);
+            }
+            return ret;
         }
 
         std::map<std::string, Systematic<TH1>>

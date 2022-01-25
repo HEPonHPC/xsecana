@@ -71,6 +71,8 @@ namespace xsec {
         
         Systematic<TH1> PrefitComponentUncertainty(const std::string & component_label) const;
         TH1 * PostfitTotalUncertainty(const TemplateFitResult & fit_result) const;
+
+        const TH1 * GetMask() const { return fReducer.GetMask(); }
     protected:
         bool _is_component_fixed(std::string label) const;
         void _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const;

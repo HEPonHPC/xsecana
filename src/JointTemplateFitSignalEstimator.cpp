@@ -154,4 +154,29 @@ namespace xsec {
         };
         return joint_results;
     }
+
+    std::shared_ptr<TH1>
+    JointTemplateFitSignalEstimator::
+    JoinData(const std::map<std::string, std::shared_ptr<TH1>> & data_samples) {
+        std::vector<std::shared_ptr<TH1>> samples;
+        for(const auto & sample : data_samples) {
+            samples.push_back(sample.second);
+        }
+        return fit::detail::_join(samples);
+    }
+
+    std::map<std::string, TemplateFitResult>
+    JointTemplateFitSignalEstimator::
+    Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+        int nrandom_seeds) const {
+        return this->Fit(JoinData(data), nrandom_seeds);
+    }
+
+    std::map<std::string, TemplateFitResult>
+    JointTemplateFitSignalEstimator::
+    Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+        fit::IFitter * fitter,
+        int nrandom_seeds) {
+        return this->Fit(JoinData(data), fitter, nrandom_seeds);
+    }
 }

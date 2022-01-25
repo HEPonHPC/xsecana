@@ -32,24 +32,6 @@ namespace xsec {
                 return joined;
             }
         }
-        /*
-        class UserSingleSampleTemplateComponent : public IUserTemplateComponent {
-        public:
-            UserSingleSampleTemplateComponent(const TH1 * nominal,
-                                              const std::map<std::string, xsec::Systematic<TH1>> & systematics)
-                    : fNominal(nominal), fSystematics(systematics) {}
-
-            const TH1 * GetNominal() const override { return fNominal; }
-            const std::map<std::string, Systematic<TH1>> & GetSystematics() const { return fSystematics; }
-            IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
-            TH1 * ProjectNominal() const;
-            std::map<std::string, Systematic<TH1>> ProjectSystematics() const;
-
-        private:
-            const TH1 * fNominal;
-            std::map<std::string, Systematic<TH1>> fSystematics;
-        };
-
 
         class ReducedSingleSampleTemplateComponent : public ReducedTemplateComponent {
         public:

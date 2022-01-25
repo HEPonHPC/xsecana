@@ -13,6 +13,12 @@ namespace xsec {
         [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::shared_ptr<TH1> data, int nrandom_seeds=-1) const;
         [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds=-1);
 
+        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+                                                                   int nrandom_seeds=-1) const;
+        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+                                                                   fit::IFitter * fitter,
+                                                                   int nrandom_seeds=-1);
+
         TemplateFitSignalEstimator * GetSampleTemplateFit(const std::string & name) const { return fSampleEstimators.at(name); }
         TemplateFitSignalEstimator * GetJointTemplateFit() const { return fJointEstimator; }
 
@@ -31,6 +37,7 @@ namespace xsec {
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;
+        static std::shared_ptr<TH1> JoinData(const std::map<std::string, std::shared_ptr<TH1>> & data_samples);
     private:
         std::map<std::string, TemplateFitResult> _joint_fit_result(const TemplateFitResult & condi_sample_fit_result) const;
         TH1 * _condi_params_to_comp_params(const std::string & name, const TH1 * condi) const;
