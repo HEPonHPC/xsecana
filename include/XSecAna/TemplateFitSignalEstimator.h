@@ -52,7 +52,7 @@ namespace xsec {
         TH1 * NominalProjectedTotal() const;
 
         double Chi2(const std::shared_ptr<TH1> data,
-                    const std::map<std::string, TH1*> & params) const;
+                    const std::map<std::string, TH1*> & params = std::map<std::string, TH1*>()) const;
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;

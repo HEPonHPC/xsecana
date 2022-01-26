@@ -33,22 +33,11 @@ namespace xsec {
             }
         }
 
-        class ReducedSingleSampleTemplateComponent : public ReducedTemplateComponent {
-        public:
-            ReducedSingleSampleTemplateComponent(const ReducedComponent * mean,
-                                                 std::map<std::string, Systematic<TH1>> & systematics)
-            : ReducedTemplateComponent(mean),  fSystematics(systematics) {}
-
-            const std::map<std::string, Systematic<TH1>> & GetSystematics() const { return fSystematics; }
-        private:
-            const std::map<std::string, Systematic<TH1>> & fSystematics;
-        };
-*/
         ///\brief User-level template fit component for simultaneous fitting of
         // multiple correlated samples
         class UserJointTemplateComponent : public IUserTemplateComponent {
         public:
-            UserJointTemplateComponent(const std::map<std::string, const UserTemplateComponent *> & sample_components);
+            UserJointTemplateComponent(const std::map<std::string, const IUserTemplateComponent *> & sample_components);
             [[nodiscard]] IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
 
             std::shared_ptr<TH1> GetNominal() const override { return fJointTemplateMean; }
@@ -62,7 +51,7 @@ namespace xsec {
             const std::shared_ptr<TH1> GetJointNormalization() const
             { return fJointNormalization; }
 
-            const std::map<std::string, const UserTemplateComponent *> & GetUserTemplateComponents() const
+            const std::map<std::string, const IUserTemplateComponent *> & GetUserTemplateComponents() const
             { return fSamples; }
 
         private:
@@ -86,7 +75,7 @@ namespace xsec {
             std::map<std::string, std::map<std::string, TH1*>> fSampleNormalizationCovariances;
 
             std::string fConditioningSampleLabel;
-            std::map<std::string, const UserTemplateComponent*> fSamples;
+            std::map<std::string, const IUserTemplateComponent*> fSamples;
 
         };
 
@@ -95,7 +84,7 @@ namespace xsec {
         // correlated samples
         class ReducedJointTemplateComponent : public IReducedTemplateComponent {
         public:
-            ReducedJointTemplateComponent(std::map<std::string, const ReducedTemplateComponent*> samples,
+            ReducedJointTemplateComponent(std::map<std::string, const IReducedTemplateComponent*> samples,
                                           const ReducedComponent * joined_template_mean,
                                           std::shared_ptr<TH1> joined_normalization,
                                           std::map<std::string, std::shared_ptr<TH1>> & sample_normalizations,
@@ -131,10 +120,10 @@ namespace xsec {
             const std::shared_ptr<TH1> GetComplimentarySampleNormalization() const
             { return fSampleNormalizations.at(fComplimentarySampleLabel); }
 
-            const ReducedTemplateComponent * GetConditioningComponent() const
+            const IReducedTemplateComponent * GetConditioningComponent() const
             { return fConditioningSample; }
 
-            const ReducedTemplateComponent * GetComplimentaryComponent() const
+            const IReducedTemplateComponent * GetComplimentaryComponent() const
             { return fComplimentarySample; }
 
             bool IsSingular() const { return fIsSingular; }
@@ -160,8 +149,8 @@ namespace xsec {
             std::string fComplimentarySampleLabel;
             int fNOuterBins;
 
-            const ReducedTemplateComponent * fConditioningSample;
-            const ReducedTemplateComponent * fComplimentarySample;
+            const IReducedTemplateComponent * fConditioningSample;
+            const IReducedTemplateComponent * fComplimentarySample;
             bool fIsSingular;
         };
     }

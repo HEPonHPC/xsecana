@@ -124,7 +124,7 @@ namespace xsec {
                 std::map<std::string, const IUserTemplateComponent *> joined_components;
                 // join components
                 for (const auto & component: samples.begin()->second.components.GetComponents()) {
-                    std::map<std::string, const UserTemplateComponent*> tmp_comp;
+                    std::map<std::string, const IUserTemplateComponent*> tmp_comp;
                     for (const auto & sample: samples) {
                         tmp_comp[sample.first] =
                                 (UserTemplateComponent *) samples.at(sample.first)
@@ -241,7 +241,7 @@ namespace xsec {
         }
 
         UserJointTemplateComponent::
-        UserJointTemplateComponent(const std::map<std::string, const UserTemplateComponent *> & sample_components)
+        UserJointTemplateComponent(const std::map<std::string, const IUserTemplateComponent *> & sample_components)
                 : fSamples(sample_components) {
             // joined templates
             std::vector<std::shared_ptr<TH1>> vmeans;
@@ -262,7 +262,7 @@ namespace xsec {
             std::vector<std::shared_ptr<TH1>> projected_sample_means;
             for (const auto & sample: sample_components) {
                 fSampleNormalizations[sample.first] = _to1d(
-                        std::shared_ptr<TH1>(ComponentReducer::Project(sample.second->GetNominal()))
+                        std::shared_ptr<TH1>(ComponentReducer::Project(sample.second->GetNominalForErrorCalculation()))
                 );
                 projected_sample_means.push_back(fSampleNormalizations.at(sample.first));
             }
@@ -359,9 +359,9 @@ namespace xsec {
                 compressed_norm_means_to_join.push_back(compressed_sample_norm_means.at(sample.first));
             }
 
-            std::map<std::string, const ReducedTemplateComponent *> reduced_samples;
+            std::map<std::string, const IReducedTemplateComponent *> reduced_samples;
             for (const auto & sample: fSamples) {
-                reduced_samples[sample.first] = (ReducedTemplateComponent *) sample.second->Reduce(reducer);
+                reduced_samples[sample.first] = sample.second->Reduce(reducer);
             }
             return new ReducedJointTemplateComponent(reduced_samples,
                                                      reducer.Reduce(fJointTemplateMean),
@@ -371,7 +371,7 @@ namespace xsec {
         }
 
         ReducedJointTemplateComponent::
-        ReducedJointTemplateComponent(std::map<std::string, const ReducedTemplateComponent *> samples,
+        ReducedJointTemplateComponent(std::map<std::string, const IReducedTemplateComponent *> samples,
                                       const ReducedComponent * joined_template_mean,
                                       std::shared_ptr<TH1> joined_norm_mean,
                                       std::map<std::string, std::shared_ptr<TH1>> & sample_norm_means,

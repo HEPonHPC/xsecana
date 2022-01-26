@@ -174,6 +174,15 @@ namespace xsec {
                                                 reduced_systematics);
         }
 
+        IReducedTemplateComponent *
+        UserTemplateComponentAlternativeNominal::
+        Reduce(const ComponentReducer & reducer) const {
+            auto reduced_component = UserTemplateComponent::Reduce(reducer);
+            return new ReducedTemplateComponentAlternativeNominal(reduced_component->GetNominal(),
+                                                                  reduced_component->GetSystematics(),
+                                                                  reducer.Reduce(fMeanForErrorCalc));
+        }
+
         ComponentReducer::
         ComponentReducer(const TH1 * mask)
                 : fMask(mask),
@@ -336,6 +345,21 @@ namespace xsec {
 
         TH1 *
         UserComponentCollection::
+        NominalTotalForErrorCalculation() const {
+            TH1 * total = nullptr;
+            for(const auto & component : fComponents) {
+                if (!total) {
+                    total = (TH1*) component.second->GetNominalForErrorCalculation()->Clone();
+                }
+                else {
+                    total->Add(component.second->GetNominalForErrorCalculation().get());
+                }
+            }
+            return total;
+        }
+
+        TH1 *
+        UserComponentCollection::
         NominalProjectedTotal() const {
             TH1 * total = nullptr;
             for(const auto & component : fComponents) {
@@ -347,6 +371,43 @@ namespace xsec {
                 }
             }
             return total;
+        }
+
+        TH1 *
+        UserComponentCollection::
+        NominalProjectedTotalForErrorCalculation() const {
+            TH1 * total = nullptr;
+            for(const auto & component : fComponents) {
+                if(!total) {
+                    total = component.second->ProjectNominalForErrorCalculation();
+                }
+                else {
+                    total->Add(component.second->ProjectNominalForErrorCalculation());
+                }
+            }
+            return total;
+        }
+
+        Systematic<TH1>
+        UserComponentCollection::
+        SystematicTotal(std::string syst_label) const {
+            std::vector<std::shared_ptr<TH1>> total_shifted(
+                    fComponents.begin()->second->GetSystematics().at(syst_label).GetShifts().size(), nullptr
+            );
+            for(auto const & component : fComponents) {
+                auto component_shifts = component.second->GetSystematics().at(syst_label).GetShifts();
+                for(auto i = 0u; i < total_shifted.size(); i++) {
+                    if(!total_shifted[i]) {
+                        total_shifted[i] = std::shared_ptr<TH1>((TH1*) component_shifts[i]->Clone());
+                    }
+                    else {
+                        total_shifted[i]->Add(component_shifts[i].get());
+                    }
+                }
+            }
+            return Systematic<TH1>(fComponents.begin()->second->GetSystematics().at(syst_label).GetName(),
+                                   total_shifted,
+                                   fComponents.begin()->second->GetSystematics().at(syst_label).GetType());
         }
 
         Systematic<TH1>
@@ -437,6 +498,12 @@ namespace xsec {
             return ComponentReducer::Project(this->GetNominal());
         }
 
+        TH1*
+        IUserTemplateComponent::
+        ProjectNominalForErrorCalculation() const {
+            return ComponentReducer::Project(this->GetNominalForErrorCalculation());
+        }
+
         std::map<std::string, Systematic<TH1>>
         IUserTemplateComponent::
         ProjectSystematics() const {
@@ -457,6 +524,12 @@ namespace xsec {
         IReducedTemplateComponent::
         ProjectNominal() const {
             return this->GetNominal()->Project();
+        }
+
+        Array
+        IReducedTemplateComponent::
+        ProjectNominalForErrorCalculation() const {
+            return this->GetNominalForErrorCalculation()->Project();
         }
 
         std::map<std::string, Systematic<TH1>>

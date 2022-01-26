@@ -76,8 +76,10 @@ namespace xsec {
         public:
             [[nodiscard]] virtual Vector Predict(const Vector & component_params) const = 0;
             virtual const ReducedComponent * GetNominal() const = 0;
+            virtual const ReducedComponent * GetNominalForErrorCalculation() const { return this->GetNominal(); }
             virtual const std::map<std::string, Systematic<TH1>> & GetSystematics() const = 0;
             virtual Array ProjectNominal() const final;
+            virtual Array ProjectNominalForErrorCalculation() const final;
             virtual std::map<std::string, Systematic<TH1>> ProjectSystematics() const final;
             virtual Systematic<TH1> ProjectSystematic(std::string syst_label) const final;
         };
@@ -88,8 +90,10 @@ namespace xsec {
         public:
             [[nodiscard]] virtual IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const = 0;
             virtual std::shared_ptr<TH1> GetNominal() const = 0;
+            virtual std::shared_ptr<TH1> GetNominalForErrorCalculation() const { return this->GetNominal(); }
             virtual const std::map<std::string, Systematic<TH1>> & GetSystematics() const = 0;
             virtual TH1 * ProjectNominal() const final;
+            virtual TH1 * ProjectNominalForErrorCalculation() const final;
             virtual std::map<std::string, Systematic<TH1>> ProjectSystematics() const final;
             virtual Systematic<TH1> ProjectSystematic(std::string syst_label) const final;
         };
@@ -126,8 +130,13 @@ namespace xsec {
             const std::map<std::string, const IUserTemplateComponent*> & GetComponents() const { return fComponents; }
             [[nodiscard]] ReducedComponentCollection Reduce(const ComponentReducer & reducer) const;
             [[nodiscard]] TH1 * NominalProjectedTotal() const;
+            [[nodiscard]] TH1 * NominalTotal() const;
+            [[nodiscard]] TH1 * NominalProjectedTotalForErrorCalculation() const;
+            [[nodiscard]] TH1 * NominalTotalForErrorCalculation() const;
             [[nodiscard]] Systematic<TH1> SystematicProjectedTotal(std::string syst_label) const;
+            [[nodiscard]] Systematic<TH1> SystematicTotal(std::string syst_label) const;
             [[nodiscard]] std::map<std::string, Systematic<TH1>> ProjectedTotalSystematics() const;
+            [[nodiscard]] std::map<std::string, Systematic<TH1>> TotalSystematics() const;
             [[nodiscard]] std::vector<std::string> GetSystematicLabels() const;
             const IUserTemplateComponent * GetComponent(std::string label) const { return fComponents.at(label); }
             //[[nodiscard]] TH1 * Predict(std::map<std::string, TH1 *> params) const;
@@ -153,6 +162,21 @@ namespace xsec {
             const std::map<std::string, Systematic<TH1>> fSystematics;
         };
 
+        class UserTemplateComponentAlternativeNominal : public UserTemplateComponent {
+        public:
+            explicit UserTemplateComponentAlternativeNominal(const std::shared_ptr<TH1> mean,
+                                                             std::map<std::string, Systematic<TH1>> systematics = std::map<std::string, Systematic<TH1>>(),
+                                                             const std::shared_ptr<TH1> mean_for_error_calc = 0)
+            : UserTemplateComponent(mean, systematics),
+              fMeanForErrorCalc(mean_for_error_calc) {}
+
+            virtual std::shared_ptr<TH1> GetNominalForErrorCalculation() const override { return fMeanForErrorCalc; }
+            [[nodiscard]] IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
+
+        private:
+            std::shared_ptr<TH1> fMeanForErrorCalc;
+        };
+
         ///\brief Basic fitter-level template component object for single-sample template fitting
         class ReducedTemplateComponent : public IReducedTemplateComponent {
         public:
@@ -167,6 +191,18 @@ namespace xsec {
         private:
             const ReducedComponent * fMean;
             const std::map<std::string, Systematic<TH1>> fSystematics;
+        };
+
+        class ReducedTemplateComponentAlternativeNominal : public ReducedTemplateComponent {
+        public:
+            ReducedTemplateComponentAlternativeNominal(const ReducedComponent * mean,
+                                                       const std::map<std::string, Systematic<TH1>> systematics = std::map<std::string, Systematic<TH1>>(),
+                                                       const ReducedComponent * mean_for_error_calc = 0)
+                    : ReducedTemplateComponent(mean, systematics),
+                      fMeanForErrorCalc(mean_for_error_calc) {}
+            const ReducedComponent * GetNominalForErrorCalculation() const override { return fMeanForErrorCalc; }
+        private:
+            const ReducedComponent * fMeanForErrorCalc;
         };
 
         struct TemplateFitSample {

@@ -142,9 +142,9 @@ namespace xsec {
         fTotalTemplate = nullptr;
         for (const auto & component: fReducedComponents.GetComponents()) {
             if (!fTotalTemplate) {
-                fTotalTemplate = (TH1 *) component.second->GetNominal()->GetHist()->Clone();
+                fTotalTemplate = (TH1 *) component.second->GetNominalForErrorCalculation()->GetHist()->Clone();
             } else {
-                fTotalTemplate->Add(component.second->GetNominal()->GetHist().get());
+                fTotalTemplate->Add(component.second->GetNominalForErrorCalculation()->GetHist().get());
             }
         }
 
@@ -340,9 +340,15 @@ namespace xsec {
     TemplateFitSignalEstimator::
     Chi2(const std::shared_ptr<TH1> data,
          const std::map<std::string, TH1 *> & params) const {
-        Array mparams = ToCalculatorParams(params);
+        Array mparams;
+        if(params.empty()) {
+            mparams = Array::Ones(fFitCalc->GetNMinimizerParams());
+        }
+        else {
+            mparams = ToCalculatorParams(params);
+        }
         Array mdata = fReducer.Reduce(data)->GetArray();
-        return fFitCalc->Chi2(ToCalculatorParams(params), fReducer.Reduce(data)->GetArray());
+        return fFitCalc->Chi2(mparams, fReducer.Reduce(data)->GetArray());
     }
 
     void
