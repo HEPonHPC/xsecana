@@ -13,6 +13,26 @@
 #include <iomanip>
 
 namespace xsec {
+    TemplateFitResult
+    TemplateFitResult::
+    Clone() const {
+        std::map<std::string, TH1*> _component_params;
+        std::map<std::string, TH1*> _component_params_up;
+        std::map<std::string, TH1*> _component_params_down;
+        for(const auto & component : this->component_params) {
+            _component_params[component.first] = (TH1*) this->component_params.at(component.first)->Clone();
+            _component_params_up[component.first] = (TH1*) this->component_params_error_up.at(component.first)->Clone();
+            _component_params_down[component.first] = (TH1*) this->component_params_error_down.at(component.first)->Clone();
+        }
+
+        return {this->fun_val,
+                _component_params,
+                _component_params_up,
+                _component_params_down,
+                (TH2D*) this->covariance->Clone(),
+                this->fun_calls};
+    }
+
     void
     TemplateFitResult::
     SaveTo(TDirectory * dir, const std::string & name) const {
@@ -234,14 +254,23 @@ namespace xsec {
 
     fit::Vector
     TemplateFitSignalEstimator::
+    ToCalculatorParamsComponent(const TH1 * params) const {
+        return fOuterBinMap.ToMinimizerParams(root::MapContentsToEigen(params));
+    }
+
+    fit::Vector
+    TemplateFitSignalEstimator::
     ToCalculatorParams(const std::map<std::string, TH1 *> & params) const {
         Matrix calc_params(fReducedComponents.GetNOuterBins(), fReducedComponents.size());
         for (auto label_idx: fComponentIdx) {
-            calc_params.col(label_idx.second) = fOuterBinMap.ToMinimizerParams(
-                    root::MapContentsToEigen(params.at(label_idx.first))
-            );
+            calc_params.col(label_idx.second) = ToCalculatorParamsComponent(params.at(label_idx.first));
         }
         return calc_params.reshaped();
+    }
+
+    TH1 *
+    TemplateFitSignalEstimator::ToUserParamsComponent(const fit::Vector & calc_params) const {
+        return root::ToROOT(fOuterBinMap.ToUserParams(calc_params), fProjectPredictionProps);
     }
 
     void
@@ -342,7 +371,7 @@ namespace xsec {
          const std::map<std::string, TH1 *> & params) const {
         Array mparams;
         if(params.empty()) {
-            mparams = Array::Ones(fFitCalc->GetNMinimizerParams());
+            mparams = Array::Ones(fFitCalc->GetNUserParams());
         }
         else {
             mparams = ToCalculatorParams(params);
@@ -367,6 +396,24 @@ namespace xsec {
     TemplateFitSignalEstimator::
     GetFitCalc() const {
         return fFitCalc;
+    }
+
+    TemplateFitResult
+    TemplateFitSignalEstimator::
+    Fit(const std::shared_ptr<TH1> data,
+        const std::map<std::string, TH1*> & seed) const {
+        Array mseed = ToCalculatorParams(seed);
+        return this->_fit(data, {mseed});
+    }
+
+    TemplateFitResult
+    TemplateFitSignalEstimator::
+    Fit(const std::shared_ptr<TH1> data,
+        fit::IFitter * fitter,
+        const std::map<std::string, TH1*> & seed) {
+        SetFitter(fitter);
+        Array mseed = ToCalculatorParams(seed);
+        return this->_fit(data, {fFitCalc->ToMinimizerParams(mseed)});
     }
 
     TemplateFitResult
@@ -398,6 +445,7 @@ namespace xsec {
     TemplateFitResult
     TemplateFitSignalEstimator::
     _fit(const std::shared_ptr<TH1> data, const std::vector<Vector> & seeds) const {
+        assert(seeds[0].size() == fFitCalc->GetNMinimizerParams());
         if (!fFitter) {
             throw std::runtime_error("This TemplateFitSignalEstimator does not have an active IFitter");
         }

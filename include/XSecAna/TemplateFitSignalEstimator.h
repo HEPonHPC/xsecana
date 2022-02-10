@@ -15,6 +15,8 @@ namespace xsec {
         TH2D * covariance;
         unsigned int fun_calls;
 
+        TemplateFitResult Clone() const;
+
         void SaveTo(TDirectory * dir, const std::string & name) const;
         static std::unique_ptr<TemplateFitResult> LoadFrom(TDirectory * dir, const std::string & subdir);
     };
@@ -30,6 +32,9 @@ namespace xsec {
 
         TemplateFitResult Fit(const std::shared_ptr<TH1> data, int nrandom_seeds=-1) const;
         TemplateFitResult Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds=-1);
+
+        TemplateFitResult Fit(const std::shared_ptr<TH1> data, const std::map<std::string, TH1*> & seed) const;
+        TemplateFitResult Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, const std::map<std::string, TH1*> & seed);
 
         void SaveTo(TDirectory * dir, const std::string & name) const;
 
@@ -73,6 +78,15 @@ namespace xsec {
         TH1 * PostfitTotalUncertainty(const TemplateFitResult & fit_result) const;
 
         const TH1 * GetMask() const { return fReducer.GetMask(); }
+        const fit::ComponentReducer & GetReducer() const { return fReducer; }
+
+        fit::Vector ToCalculatorParams(const std::map<std::string, TH1*> & params) const;
+        fit::Vector ToCalculatorParamsComponent(const TH1 * component_params) const;
+
+        void ToUserParams(const fit::Vector & calc_params,
+                          std::map<std::string, TH1 *> & params) const;
+        TH1 * ToUserParamsComponent(const fit::Vector & calc_params) const;
+
     protected:
         bool _is_component_fixed(std::string label) const;
         void _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const;
@@ -82,10 +96,6 @@ namespace xsec {
         TH1 * _project_prediction(const Array & prediction) const;
 
 
-        fit::Vector ToCalculatorParams(const std::map<std::string, TH1*> & params) const;
-
-        void ToUserParams(const fit::Vector & calc_params,
-                          std::map<std::string, TH1*> & params) const;
 
         fit::UserComponentCollection fUserComponents;
         fit::ReducedComponentCollection fReducedComponents;
