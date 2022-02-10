@@ -39,12 +39,11 @@ namespace xsec {
                         const Vector & data) const;
 
             Vector ToUserParams(const Vector & minimizer_coords) const override;
-
+            Vector ToMinimizerParams(const Vector & user_coords) const override;
             double fun(const Vector & minimizer_params,
                        const Vector & data) const override;
 
         private:
-            Vector ToMinimizerParams(const Vector & user_coords) const override;
 
             const Matrix fSystematicCovariance;
             ReducedComponentCollection fComponents;
