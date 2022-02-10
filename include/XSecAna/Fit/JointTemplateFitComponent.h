@@ -48,6 +48,12 @@ namespace xsec {
             const std::shared_ptr<TH1> GetSampleNormalization(const std::string & sample_name) const
             { return fSampleNormalizations.at(sample_name); }
 
+            const std::shared_ptr<TH1> GetConditioningSampleNormalization() const
+            { return fSampleNormalizations.at(fConditioningSampleLabel); }
+
+            const std::shared_ptr<TH1> GetComplimentarySampleNormalization() const
+            { return fSampleNormalizations.at(fComplimentarySampleLabel); }
+
             const std::shared_ptr<TH1> GetJointNormalization() const
             { return fJointNormalization; }
 
@@ -65,7 +71,9 @@ namespace xsec {
             std::map<std::string, Systematic<TH1>> fJointTemplateSystematics;
 
             std::shared_ptr<TH1> fJointNormalization;
+            std::shared_ptr<TH1> fJointNormalizationForErrorCalc;
             std::map<std::string, std::shared_ptr<TH1>> fSampleNormalizations;
+            std::map<std::string, std::shared_ptr<TH1>> fSampleNormalizationsForErrorCalc;
             std::map<std::string, std::map<std::string, Systematic<TH1>>> fSampleNormSystematics;
             std::map<std::string, Systematic<TH1>> fJointNormSystematics;
 
@@ -74,7 +82,9 @@ namespace xsec {
             std::map<std::string, TH1*> fSampleNormalizationTotalCovariance;
             std::map<std::string, std::map<std::string, TH1*>> fSampleNormalizationCovariances;
 
+
             std::string fConditioningSampleLabel;
+            std::string fComplimentarySampleLabel;
             std::map<std::string, const IUserTemplateComponent*> fSamples;
 
         };
@@ -87,11 +97,15 @@ namespace xsec {
             ReducedJointTemplateComponent(std::map<std::string, const IReducedTemplateComponent*> samples,
                                           const ReducedComponent * joined_template_mean,
                                           std::shared_ptr<TH1> joined_normalization,
+                                          std::shared_ptr<TH1> joined_normalization_for_error_calc,
                                           std::map<std::string, std::shared_ptr<TH1>> & sample_normalizations,
+                                          std::map<std::string, std::shared_ptr<TH1>> & sample_normalizations_for_error_calc,
                                           std::map<std::string, Systematic<TH1>> & joint_norm_systematics);
 
-            [[nodiscard]] Vector Predict(const Vector & component_params) const override;
+            [[nodiscard]] Vector Predict(const Vector & condi_params) const override;
+            [[nodiscard]] Vector PredictProjected(const Vector & condi_params) const override;
             [[nodiscard]] Vector ComplimentaryParams(const Vector & conditioning_params) const;
+            [[nodiscard]] Vector ConditionalParams(const Vector & complimentary_params) const;
 
             const ReducedComponent * GetNominal() const override
             { return fJointTemplateMean; }
@@ -99,7 +113,7 @@ namespace xsec {
             const std::map<std::string, Systematic<TH1>> & GetSystematics() const override
             { return fJointTemplateSystematics; }
 
-            TH1 * GetTotalJointNormalizationCovariance() const
+            TH1 * GetJointNormalizationTotalCovariance() const
             { return fJoinedNormTotalCovariance; }
 
             TH1 * GetJointNormalizationCovariance(std::string systematic_label) const
@@ -134,13 +148,16 @@ namespace xsec {
             std::map<std::string, Systematic<TH1>> fJointTemplateSystematics;
 
             std::shared_ptr<TH1> fJointNormalization;
+            std::shared_ptr<TH1> fJointNormalizationForErrorCalc;
             const std::map<std::string, std::shared_ptr<TH1>> fSampleNormalizations;
+            const std::map<std::string, std::shared_ptr<TH1>> fSampleNormalizationsForErrorCalc;
             const std::map<std::string, Systematic<TH1>> fJointNormSystematics;
 
             TH1 * fJoinedNormTotalCovariance;
             std::map<std::string, TH1*> fJoinedNormCovariances;
             Matrix fConditioningSampleInvCovariance;
             Matrix fCrossSampleCovariance;
+            Matrix fRotationMatrix;
 
             Array fConditioningSampleNormalization;
             Vector fComplimentarySampleNormalization;

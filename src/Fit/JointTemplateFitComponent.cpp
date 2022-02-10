@@ -257,18 +257,33 @@ namespace xsec {
                 fJointTemplateSystematics[syst.first] = detail::_join(vsysts);
             }
 
-
             // project sample means
             std::vector<std::shared_ptr<TH1>> projected_sample_means;
+            std::vector<std::shared_ptr<TH1>> projected_sample_means_for_error_calc;
             for (const auto & sample: sample_components) {
+                bool alt_nominal =
+                        sample.second->GetNominalForErrorCalculation() !=
+                        sample.second->GetNominal();
+
                 fSampleNormalizations[sample.first] = _to1d(
-                        std::shared_ptr<TH1>(ComponentReducer::Project(sample.second->GetNominalForErrorCalculation()))
+                        std::shared_ptr<TH1>(ComponentReducer::Project(sample.second->GetNominal()))
                 );
+                if(alt_nominal) {
+                    fSampleNormalizationsForErrorCalc[sample.first] = _to1d(
+                            std::shared_ptr<TH1>(
+                                    ComponentReducer::Project(sample.second->GetNominalForErrorCalculation()))
+                    );
+                }
+                else {
+                    fSampleNormalizationsForErrorCalc[sample.first] = fSampleNormalizations.at(sample.first);
+                }
                 projected_sample_means.push_back(fSampleNormalizations.at(sample.first));
+                projected_sample_means_for_error_calc.push_back(fSampleNormalizationsForErrorCalc.at(sample.first));
             }
 
             // join projected means
             fJointNormalization = detail::_join(projected_sample_means);
+            fJointNormalizationForErrorCalc = detail::_join(projected_sample_means_for_error_calc);
 
             // join projected systematics
             // loop over systematics
@@ -285,7 +300,7 @@ namespace xsec {
             }
             fJointNormalizationTotalCovariance = 0;
             for (auto syst: fJointNormSystematics) {
-                fJointNormalizationCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalization.get());
+                fJointNormalizationCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalizationForErrorCalc.get());
                 if (!fJointNormalizationTotalCovariance) {
                     fJointNormalizationTotalCovariance = (TH1 *) fJointNormalizationCovariances.at(
                             syst.first)->Clone();
@@ -298,7 +313,7 @@ namespace xsec {
                 fSampleNormalizationTotalCovariance[sample.first] = 0;
                 for (auto syst: fSampleNormSystematics.at(sample.first)) {
                     fSampleNormalizationCovariances[sample.first][syst.first] =
-                            syst.second.CovarianceMatrix(fSampleNormalizations.at(sample.first).get());
+                            syst.second.CovarianceMatrix(fSampleNormalizationsForErrorCalc.at(sample.first).get());
                     if (!fSampleNormalizationTotalCovariance.at(sample.first)) {
                         fSampleNormalizationTotalCovariance.at(sample.first) =
                                 (TH1 *) fSampleNormalizationCovariances.at(sample.first).at(
@@ -325,7 +340,12 @@ namespace xsec {
                 }
             }
 
-            fConditioningSampleLabel = fSampleNormalizations.begin()->first;
+            auto sample_it = fSampleNormalizations.begin();
+            fConditioningSampleLabel = sample_it->first;
+
+            sample_it++;
+            fComplimentarySampleLabel = sample_it->first;
+
         }
 
         IReducedTemplateComponent *
@@ -353,20 +373,34 @@ namespace xsec {
             }
 
             std::vector<std::shared_ptr<TH1>> compressed_norm_means_to_join;
+            std::vector<std::shared_ptr<TH1>> compressed_norm_means_to_join_for_error_calc;
             std::map<std::string, std::shared_ptr<TH1>> compressed_sample_norm_means;
+            std::map<std::string, std::shared_ptr<TH1>> compressed_sample_norm_means_for_error_calc;
             for (const auto & sample: fSampleNormalizations) {
                 compressed_sample_norm_means[sample.first] = std::shared_ptr<TH1>(reducer.Compress1D(sample.second));
                 compressed_norm_means_to_join.push_back(compressed_sample_norm_means.at(sample.first));
+                if(fSampleNormalizations.at(sample.first) == fSampleNormalizationsForErrorCalc.at(sample.first)) {
+                    compressed_sample_norm_means_for_error_calc[sample.first] =
+                            compressed_sample_norm_means.at(sample.first);
+                }
+                else {
+                    compressed_sample_norm_means_for_error_calc[sample.first] =
+                            std::shared_ptr<TH1>(reducer.Compress1D(fSampleNormalizationsForErrorCalc.at(sample.first)));
+                }
+                compressed_norm_means_to_join_for_error_calc.push_back(compressed_sample_norm_means_for_error_calc.at(sample.first));
             }
 
             std::map<std::string, const IReducedTemplateComponent *> reduced_samples;
             for (const auto & sample: fSamples) {
                 reduced_samples[sample.first] = sample.second->Reduce(reducer);
             }
+
             return new ReducedJointTemplateComponent(reduced_samples,
                                                      reducer.Reduce(fJointTemplateMean),
                                                      detail::_join(compressed_norm_means_to_join),
+                                                     detail::_join(compressed_norm_means_to_join_for_error_calc),
                                                      compressed_sample_norm_means,
+                                                     compressed_sample_norm_means_for_error_calc,
                                                      compressed_joined_norm_systematics1d);
         }
 
@@ -374,11 +408,15 @@ namespace xsec {
         ReducedJointTemplateComponent(std::map<std::string, const IReducedTemplateComponent *> samples,
                                       const ReducedComponent * joined_template_mean,
                                       std::shared_ptr<TH1> joined_norm_mean,
+                                      std::shared_ptr<TH1> joined_norm_mean_for_error_calc,
                                       std::map<std::string, std::shared_ptr<TH1>> & sample_norm_means,
+                                      std::map<std::string, std::shared_ptr<TH1>> & sample_norm_means_for_error_calc,
                                       std::map<std::string, Systematic<TH1>> & joint_norm_systematics)
                 : fJointTemplateMean(joined_template_mean),
                   fJointNormalization(joined_norm_mean),
+                  fJointNormalizationForErrorCalc(joined_norm_mean_for_error_calc),
                   fSampleNormalizations(sample_norm_means),
+                  fSampleNormalizationsForErrorCalc(sample_norm_means_for_error_calc),
                   fJointNormSystematics(joint_norm_systematics),
                   fNOuterBins(joined_template_mean->GetNOuterBins()) {
             assert(sample_norm_means.size() == 2 && "Implementation only supports 2 sample joint fits");
@@ -393,7 +431,7 @@ namespace xsec {
 
             fJoinedNormTotalCovariance = nullptr;
             for (const auto & syst: joint_norm_systematics) {
-                fJoinedNormCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalization.get());
+                fJoinedNormCovariances[syst.first] = syst.second.CovarianceMatrix(fJointNormalizationForErrorCalc.get());
                 if (!fJoinedNormTotalCovariance) {
                     fJoinedNormTotalCovariance = (TH1 *) fJoinedNormCovariances.at(syst.first)->Clone();
                 } else {
@@ -444,6 +482,8 @@ namespace xsec {
                                                fNOuterBins,
                                                fNOuterBins);
             }
+
+            fRotationMatrix = fCrossSampleCovariance * fConditioningSampleInvCovariance;
         }
 
         bool
@@ -471,6 +511,19 @@ namespace xsec {
 
         Vector
         ReducedJointTemplateComponent::
+        ConditionalParams(const Vector & complimentary_params) const {
+            Array complimentary_diff = fComplimentarySampleNormalization.array() *
+                                       complimentary_params.array() -
+                                       fComplimentarySampleNormalization.array();
+            Vector conditional_diff = fRotationMatrix.completeOrthogonalDecomposition().solve(complimentary_diff.matrix());
+            Array rescaled_condi_sample = (conditional_diff.array() + fConditioningSampleNormalization);
+            Array conditioning_params = rescaled_condi_sample.array() / fConditioningSampleNormalization;
+            return (fConditioningSampleNormalization.array() == 0).select(0, conditioning_params);
+        }
+        
+
+        Vector
+        ReducedJointTemplateComponent::
         Predict(const Vector & condi_params) const {
             Vector comp_params = this->ComplimentaryParams(condi_params);
             Matrix condi_prediction = fConditioningSample->Predict(condi_params)
@@ -482,6 +535,16 @@ namespace xsec {
                                     fNOuterBins);
             joint_prediction << condi_prediction, comp_prediction;
             return joint_prediction.reshaped();
+        }
+
+        Vector
+        ReducedJointTemplateComponent::
+        PredictProjected(const Vector & condi_params) const {
+            Vector comp_params = this->ComplimentaryParams(condi_params);
+            Vector joint_projection(condi_params.size() + comp_params.size());
+            joint_projection << fConditioningSample->PredictProjected(condi_params),
+                                fComplimentarySample->PredictProjected(comp_params);
+            return joint_projection;
         }
 
         /*
