@@ -163,6 +163,15 @@ namespace xsec {
                    component_params.asDiagonal()).reshaped();
         }
 
+        Vector
+        ReducedTemplateComponent::
+        PredictProjected(const Vector & component_params) const {
+            Array nominal_projection = fMean->GetArray().reshaped(fMean->GetNInnerBins(),
+                                                                  fMean->GetNOuterBins())
+                    .colwise().sum().reshaped();
+            return  nominal_projection * component_params.array();
+        }
+
         IReducedTemplateComponent *
         UserTemplateComponent::
         Reduce(const ComponentReducer & reducer) const {

@@ -75,6 +75,7 @@ namespace xsec {
         class IReducedTemplateComponent {
         public:
             [[nodiscard]] virtual Vector Predict(const Vector & component_params) const = 0;
+            [[nodiscard]] virtual Vector PredictProjected(const Vector & component_params) const = 0;
             virtual const ReducedComponent * GetNominal() const = 0;
             virtual const ReducedComponent * GetNominalForErrorCalculation() const { return this->GetNominal(); }
             virtual const std::map<std::string, Systematic<TH1>> & GetSystematics() const = 0;
@@ -185,6 +186,7 @@ namespace xsec {
                     : fMean(mean), fSystematics(systematics) {}
 
             [[nodiscard]] Vector Predict(const Vector & component_params) const override;
+            [[nodiscard]] Vector PredictProjected(const Vector & component) const override;
             const ReducedComponent * GetNominal() const override { return fMean; }
             const std::map<std::string, Systematic<TH1>> & GetSystematics() const override { return fSystematics; }
 
