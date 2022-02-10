@@ -1,9 +1,23 @@
 #include "XSecAna/JointTemplateFitSignalEstimator.h"
 #include "XSecAna/Fit/JointTemplateFitComponent.h"
+#include "XSecAna/Fit/Minuit2TemplateFitter.h"
 #include "XSecAna/Utils.h"
 #include <algorithm>
 
 namespace xsec {
+    template<class T>
+    std::map<std::string, T>
+    JointTemplateFitSignalEstimator::
+    _invert_samples(const std::map<std::string, T> & samples) const {
+        std::map<std::string, T> inverted;
+        int i = fSampleEstimators.size()-1;
+        for(auto const & sample : samples) {
+            inverted[std::to_string(i) + sample.first] = sample.second;
+            i--;
+        }
+        return inverted;
+    }
+
     JointTemplateFitSignalEstimator::
     JointTemplateFitSignalEstimator(const std::map<std::string, fit::TemplateFitSample> & samples,
                                     const TH1 * mask)
@@ -12,6 +26,8 @@ namespace xsec {
         for(const auto & sample : samples) {
             fSampleEstimators[sample.first] = new TemplateFitSignalEstimator(sample.second, mask);
         }
+        std::map<std::string, fit::TemplateFitSample> inverted_samples = _invert_samples(samples);
+        fJointEstimatorInverse = new TemplateFitSignalEstimator(fit::detail::_join(inverted_samples), mask);
     }
 
     void
@@ -22,6 +38,7 @@ namespace xsec {
             sample.second->FixComponent(template_name, val);
         }
         fJointEstimator->FixComponent(template_name, val);
+        fJointEstimatorInverse->FixComponent(template_name, val);
     }
 
     void
@@ -32,6 +49,7 @@ namespace xsec {
             sample.second->ReleaseComponent(template_name);
         }
         fJointEstimator->ReleaseComponent(template_name);
+        fJointEstimatorInverse->ReleaseComponent(template_name);
     }
 
     TH1 *
@@ -71,17 +89,19 @@ namespace xsec {
     }
 
 
-    std::map<std::string, TemplateFitResult>
-    JointTemplateFitSignalEstimator::
-    Fit(const std::shared_ptr<TH1> data, int nrandom_seeds) const {
-        return _joint_fit_result(fJointEstimator->Fit(data, nrandom_seeds));
-    }
-
-    std::map<std::string, TemplateFitResult>
-    JointTemplateFitSignalEstimator::
-    Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds) {
-        return _joint_fit_result(fJointEstimator->Fit(data, fitter, nrandom_seeds));
-    }
+    //std::map<std::string, TemplateFitResult>
+    //JointTemplateFitSignalEstimator::
+    //Fit(const std::shared_ptr<TH1> data, int nrandom_seeds) const {
+    //    //return _joint_fit_result(fJointEstimator->Fit(data, nrandom_seeds));
+    //    return _joint_fit_result_run_inverse(fJointEstimator->Fit(data), data);
+    //}
+    //
+    //std::map<std::string, TemplateFitResult>
+    //JointTemplateFitSignalEstimator::
+    //Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds) {
+    //    //return _joint_fit_result(fJointEstimator->Fit(data, fitter, nrandom_seeds));
+    //    //return _joint_fit_result_run_inverse(fJointEstimator->Fit(data, fitter), data);
+    //}
 
     std::map<std::string, TH1*>
     JointTemplateFitSignalEstimator::
@@ -103,6 +123,92 @@ namespace xsec {
         return root::ToROOTLike(condi,
                                 fReducer.GetMap().ToUserParams(_comp));
     }
+
+    std::map<std::string, TH1*>
+    JointTemplateFitSignalEstimator::
+    InvertParams(const std::map<std::string, TH1*> & condi_params) const {
+        std::map<std::string, TH1 *> ret;
+        for (const auto & component: condi_params) {
+            Array inverted_component_param =
+                    ((fit::ReducedJointTemplateComponent *)
+                            fJointEstimatorInverse->GetReducedComponent(component.first))->ConditionalParams(
+                            fJointEstimatorInverse->ToCalculatorParamsComponent(component.second)
+                    );
+            ret[component.first] = fJointEstimatorInverse->ToUserParamsComponent(inverted_component_param);
+        }
+        return ret;
+    }
+
+    void
+    JointTemplateFitSignalEstimator::
+    _update_results_with_bias_uncertainty(TemplateFitResult & condi, TemplateFitResult & comp) const {
+
+        for(auto & component : condi.component_params) {
+            Array std_condi = fJointEstimator->ToCalculatorParamsComponent(component.second);
+            Array inv_condi =
+                    ((fit::ReducedJointTemplateComponent *)
+                            fJointEstimatorInverse->GetReducedComponent(component.first))->ComplimentaryParams(
+                            fJointEstimatorInverse->ToCalculatorParamsComponent(
+                                    comp.component_params.at(component.first))
+                    );
+
+            Array bias_error = (std_condi - inv_condi).pow(2);
+
+            Array fit_error_up = fJointEstimator->ToCalculatorParamsComponent(
+                    condi.component_params_error_up.at(component.first)
+            );
+            fit_error_up = fit_error_up.pow(2);
+
+            Array fit_error_down = fJointEstimator->ToCalculatorParamsComponent(
+                    condi.component_params_error_down.at(component.first)
+            );
+            fit_error_down = fit_error_down.pow(2);
+
+
+            Array total_error = ((fit_error_down > fit_error_up).select(fit_error_down, fit_error_up) +
+                    bias_error).sqrt();
+
+            condi.component_params_error_up.at(component.first) = fJointEstimator->ToUserParamsComponent(total_error);
+            condi.component_params_error_down.at(component.first) = fJointEstimator->ToUserParamsComponent(-1 * total_error);
+        }
+    }
+
+    std::map<std::string, TemplateFitResult>
+    JointTemplateFitSignalEstimator::
+    _joint_fit_result_run_inverse(TemplateFitResult condi_sample_fit_result,
+                                  const std::shared_ptr<TH1> inverted_data,
+                                  int nrandom_seeds) const {
+        std::cout << "Standard ordering fit done. Moving on to inverse ordering.\n";
+        std::map<std::string, TemplateFitResult> joint_results;
+
+        std::map<std::string, TH1*> inverted_seed = this->InvertParams(condi_sample_fit_result.component_params);
+
+        ((fit::Minuit2TemplateFitter*) fJointEstimator->GetFitter())->SetMinosErrors(false);
+        auto comp_sample_fit_result = fJointEstimatorInverse->Fit(inverted_data,
+                                                                  fJointEstimator->GetFitter(),
+                                                                  nrandom_seeds);
+
+        auto condi_sample_fit_result_with_bias_error = condi_sample_fit_result.Clone();
+        this->_update_results_with_bias_uncertainty(condi_sample_fit_result_with_bias_error, comp_sample_fit_result);
+        auto sample_it = fSampleEstimators.begin();
+        joint_results[sample_it->first] = condi_sample_fit_result;
+        joint_results[sample_it->first + "_with_bias_error"] = condi_sample_fit_result_with_bias_error;
+
+        sample_it++;
+        joint_results[sample_it->first] = comp_sample_fit_result;
+
+        double chi2_inv = joint_results.at(sample_it->first).fun_val;
+        double chi2_std = condi_sample_fit_result.fun_val;
+        double chi2_diff = std::abs(chi2_inv - chi2_std);
+        double chi2_inv_at_std = fJointEstimatorInverse->Chi2(inverted_data,
+                                                              inverted_seed);
+        std::cout << "Inverted chi2 = " << chi2_inv << std::endl;
+        std::cout << "Standard chi2 = " << chi2_std << std::endl;
+        std::cout << "Difference = " << chi2_diff << std::endl;
+        std::cout << "Inverted chi2 at standard best fit parameters = " << chi2_inv_at_std << std::endl;
+        return joint_results;
+    }
+
 
     std::map<std::string, TemplateFitResult>
     JointTemplateFitSignalEstimator::
@@ -169,7 +275,11 @@ namespace xsec {
     JointTemplateFitSignalEstimator::
     Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
         int nrandom_seeds) const {
-        return this->Fit(JoinData(data), nrandom_seeds);
+        //return _joint_fit_result(fJointEstimator->Fit(data, nrandom_seeds));
+        return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), nrandom_seeds),
+                                             JoinData(_invert_samples(data)),
+                                             nrandom_seeds);
+        //return this->Fit(JoinData(data), nrandom_seeds);
     }
 
     std::map<std::string, TemplateFitResult>
@@ -177,6 +287,9 @@ namespace xsec {
     Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
         fit::IFitter * fitter,
         int nrandom_seeds) {
-        return this->Fit(JoinData(data), fitter, nrandom_seeds);
+        return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), fitter, nrandom_seeds),
+                                             JoinData(_invert_samples(data)),
+                                             nrandom_seeds);
+        //return this->Fit(JoinData(data), fitter, nrandom_seeds);
     }
 }

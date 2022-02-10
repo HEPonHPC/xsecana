@@ -9,10 +9,7 @@ namespace xsec {
     public:
         JointTemplateFitSignalEstimator(const std::map<std::string, fit::TemplateFitSample> & samples,
                                         const TH1 * mask = 0);
-
-        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::shared_ptr<TH1> data, int nrandom_seeds=-1) const;
-        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::shared_ptr<TH1> data, fit::IFitter * fitter, int nrandom_seeds=-1);
-
+        
         [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
                                                                    int nrandom_seeds=-1) const;
         [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
@@ -21,8 +18,10 @@ namespace xsec {
 
         TemplateFitSignalEstimator * GetSampleTemplateFit(const std::string & name) const { return fSampleEstimators.at(name); }
         TemplateFitSignalEstimator * GetJointTemplateFit() const { return fJointEstimator; }
+        TemplateFitSignalEstimator * GetInvertedJointTemplateFit() const { return fJointEstimatorInverse; }
 
         std::map<std::string, TH1*> ComplimentaryParams(const std::map<std::string, TH1*> & condi_params) const;
+        std::map<std::string, TH1*> InvertParams(const std::map<std::string, TH1*> & condi_params) const;
 
         void FixComponent(const std::string & template_name, const double & val=1);
         void ReleaseComponent(const std::string & template_name);
@@ -37,12 +36,22 @@ namespace xsec {
         TH2D * GetTotalCovariance() const;
         TH2D * GetCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;
+
         static std::shared_ptr<TH1> JoinData(const std::map<std::string, std::shared_ptr<TH1>> & data_samples);
     private:
         std::map<std::string, TemplateFitResult> _joint_fit_result(const TemplateFitResult & condi_sample_fit_result) const;
+        std::map<std::string, TemplateFitResult> _joint_fit_result_run_inverse(TemplateFitResult condi_sample_fit_result,
+                                                                               std::shared_ptr<TH1> inverted_data,
+                                                                               int nrandom_seeds) const;
+        void _update_results_with_bias_uncertainty(TemplateFitResult & condi, TemplateFitResult & comp) const;
+
+        template<class T>
+        std::map<std::string, T> _invert_samples(const std::map<std::string, T> & samples) const;
         TH1 * _condi_params_to_comp_params(const std::string & name, const TH1 * condi) const;
         TemplateFitSignalEstimator * fJointEstimator;
+        TemplateFitSignalEstimator * fJointEstimatorInverse;
         std::map<std::string, TemplateFitSignalEstimator*> fSampleEstimators;
+
         std::set<std::string> fFixedComponentLabels;
         fit::ComponentReducer fReducer;
 
