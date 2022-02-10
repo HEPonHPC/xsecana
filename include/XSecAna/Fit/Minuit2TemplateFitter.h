@@ -41,6 +41,7 @@ namespace xsec {
             virtual double Up() const override;
 
             void SetPrintLevel(const int & level) const;
+            void SetMinosErrors(bool opt) { fMinosErrors = opt; }
 
         private:
             IFitCalculator * fFitCalc;
