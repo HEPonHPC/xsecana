@@ -7,6 +7,6 @@
 namespace xsec {
     namespace type {
         template<class I>
-        using LoadFunction = std::unique_ptr<I> (*) (TDirectory*, const std::string&);
+        using LoadFunction = std::function<std::unique_ptr<I>(TDirectory*, const std::string&)>;
     }
 }
