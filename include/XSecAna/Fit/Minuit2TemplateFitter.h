@@ -21,10 +21,12 @@ namespace xsec {
         public:
             Minuit2TemplateFitter(int strategy = 2,
                                   double up = 1,
-                                  bool minos_errors = true)
+                                  bool minos_errors = true,
+                                  double initial_error = 0.01)
                     : fMnStrategy(strategy),
                       fUp(up),
-                      fMinosErrors(minos_errors)
+                      fMinosErrors(minos_errors),
+                      fInitialError(initial_error)
             {}
 
             // IFitter overrides
@@ -44,6 +46,7 @@ namespace xsec {
             int fMnStrategy;
             double fUp;
             bool fMinosErrors;
+            double fInitialError;
             Vector fData;
         };
 

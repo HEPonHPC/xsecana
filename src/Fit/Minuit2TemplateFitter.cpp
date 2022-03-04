@@ -65,7 +65,7 @@ namespace xsec {
                     // can we name these better?
                     mn_params.Add(std::to_string(i),
                                   seed(i),
-                                  0.01);
+                                  fInitialError);
                     mn_params.SetLowerLimit(std::to_string(i), 0);
                 }
                 // call minimizer with this
