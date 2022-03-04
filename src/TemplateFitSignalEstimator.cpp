@@ -456,11 +456,14 @@ namespace xsec {
     TemplateFitSignalEstimator::
     PrefitComponentUncertainty(const std::string & component_label) const {
         const auto component = fUserComponents.GetComponent(component_label);
+
         std::map<std::string, Systematic<TH1>> projected_systematics;
-        for(const auto & syst : component->GetSystematics()) {
-            projected_systematics[syst.first] = fit::ComponentReducer::Project(syst.second);
+        for(const auto & syst : fCovarianceMatrices) {
+            projected_systematics[syst.first] =
+                    component->ProjectSystematic(syst.first);
         }
-        TH1 * nominal = fit::ComponentReducer::Project(component->GetNominal());
+        auto nominal = component->ProjectNominalForErrorCalculation();
+
         auto up = std::get<1>(SimpleQuadSum::TotalFractionalUncertainty(nominal, projected_systematics)).Up();
         auto down = std::shared_ptr<TH1>((TH1*) up->Clone());
         down->Scale(-1);
