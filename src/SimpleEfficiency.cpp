@@ -28,6 +28,10 @@ namespace xsec {
         // binomial error
         result = root::MapContentsToEigen(fNumerator) / root::MapContentsToEigen(fDenominator);
         rerror = (result * (1 - result) / root::MapContentsToEigen(fDenominator)).sqrt();
+
+        rerror = result.isNaN().select(0, rerror);
+        result = result.isNaN().select(0, result);
+
     }
 
 //////////////////////////////////////////////////////////
