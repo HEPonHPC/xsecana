@@ -1,6 +1,7 @@
 
 #include "XSecAna/CrossSection.h"
 #include "XSecAna/SimpleQuadSum.h"
+#include "XSecAna/SimpleQuadSumAsymm.h"
 #include "test_utils.h"
 #include <iostream>
 

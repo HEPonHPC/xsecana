@@ -6,6 +6,7 @@ set(HEADER_FILES
         ../include/XSecAna/CrossSection.h
         ../include/XSecAna/Systematic.h
         ../include/XSecAna/SimpleQuadSum.h
+        ../include/XSecAna/SimpleQuadSumAsymm.h
         ../include/XSecAna/Fit/IFitter.h
         ../include/XSecAna/Fit/TemplateFitCalculator.h
         ../include/XSecAna/Fit/Minuit2TemplateFitter.h
