@@ -95,6 +95,9 @@ namespace xsec {
 
         TH1 * CovarianceMatrix(const T * nominal) const;
 
+        TH1 * RandomSample(const T * nominal, double seed=0) const;
+        static TH1 * RandomSample(const T * nominal, const TH1 * covariance, double seed = 0);
+
         const std::vector<std::shared_ptr<T>> & GetShifts() const;
 
         const std::shared_ptr<T> Up() const;

@@ -15,7 +15,7 @@ namespace xsec {
     /// in order to transform into a TH1.
     /// The only exception is if type T is type TH1.
     namespace SimpleQuadSum {
-        namespace {
+        namespace detail {
             /// \brief Evaluate all the T's out to TH1s
             /// Calling Eval on the T's the long way since
             /// passing parameter packs through a lambda capture
@@ -71,6 +71,7 @@ namespace xsec {
 
             /// \brief Internal function for calculating fractional uncertainty
             /// on Systematic<TH1>s
+            inline
             std::pair<const TH1 *, Systematic<TH1>>
             _FractionalUncertainty(const TH1 * nominal,
                                    const xsec::Systematic<TH1> & shifted_obj) {
@@ -85,6 +86,7 @@ namespace xsec {
 
             /// \brief Internal function for calculating total absolute uncertainty
             /// on Systematic<TH1>s
+            inline
             std::pair<const TH1 *, Systematic<TH1>>
             _TotalAbsoluteUncertainty(const TH1 * nominal,
                                       const std::map<std::string,
@@ -103,6 +105,7 @@ namespace xsec {
 
             /// \brief Internal function for calculating total fractional uncertainty
             /// on Systematic<TH1>s
+            inline
             std::pair<const TH1 *, Systematic<TH1>>
             _TotalFractionalUncertainty(const TH1 * nominal,
                                         const std::map<std::string,
@@ -144,13 +147,13 @@ namespace xsec {
                             const xsec::Systematic<T> & shifted_obj,
                             Args & ...  args) {
             if constexpr(std::is_same<T, TH1>::value) {
-                return _AbsoluteUncertainty(nominal_obj, shifted_obj);
+                return detail::_AbsoluteUncertainty(nominal_obj, shifted_obj);
             } else {
                 std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
-                Systematic<TH1> hsystematic = EvalSystematic(shifted_obj,
-                                                             std::forward<Args>(args)...);
-                return _AbsoluteUncertainty(hnominal.get(),
-                                            hsystematic);
+                Systematic<TH1> hsystematic = detail::EvalSystematic(shifted_obj,
+                                                                     std::forward<Args>(args)...);
+                return detail::_AbsoluteUncertainty(hnominal.get(),
+                                                    hsystematic);
             }
         }
 
@@ -176,12 +179,12 @@ namespace xsec {
                               const xsec::Systematic<T> & shifted_obj,
                               Args & ...  args) {
             if constexpr(std::is_same<T, TH1>::value) {
-                return _FractionalUncertainty(nominal_obj, shifted_obj);
+                return detail::_FractionalUncertainty(nominal_obj, shifted_obj);
             } else {
                 std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
-                auto hsystematic = EvalSystematic(shifted_obj,
-                                                  std::forward<Args>(args)...);
-                return _FractionalUncertainty(hnominal.get(), hsystematic);
+                auto hsystematic = detail::EvalSystematic(shifted_obj,
+                                                          std::forward<Args>(args)...);
+                return detail::_FractionalUncertainty(hnominal.get(), hsystematic);
             }
         }
 
@@ -211,16 +214,16 @@ namespace xsec {
                                                 xsec::Systematic<T> > & shifted_objs,
                                  Args & ...  args) {
             if constexpr(std::is_same<T, TH1>::value) {
-                return _TotalAbsoluteUncertainty(nominal_obj, shifted_objs);
+                return detail::_TotalAbsoluteUncertainty(nominal_obj, shifted_objs);
             } else {
                 std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
                 std::map<std::string, Systematic<TH1>> hsystematics;
                 for (auto syst_it = shifted_objs.begin(); syst_it != shifted_objs.end(); syst_it++) {
-                    hsystematics[syst_it->first] = EvalSystematic(syst_it->second,
-                                                                  std::forward<Args>(args)...);
+                    hsystematics[syst_it->first] = detail::EvalSystematic(syst_it->second,
+                                                                          std::forward<Args>(args)...);
                 }
 
-                return _TotalAbsoluteUncertainty(hnominal.get(), hsystematics);
+                return detail::_TotalAbsoluteUncertainty(hnominal.get(), hsystematics);
             }
         }
 
@@ -250,16 +253,16 @@ namespace xsec {
                                                   xsec::Systematic<T> > & shifted_objs,
                                    Args & ... args) {
             if constexpr(std::is_same<T, TH1>::value) {
-                return _TotalFractionalUncertainty(nominal_obj, shifted_objs);
+                return detail::_TotalFractionalUncertainty(nominal_obj, shifted_objs);
             } else {
                 std::shared_ptr<TH1> hnominal = nominal_obj->Eval(std::forward<Args>(args)...);
                 std::map<std::string, Systematic<TH1>> hsystematics;
                 for (auto syst_it = shifted_objs.begin(); syst_it != shifted_objs.end(); syst_it++) {
-                    hsystematics[syst_it->first] = EvalSystematic(syst_it->second,
-                                                                  std::forward<Args>(args)...);
+                    hsystematics[syst_it->first] = detail::EvalSystematic(syst_it->second,
+                                                                          std::forward<Args>(args)...);
                 }
 
-                return _TotalFractionalUncertainty(hnominal.get(), hsystematics);
+                return detail::_TotalFractionalUncertainty(hnominal.get(), hsystematics);
             }
         }
     }

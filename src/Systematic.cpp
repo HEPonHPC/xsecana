@@ -7,6 +7,7 @@
 #include "XSecAna/Utils.h"
 
 #include <stdexcept>
+#include <random>
 
 namespace xsec {
     template<class T>
@@ -113,6 +114,54 @@ namespace xsec {
         }
         return Systematic<U>(new_name, container, fType);
 
+    }
+
+    ///\brief Return a random shifted distribution by sampling
+    /// the covariance matrix calculated from this systematic shift
+    template<class T>
+    TH1 *
+    Systematic<T>::
+    RandomSample(const T * nominal, double seed) const {
+        if constexpr(!std::is_base_of<TH1, T>::value) {
+            throw std::runtime_error("Type " +
+                                     std::string(typeid(T).name()) +
+                                     " does not implement RandomSample. Must be of type Systematic<TH1>.");
+        } else {
+            return Systematic<TH1>::RandomSample(nominal, this->CovarianceMatrix(nominal), seed);
+        }
+    }
+
+    ///\brief Return a random shifted distribution by sampling
+    /// a covariance matrix
+    /// https://juanitorduz.github.io/multivariate_normal/
+    template<class T>
+    TH1 *
+    Systematic<T>::
+    RandomSample(const T * nominal, const TH1 * covariance, double seed) {
+        if constexpr(!std::is_base_of<TH1, T>::value) {
+            throw std::runtime_error("Type " +
+                                     std::string(typeid(T).name()) +
+                                     " does not implement RandomSample. Must be of type Systematic<TH1>.");
+        } else {
+            Matrix cov = root::MapContentsToEigen(covariance)
+                    .reshaped(nominal->GetNbinsX()+2,
+                              nominal->GetNbinsX()+2);
+            Matrix epsilon = (Vector::Ones(cov.rows()) * 0.0001).asDiagonal();
+            cov = cov + epsilon;
+
+            Matrix L = cov.llt().matrixL();
+            Vector m = root::MapContentsToEigen(nominal);
+
+            std::mt19937 generator(seed);
+            std::normal_distribution<double> distribution(0, 1);
+            Vector u(m.size());
+            for(auto i = 0u; i < u.size(); i++) {
+                u(i) = distribution(generator);
+            }
+
+            Vector x = m + L * u;
+            return root::ToROOTLike(nominal, x);
+        }
     }
 
     template<class T>
