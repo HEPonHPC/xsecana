@@ -14,12 +14,8 @@
 namespace xsec {
     namespace fit {
         namespace detail {
-            Eigen::Map<const Vector> STDToEigen(const std::vector<double> & v) {
-                return Eigen::Map<const Vector>(v.data(), v.size(), 1);
-            }
-            std::vector<double> EigenToSTD(const Vector & v) {
-                return std::vector<double>(v.data(), v.data() + v.size());
-            }
+            Eigen::Map<const Vector> STDToEigen(const std::vector<double> & v);
+            std::vector<double> EigenToSTD(const Vector & v);
         }
         class Minuit2TemplateFitter : public IFitter, public ROOT::Minuit2::FCNBase {
         public:
