@@ -16,7 +16,9 @@ namespace xsec {
     class IMeasurement {
     public:
         virtual std::shared_ptr<TH1> Eval(const TH1 * data) const = 0;
-        virtual void SaveTo(TDirectory * dir, const std::string & subdir) const = 0;
+        virtual void SaveTo(TDirectory * dir, const std::string & subdir) const {
+            throw std::runtime_error(std::string(typeid(this).name()) + "::SaveTo not implemented");
+        }
         virtual ~IMeasurement() = default;
         static std::unique_ptr<IMeasurement>
         LoadFrom(xsec::type::LoadFunction<IMeasurement> load,
