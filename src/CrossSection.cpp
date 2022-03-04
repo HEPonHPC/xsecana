@@ -25,6 +25,31 @@ namespace xsec {
               fUnfold(unfold),
               fNTargets(ntargets) {}
 
+    DifferentialCrossSectionEstimator::
+    DifferentialCrossSectionEstimator(IMeasurement * efficiency,
+                                      IMeasurement * signal_estimator,
+                                      IMeasurement * flux,
+                                      IMeasurement * unfold,
+                                      double ntargets)
+            : ICrossSection(efficiency,
+                            signal_estimator,
+                            flux,
+                            unfold,
+                            ntargets) {}
+
+
+    CrossSectionEstimator::
+    CrossSectionEstimator(IMeasurement * efficiency,
+                          IMeasurement * signal_estimator,
+                          IMeasurement * flux,
+                          IMeasurement * unfold,
+                          double ntargets)
+            : ICrossSection(efficiency,
+                            signal_estimator,
+                            flux,
+                            unfold,
+                            ntargets) {}
+
     EigenDifferentialCrossSectionEstimator::
     EigenDifferentialCrossSectionEstimator(IMeasurement * efficiency,
                                            IMeasurement * signal_estimator,
@@ -57,7 +82,10 @@ namespace xsec {
                           const double ntargets,
                           const Array & bin_widths) {
         auto denom = efficiency * flux * ntargets / 1e4 * bin_widths;
-        return unfolded_selected_signal / denom;
+
+        Array result = unfolded_selected_signal / denom;
+        result = (denom == 0).select(0, result);
+        return result;
     }
 
     const std::shared_ptr<TH1>
@@ -67,20 +95,81 @@ namespace xsec {
                           const double ntargets,
                           const bool is_differential) {
 
-        root::TH1Props prop(unfolded_selected_signal, "cross_section");
+        root::TH1Props prop(unfolded_selected_signal);
         Array bin_widths;
         if (is_differential) {
             bin_widths = Array::Ones(prop.nbins_and_uof);
         } else {
             bin_widths = root::MapBinWidthsToEigen(unfolded_selected_signal);
         }
-        auto result = CalculateCrossSection(root::MapContentsToEigen(unfolded_selected_signal),
-                                            root::MapContentsToEigen(efficiency),
-                                            root::MapContentsToEigen(flux),
-                                            ntargets,
-                                            bin_widths);
-        return std::shared_ptr<TH1>(root::ToROOT(result, result, prop));
+        Array result = CalculateCrossSection(root::MapContentsToEigen(unfolded_selected_signal),
+                                             root::MapContentsToEigen(efficiency),
+                                             root::MapContentsToEigen(flux),
+                                             ntargets,
+                                             bin_widths);
+        auto hresult = std::shared_ptr<TH1>(root::ToROOT(result, prop));
+        for (auto x = 1; x <= hresult->GetNbinsX(); x++) {
+            for (auto y = 1; y <= hresult->GetNbinsY(); y++) {
+                for (auto z = 1; z <= hresult->GetNbinsZ(); z++) {
+                    double r = hresult->GetBinContent(x, y, z);
+                    if (!r) continue;
+
+                    double deff = efficiency->GetBinError(x, y, z) / efficiency->GetBinContent(x, y, z);
+                    double dflux = flux->GetBinError(x, y, z) / flux->GetBinContent(x, y, z);
+                    double dsig = unfolded_selected_signal->GetBinError(x, y, z) /
+                                  unfolded_selected_signal->GetBinContent(x, y, z);
+
+                    double e = std::sqrt(deff * deff +
+                                         dflux * dflux +
+                                         dsig * dsig);
+                    hresult->SetBinError(x, y, z, e * r);
+                }
+            }
+        }
+        return hresult;
     }
+
+
+    ////////////////////////////////////////////////
+    std::shared_ptr<TH1>
+    DifferentialCrossSectionEstimator::
+    Eval(const TH1 * data) const {
+
+        auto signal_estimation = fSignalEstimator->Eval(data);
+        auto unfolded_signal = fUnfold->Eval(signal_estimation.get());
+
+        auto efficiency = fEfficiency->Eval(data);
+
+        auto flux = fFlux->Eval(data);
+
+        auto result = std::shared_ptr<TH1>(CalculateCrossSection(signal_estimation.get(),
+                                                                 efficiency.get(),
+                                                                 flux.get(),
+                                                                 fNTargets,
+                                                                 true));
+        return result;
+    }
+
+    ////////////////////////////////////////////////
+    std::shared_ptr<TH1>
+    CrossSectionEstimator::
+    Eval(const TH1 * data) const {
+
+        auto signal_estimation = dynamic_cast<ISignalEstimator *>(fSignalEstimator)->Signal(data);
+        auto unfolded_signal = dynamic_cast<IUnfoldEstimator *>(fUnfold)->Truth(signal_estimation);
+
+        auto efficiency = fEfficiency->Eval(data);
+
+        auto flux = fFlux->Eval(data);
+
+        auto result = std::shared_ptr<TH1>(CalculateCrossSection(signal_estimation,
+                                                                 efficiency.get(),
+                                                                 flux.get(),
+                                                                 fNTargets,
+                                                                 false));
+        return result;
+    }
+
 
     ////////////////////////////////////////////////
     void
@@ -88,15 +177,15 @@ namespace xsec {
     _eval_impl(const Array & data, const Array & error,
                ArrayRef result, ArrayRef rerror) const {
         Array signal_c(data.size()), signal_e(data.size());
-        dynamic_cast<IEigenSignalEstimator*>(fSignalEstimator)->_eval_impl(data, error, signal_c, signal_e);
-        dynamic_cast<IEigenUnfoldEstimator*>(fUnfold)->_eval_impl(signal_c, signal_e, signal_c, signal_e);
+        dynamic_cast<IEigenSignalEstimator *>(fSignalEstimator)->_eval_impl(data, error, signal_c, signal_e);
+        dynamic_cast<IEigenUnfoldEstimator *>(fUnfold)->_eval_impl(signal_c, signal_e, signal_c, signal_e);
 
 
         Array eff_c(data.size()), eff_e(data.size());
-        dynamic_cast<IEigenEfficiencyEstimator*>(fEfficiency)->_eval_impl(data, error, eff_c, eff_e);
+        dynamic_cast<IEigenEfficiencyEstimator *>(fEfficiency)->_eval_impl(data, error, eff_c, eff_e);
 
         Array flux_c(data.size()), flux_e(data.size());
-        dynamic_cast<IEigenFluxEstimator*>(fFlux)->_eval_impl(data, error, flux_c, flux_e);
+        dynamic_cast<IEigenFluxEstimator *>(fFlux)->_eval_impl(data, error, flux_c, flux_e);
 
         result = CalculateCrossSection(signal_c,
                                        eff_c,
@@ -104,8 +193,8 @@ namespace xsec {
                                        fNTargets,
                                        Array::Ones(data.size()));
         rerror = ((signal_e / signal_c).pow(2) +
-                 (flux_e / flux_c).pow(2) +
-                 (eff_e / eff_c).pow(2)).sqrt() * result;
+                  (flux_e / flux_c).pow(2) +
+                  (eff_e / eff_c).pow(2)).sqrt() * result;
     }
 
     ////////////////////////////////////////////////
@@ -114,15 +203,15 @@ namespace xsec {
     _eval_impl(const Array & data, const Array & error,
                ArrayRef result, ArrayRef rerror) const {
         Array signal_c(data.size()), signal_e(data.size());
-        dynamic_cast<IEigenSignalEstimator*>(fSignalEstimator)->_eval_impl(data, error, signal_c, signal_e);
-        dynamic_cast<IEigenUnfoldEstimator*>(fUnfold)->_eval_impl(signal_c, signal_e, signal_c, signal_e);
+        dynamic_cast<IEigenSignalEstimator *>(fSignalEstimator)->_eval_impl(data, error, signal_c, signal_e);
+        dynamic_cast<IEigenUnfoldEstimator *>(fUnfold)->_eval_impl(signal_c, signal_e, signal_c, signal_e);
 
 
         Array eff_c(data.size()), eff_e(data.size());
-        dynamic_cast<IEigenEfficiencyEstimator*>(fEfficiency)->_eval_impl(data, error, eff_c, eff_e);
+        dynamic_cast<IEigenEfficiencyEstimator *>(fEfficiency)->_eval_impl(data, error, eff_c, eff_e);
 
         Array flux_c(data.size()), flux_e(data.size());
-        dynamic_cast<IEigenFluxEstimator*>(fFlux)->_eval_impl(data, error, flux_c, flux_e);
+        dynamic_cast<IEigenFluxEstimator *>(fFlux)->_eval_impl(data, error, flux_c, flux_e);
 
         auto bin_widths = root::MapBinWidthsToEigen(this->GetHistProps());
 
@@ -133,8 +222,8 @@ namespace xsec {
                                        bin_widths);
 
         rerror = ((signal_e / signal_c).pow(2) +
-                 (flux_e / flux_c).pow(2) +
-                 (eff_e / eff_c).pow(2)).sqrt() * result;
+                  (flux_e / flux_c).pow(2) +
+                  (eff_e / eff_c).pow(2)).sqrt() * result;
     }
 
     ////////////////////////////////////////////////
