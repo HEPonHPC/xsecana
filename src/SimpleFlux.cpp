@@ -59,6 +59,12 @@ namespace xsec {
         root::MapToEigen(this->fFlux, result, rerror);
     }
 
+    IMeasurement *
+    SimpleFlux::
+    IntegratedFlux() const {
+        return new SimpleIntegratedFlux(fFlux);
+    }
+
 
     //////////////////////////////////////////////////////////
     void

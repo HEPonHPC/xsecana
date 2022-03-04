@@ -17,6 +17,8 @@ namespace xsec {
 
         virtual void SaveTo(TDirectory * dir, const std::string & subdir) const override;
 
+        IMeasurement * IntegratedFlux() const;
+
         static std::unique_ptr<IMeasurement>
         LoadFrom(TDirectory * dir, const std::string & subdir);
 
