@@ -26,6 +26,68 @@ namespace xsec {
             };
         }
 
+        class Reducer {
+        public:
+            Reducer(const TH1 * mask, bool padded)
+                    : fMask(mask), fPadded(padded)
+            {
+                Array m = root::MapContentsToEigen(fMask);
+                for(auto i = 0; i < m.size(); i++) {
+                    m(i) = m(i) ? 1 : 0;
+                }
+                fMap = detail::ParamMap(m);
+
+                if(fPadded) {
+                    fReducedProps = root::TH1Props(new TH1D("", "",
+                                                            fMap.GetNMinimizerParams(),
+                                                            0,
+                                                            fMap.GetNMinimizerParams()));
+                }
+                else {
+                    fReducedProps = root::TH1Props(new TH1D("", "",
+                                                            fMap.GetNMinimizerParams()-2,
+                                                            0,
+                                                            fMap.GetNMinimizerParams()-2));
+                }
+            }
+
+            TH1 * Reduce(const TH1 * expanded) const {
+                if(fPadded) {
+                    Array c(fMap.GetNMinimizerParams()+2);
+                    Array e(fMap.GetNMinimizerParams()+2);
+                    c(Eigen::seqN(1, fMap.GetNMinimizerParams())) =
+                            fMap.ToMinimizerParams(root::MapContentsToEigen(expanded));
+                    e(Eigen::seqN(1, fMap.GetNMinimizerParams())) =
+                            fMap.ToMinimizerParams(root::MapErrorsToEigen(expanded));
+                    return root::ToROOT(c, e, fReducedProps);
+                }
+                else {
+                    Array r = fMap.ToMinimizerParams(root::MapContentsToEigen(expanded));
+                    Array e = fMap.ToMinimizerParams(root::MapErrorsToEigen(expanded));
+                    return root::ToROOT(r, fReducedProps);
+                }
+            }
+
+            TH1 * Expand(const TH1 * reduced) const {
+                if(fPadded) {
+                    Array c = fMap.ToUserParams(root::MapContentsToEigenInner(reduced));
+                    Array e = fMap.ToUserParams(root::MapErrorsToEigen(reduced, false));
+                    return root::ToROOTLike(fMask, c, e);
+                }
+                else {
+                    Array c = fMap.ToUserParams(root::MapContentsToEigen(reduced));
+                    Array e = fMap.ToUserParams(root::MapErrorsToEigen(reduced));
+                    return root::ToROOTLike(fMask, c, e);
+                }
+            }
+
+        private:
+            const TH1 * fMask;
+            detail::ParamMap fMap;
+            bool fPadded;
+            root::TH1Props fReducedProps;
+        };
+
         ///\brief representation of reduced template component
         // containing both ROOT histogram and eigen array for easy access
         // and to prevent copies/transforms during the fit
