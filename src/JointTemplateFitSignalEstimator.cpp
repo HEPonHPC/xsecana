@@ -196,14 +196,12 @@ namespace xsec {
 
         auto condi_sample_fit_result_with_bias_error = condi_sample_fit_result.Clone();
         this->_update_results_with_bias_uncertainty(condi_sample_fit_result_with_bias_error, comp_sample_fit_result);
-        auto sample_it = fSampleEstimators.begin();
-        joint_results[sample_it->first] = condi_sample_fit_result;
-        joint_results[sample_it->first + "_with_bias_error"] = condi_sample_fit_result_with_bias_error;
 
-        sample_it++;
-        joint_results[sample_it->first] = comp_sample_fit_result;
+        joint_results[fCondiSampleLabel] = condi_sample_fit_result;
+        joint_results[fCondiSampleLabel + "_with_bias_error"] = condi_sample_fit_result_with_bias_error;
+        joint_results[fComplimentarySampleLabel] = comp_sample_fit_result;
 
-        double chi2_inv = joint_results.at(sample_it->first).fun_val;
+        double chi2_inv = joint_results.at(fComplimentarySampleLabel).fun_val;
         double chi2_std = condi_sample_fit_result.fun_val;
         double chi2_diff = std::abs(chi2_inv - chi2_std);
         double chi2_inv_at_std = fJointEstimatorInverse->Chi2(inverted_data,
@@ -212,7 +210,84 @@ namespace xsec {
         std::cout << "Standard chi2 = " << chi2_std << std::endl;
         std::cout << "Difference = " << chi2_diff << std::endl;
         std::cout << "Inverted chi2 at standard best fit parameters = " << chi2_inv_at_std << std::endl;
+        for(auto fixed_component : fFixedComponentLabels) {
+            _update_fixed_component_fit_result(joint_results.at(fCondiSampleLabel),
+                                               fixed_component,
+                                               fSampleEstimators.at(fCondiSampleLabel)
+                                                       ->PrefitComponentUncertainty(fixed_component));
+            _update_fixed_component_fit_result(joint_results.at(fCondiSampleLabel + "_with_bias_error"),
+                                               fixed_component,
+                                               fSampleEstimators.at(fCondiSampleLabel)
+                                                       ->PrefitComponentUncertainty(fixed_component));
+            _update_fixed_component_fit_result(joint_results.at(fComplimentarySampleLabel),
+                                               fixed_component,
+                                               fSampleEstimators.at(fComplimentarySampleLabel)
+                                                       ->PrefitComponentUncertainty(fixed_component));
+        }
+
         return joint_results;
+    }
+
+    std::map<std::string, TemplateFitResult>
+    JointTemplateFitSignalEstimator::
+    _joint_fit_result_run_inverse(TemplateFitResult condi_sample_fit_result,
+                                  const std::shared_ptr<TH1> inverted_data,
+                                  const std::map<std::string, TH1*> & seed) const {
+        std::cout << "Standard ordering fit done. Moving on to inverse ordering.\n";
+        std::map<std::string, TemplateFitResult> joint_results;
+
+        std::map<std::string, TH1*> inverted_seed = this->InvertParams(seed);
+
+        ((fit::Minuit2TemplateFitter*) fJointEstimator->GetFitter())->SetMinosErrors(false);
+        auto comp_sample_fit_result = fJointEstimatorInverse->Fit(inverted_data,
+                                                                  fJointEstimator->GetFitter(),
+                                                                  inverted_seed);
+
+        auto condi_sample_fit_result_with_bias_error = condi_sample_fit_result.Clone();
+        this->_update_results_with_bias_uncertainty(condi_sample_fit_result_with_bias_error, comp_sample_fit_result);
+
+        joint_results[fCondiSampleLabel] = condi_sample_fit_result;
+        joint_results[fCondiSampleLabel + "_with_bias_error"] = condi_sample_fit_result_with_bias_error;
+        joint_results[fComplimentarySampleLabel] = comp_sample_fit_result;
+
+        double chi2_inv = joint_results.at(fComplimentarySampleLabel).fun_val;
+        double chi2_std = condi_sample_fit_result.fun_val;
+        double chi2_diff = std::abs(chi2_inv - chi2_std);
+        double chi2_inv_at_std = fJointEstimatorInverse->Chi2(inverted_data,
+                                                              this->InvertParams(comp_sample_fit_result.component_params));
+        std::cout << "Inverted chi2 = " << chi2_inv << std::endl;
+        std::cout << "Standard chi2 = " << chi2_std << std::endl;
+        std::cout << "Difference = " << chi2_diff << std::endl;
+        std::cout << "Inverted chi2 at standard best fit parameters = " << chi2_inv_at_std << std::endl;
+
+        for(auto fixed_component : fFixedComponentLabels) {
+            _update_fixed_component_fit_result(joint_results.at(fCondiSampleLabel),
+                                               fixed_component,
+                                               fSampleEstimators.at(fCondiSampleLabel)
+                                                       ->PrefitComponentUncertainty(fixed_component));
+            _update_fixed_component_fit_result(joint_results.at(fCondiSampleLabel + "_with_bias_error"),
+                                               fixed_component,
+                                               fSampleEstimators.at(fCondiSampleLabel)
+                                                       ->PrefitComponentUncertainty(fixed_component));
+            _update_fixed_component_fit_result(joint_results.at(fComplimentarySampleLabel),
+                                               fixed_component,
+                                               fSampleEstimators.at(fComplimentarySampleLabel)
+                                                       ->PrefitComponentUncertainty(fixed_component));
+        }
+
+        return joint_results;
+    }
+
+    void
+    JointTemplateFitSignalEstimator::
+    _update_fixed_component_fit_result(TemplateFitResult & result,
+                                       std::string component_label,
+                                       const Systematic<TH1> & prefit_error) const {
+        result.component_params_error_up.at(component_label) = (TH1*) prefit_error.Up()->Clone();
+        result.component_params_error_down.at(component_label) = (TH1*) prefit_error.Down()->Clone();
+
+        result.component_params_error_up.at(component_label)->Multiply(result.component_params.at(component_label));
+        result.component_params_error_down.at(component_label)->Multiply(result.component_params.at(component_label));
     }
 
 

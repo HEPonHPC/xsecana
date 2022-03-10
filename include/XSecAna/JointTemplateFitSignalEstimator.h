@@ -54,6 +54,10 @@ namespace xsec {
                                                                                const std::map<std::string, TH1*> & seed) const;
         void _update_results_with_bias_uncertainty(TemplateFitResult & condi, TemplateFitResult & comp) const;
 
+        void _update_fixed_component_fit_result(TemplateFitResult & result,
+                                                std::string component_label,
+                                                const Systematic<TH1> & prefit_error) const;
+
         template<class T>
         std::map<std::string, T> _invert_samples(const std::map<std::string, T> & samples) const;
         TH1 * _condi_params_to_comp_params(const std::string & name, const TH1 * condi) const;
