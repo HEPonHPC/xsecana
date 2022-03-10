@@ -176,6 +176,7 @@ namespace xsec {
             const IReducedTemplateComponent * GetComponent(std::string label) const { return fComponents.at(label); }
             int GetComponentIdx(const std::string & component_label) const { return fComponentIdx.at(component_label); }
             [[nodiscard]] std::vector<std::string> GetSystematicLabels() const;
+            ReducedComponent * NominalTotal() const;
 
         private:
             int fNInnerBins;

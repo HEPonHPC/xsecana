@@ -501,6 +501,18 @@ namespace xsec {
             return fComponents.at(component_label)->Predict(component_params);
         }
 
+        ReducedComponent *
+        ReducedComponentCollection::
+        NominalTotal() const {
+            Array total = Array::Zero(fComponents.begin()->second->GetNominal()->GetArray().size());
+            for(auto component : fComponents) {
+                total += component.second->GetNominal()->GetArray().array();
+            }
+            return new ReducedComponent(total.matrix(),
+                                        fComponents.begin()->second->GetNominal()->GetNOuterBins(),
+                                        fComponents.begin()->second->GetNominal()->GetNInnerBins());
+        }
+
         TH1*
         IUserTemplateComponent::
         ProjectNominal() const {
