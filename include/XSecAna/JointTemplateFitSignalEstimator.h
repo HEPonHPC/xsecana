@@ -64,6 +64,9 @@ namespace xsec {
         std::set<std::string> fFixedComponentLabels;
         fit::ComponentReducer fReducer;
 
+        std::string fCondiSampleLabel;
+        std::string fComplimentarySampleLabel;
+
     };
 
 }

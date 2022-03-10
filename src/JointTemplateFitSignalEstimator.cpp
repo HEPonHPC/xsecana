@@ -28,6 +28,12 @@ namespace xsec {
         }
         std::map<std::string, fit::TemplateFitSample> inverted_samples = _invert_samples(samples);
         fJointEstimatorInverse = new TemplateFitSignalEstimator(fit::detail::_join(inverted_samples), mask);
+
+        auto sample_it = fSampleEstimators.begin();
+        fCondiSampleLabel = sample_it->first;
+        sample_it++;
+
+        fComplimentarySampleLabel = sample_it->first;
     }
 
     void
