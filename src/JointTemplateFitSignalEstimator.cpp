@@ -292,4 +292,24 @@ namespace xsec {
                                              nrandom_seeds);
         //return this->Fit(JoinData(data), fitter, nrandom_seeds);
     }
+
+    std::map<std::string, TemplateFitResult>
+    JointTemplateFitSignalEstimator::
+    Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+        const std::map<std::string, TH1*> & seed) const {
+        return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), seed),
+                                             JoinData(_invert_samples(data)),
+                                             seed);
+
+    }
+
+    std::map<std::string, TemplateFitResult>
+    JointTemplateFitSignalEstimator::
+    Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+        fit::IFitter * fitter,
+        const std::map<std::string, TH1*> & seed) {
+        return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), fitter, seed),
+                                             JoinData(_invert_samples(data)),
+                                             seed);
+    }
 }

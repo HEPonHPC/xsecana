@@ -16,6 +16,12 @@ namespace xsec {
                                                                    fit::IFitter * fitter,
                                                                    int nrandom_seeds=-1);
 
+        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+                                                                   const std::map<std::string, TH1*> & seed) const;
+        [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
+                                                                   fit::IFitter * fitter,
+                                                                   const std::map<std::string, TH1*> & seed);
+
         TemplateFitSignalEstimator * GetSampleTemplateFit(const std::string & name) const { return fSampleEstimators.at(name); }
         TemplateFitSignalEstimator * GetJointTemplateFit() const { return fJointEstimator; }
         TemplateFitSignalEstimator * GetInvertedJointTemplateFit() const { return fJointEstimatorInverse; }
@@ -43,6 +49,9 @@ namespace xsec {
         std::map<std::string, TemplateFitResult> _joint_fit_result_run_inverse(TemplateFitResult condi_sample_fit_result,
                                                                                std::shared_ptr<TH1> inverted_data,
                                                                                int nrandom_seeds) const;
+        std::map<std::string, TemplateFitResult> _joint_fit_result_run_inverse(TemplateFitResult condi_sample_fit_result,
+                                                                               std::shared_ptr<TH1> inverted_data,
+                                                                               const std::map<std::string, TH1*> & seed) const;
         void _update_results_with_bias_uncertainty(TemplateFitResult & condi, TemplateFitResult & comp) const;
 
         template<class T>
