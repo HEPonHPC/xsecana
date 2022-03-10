@@ -96,18 +96,17 @@ namespace xsec {
                           const bool is_differential) {
 
         root::TH1Props prop(unfolded_selected_signal);
-        Array bin_widths;
-        if (is_differential) {
-            bin_widths = Array::Ones(prop.nbins_and_uof);
-        } else {
-            bin_widths = root::MapBinWidthsToEigen(unfolded_selected_signal);
-        }
+        Array bin_widths = Array::Ones(prop.nbins_and_uof);
+
         Array result = CalculateCrossSection(root::MapContentsToEigen(unfolded_selected_signal),
                                              root::MapContentsToEigen(efficiency),
                                              root::MapContentsToEigen(flux),
                                              ntargets,
                                              bin_widths);
         auto hresult = std::shared_ptr<TH1>(root::ToROOT(result, prop));
+        if(is_differential) {
+            hresult->Scale(1, "width");
+        }
         for (auto x = 1; x <= hresult->GetNbinsX(); x++) {
             for (auto y = 1; y <= hresult->GetNbinsY(); y++) {
                 for (auto z = 1; z <= hresult->GetNbinsZ(); z++) {
