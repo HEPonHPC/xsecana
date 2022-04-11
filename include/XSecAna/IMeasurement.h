@@ -26,6 +26,13 @@ namespace xsec {
                  const std::string & name) {
             return load(dir, name);
         }
+
+        template<class T>
+        T *
+        cast() {
+            static_assert(std::is_base_of_v<IMeasurement, T>);
+            return dynamic_cast<T*>(this);
+        }
     };
     typedef xsec::type::LoadFunction<IMeasurement> LoadMeasurementFunc;
 
