@@ -15,7 +15,9 @@ namespace xsec {
 
             Matrix total_covariance = fSystematicCovariance;
             // add statistical uncertainty of reweighted prediction
-            total_covariance += u.asDiagonal();
+            if(!fIgnoreStatisticalUncertainty) {
+                total_covariance += u.asDiagonal();
+            }
             return v.dot(total_covariance.llt().solve(v));
         }
 
@@ -71,11 +73,12 @@ namespace xsec {
         TemplateFitCalculator::
         TemplateFitCalculator(const ReducedComponentCollection & templates,
                               const std::vector<int> & dims,
-                              const Matrix & systematic_covariance)
+                              const Matrix & systematic_covariance,
+                              bool ignore_statistical_uncertainty)
                 : fSystematicCovariance(systematic_covariance),
                   fNFunCalls(0),
-                  fComponents(templates) {
-
+                  fComponents(templates),
+                  fIgnoreStatisticalUncertainty(ignore_statistical_uncertainty) {
 
             // check we have an appropriate covariance matrix
             assert(systematic_covariance.rows() == fComponents.GetNOuterBins() * fComponents.GetNInnerBins() &&
@@ -86,6 +89,27 @@ namespace xsec {
 
             fParamMap = detail::ParamMap(fNUserParams);
             fFixedParams = Eigen::RowVectorXd::Zero(fNUserParams);
+
+            WarnInversionError();
+        }
+        void
+        TemplateFitCalculator::
+        AddNoise(double noise) {
+            std::cout << "Info: Adding noise to the Covariance Diagonal: " << noise << std::endl;
+            Matrix epsilon = (Vector::Ones(fSystematicCovariance.rows()) * noise).asDiagonal();
+            fSystematicCovariance += epsilon;
+
+            WarnInversionError();
+        }
+
+        void
+        TemplateFitCalculator::
+        WarnInversionError() const {
+            Matrix I = Matrix::Identity(fSystematicCovariance.rows(),
+                                        fSystematicCovariance.cols());
+            Matrix x = fSystematicCovariance.llt().solve(I);
+            double error = (fSystematicCovariance * x - I).norm() / I.norm();
+            std::cout << "Info: Numerical Accuracy of Covariance Matrix Inversion = " << error << std::endl;
         }
     }
 }

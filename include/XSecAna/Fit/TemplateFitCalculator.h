@@ -14,7 +14,8 @@ namespace xsec {
 
             TemplateFitCalculator(const ReducedComponentCollection & templates,
                                   const std::vector<int> & dims,
-                                  const Matrix & systematic_covariance);
+                                  const Matrix & systematic_covariance,
+                                  bool ignore_statistical_uncertainty = false);
 
             void FixTemplate(const int & template_idx, const double & at = 1);
 
@@ -43,9 +44,19 @@ namespace xsec {
             double fun(const Vector & minimizer_params,
                        const Vector & data) const override;
 
+
+            void AddNoise(double noise);
+
+            Matrix GetSystematicCovariance() const { return fSystematicCovariance; }
+
+            void SetIgnoreStatisticalUncertainty(bool ignore) { fIgnoreStatisticalUncertainty = ignore; }
+            double GetIgnoreStatisticalUncertainty() const { return fIgnoreStatisticalUncertainty; }
+
         private:
 
-            const Matrix fSystematicCovariance;
+            void WarnInversionError() const;
+
+            Matrix fSystematicCovariance;
             ReducedComponentCollection fComponents;
             int fNUserParams;
             int fNComponents;
@@ -54,6 +65,8 @@ namespace xsec {
             Vector fFixedParams;
 
             mutable unsigned int fNFunCalls;
+
+            bool fIgnoreStatisticalUncertainty;
         };
     }
 }
