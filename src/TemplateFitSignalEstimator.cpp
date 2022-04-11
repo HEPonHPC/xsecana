@@ -169,27 +169,25 @@ namespace xsec {
         }
 
         // calculate and store covariance matrices
-        fTotalCovariance = 0;
+        fTotalCovariance = new TH2D("", "",
+                                    fTotalTemplate->GetNbinsX(), 0, fTotalTemplate->GetNbinsX(),
+                                    fTotalTemplate->GetNbinsX(), 0, fTotalTemplate->GetNbinsX());
+        fTotalCovariance->SetTitle("Total Covariance");
+        fTotalCovariance->GetXaxis()->SetTitle("Template Bins");
+        fTotalCovariance->GetYaxis()->SetTitle("Template Bins");
         for (auto systematic: fSystematics) {
             fCovarianceMatrices[systematic.first] = systematic.second.CovarianceMatrix(fTotalTemplate);
             fCovarianceMatrices.at(systematic.first)->GetXaxis()->SetTitle("Template Bins");
             fCovarianceMatrices.at(systematic.first)->GetYaxis()->SetTitle("Template Bins");
             fCovarianceMatrices.at(systematic.first)->SetTitle((systematic.first + " Covariance").c_str());
-            if (!fTotalCovariance) {
-                fTotalCovariance = (TH1 *) fCovarianceMatrices.at(systematic.first)->Clone();
-                fTotalCovariance->SetTitle("Total Covariance");
-            } else {
-                fTotalCovariance->Add(fCovarianceMatrices.at(systematic.first));
-            }
+
+            fTotalCovariance->Add(fCovarianceMatrices.at(systematic.first));
+
         }
 
         Matrix total_covariance = root::MapContentsToEigenInner(fTotalCovariance)
                 .matrix().reshaped(fTotalCovariance->GetNbinsX(),
                                    fTotalCovariance->GetNbinsX());
-        fInvTotalCovariance = (TH1 *) fTotalCovariance->Clone();
-        fInvTotalCovariance->SetTitle("Inverse Total Covariance");
-        root::FillTH2Contents((TH2 *) fInvTotalCovariance, total_covariance.inverse());
-
         fFitCalc = new fit::TemplateFitCalculator(fReducedComponents,
                                                   {fReducedComponents.GetNOuterBins(),
                                                    fReducedComponents.GetNInnerBins()},
@@ -463,6 +461,16 @@ namespace xsec {
                     component->ProjectSystematic(syst.first);
         }
         auto nominal = component->ProjectNominalForErrorCalculation();
+        auto stat_uncert = std::shared_ptr<TH1>(component->ProjectNominal());
+        for(int x = 1; x <= stat_uncert->GetNbinsX(); x++) {
+            for (int y = 1; y <= stat_uncert->GetNbinsY(); y++) {
+                for (int z = 1; z <= stat_uncert->GetNbinsZ(); z++) {
+                    stat_uncert->SetBinContent(x,y,z, stat_uncert->GetBinContent(x,y,z) +
+                                                      stat_uncert->GetBinError(x,y,z));
+                }
+            }
+        }
+        projected_systematics["statistical"] = Systematic<TH1>("statistical", stat_uncert);
 
         auto up = std::get<1>(SimpleQuadSum::TotalFractionalUncertainty(nominal, projected_systematics)).Up();
         auto down = std::shared_ptr<TH1>((TH1*) up->Clone());
