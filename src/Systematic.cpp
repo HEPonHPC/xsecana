@@ -191,6 +191,7 @@ namespace xsec {
             else if(fType == kTwoSided) {
                 for (auto i = 0; i < nom_a.size(); i++) {
                     for (auto j = 0; j < nom_a.size(); j++) {
+
                         auto di_0 = nom_a(i) - shifts[0](i);
                         auto di_1 = nom_a(i) - shifts[1](i);
                         auto dj_0 = nom_a(j) - shifts[0](j);
@@ -198,19 +199,31 @@ namespace xsec {
                         auto di = (std::abs(di_0) > std::abs(di_1)) ? di_0 : di_1;
                         auto dj = (std::abs(dj_0) > std::abs(dj_1)) ? dj_0 : dj_1;
 
-                        cov(i, j) = di * dj;
+                        //cov(i, j) = di * dj;
+                        cov(i, j) = di_0 * dj_0 + di_1 * dj_1;
                     }
                 }
             }
             else { // multiverse
+                std::vector<double> multiverse_means(nom_a.size(), 0);
+                for(auto ibin = 0u; ibin < nom_a.size(); ibin++) {
+                    for(auto imv = 0u; imv < shifts.size(); imv++) {
+                        multiverse_means[ibin] += shifts[imv][ibin];
+                    }
+                    multiverse_means[ibin] /= shifts.size();
+                }
+
                  for (auto i = 0; i < nom_a.size(); i++) {
                     for (auto j = 0; j < nom_a.size(); j++) {
+
                         double v = 0;
                         for(auto u = 0u; u < shifts.size(); u++) {
-                            v += (shifts[u](i) - nom_a(i)) *
-                                 (shifts[u](j) - nom_a(j));
+                            //v += (shifts[u](i) - nom_a(i)) *
+                            //     (shifts[u](j) - nom_a(j));
+                            v += (shifts[u](i) - multiverse_means[i]) *
+                                 (shifts[u](j) - multiverse_means[j]);
                         }
-                        cov(i, j) =  v / fContainer.size();
+                        cov(i, j) =  v / (fContainer.size()-1);
                     }
                 }
             }
