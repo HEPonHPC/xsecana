@@ -123,6 +123,22 @@ namespace xsec {
             GetMatrix() const {
                 return fM;
             }
+
+            unsigned int
+            ParamMap::
+            UserToMinimizerIdx(int user_idx) const {
+                auto visitor = arg_equal<int>{1};
+                fM.row(user_idx).visit(visitor);
+                return visitor.col_where;
+            }
+
+            unsigned int
+            ParamMap::
+            MinimizerToUserIdx(int minimizer_idx) const {
+                auto visitor = arg_equal<int>{1};
+                fM.col(minimizer_idx).visit(visitor);
+                return visitor.row_where;
+            }
         }
 
         //ReducedComponent::

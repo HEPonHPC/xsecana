@@ -20,6 +20,8 @@ namespace xsec {
                 void UnmaskTemplate(int template_idx);
                 bool IsParamMasked(int i) const;
                 const Matrix & GetMatrix() const;
+                unsigned int UserToMinimizerIdx(int user_idx) const;
+                unsigned int MinimizerToUserIdx(int minimizer_idx) const;
 
             private:
                 Matrix fM;
@@ -49,6 +51,16 @@ namespace xsec {
                                                             0,
                                                             fMap.GetNMinimizerParams()-2));
                 }
+            }
+
+            int GetReducedIndex(int xbin, int ybin, int zbin = 0) const {
+                int gbin = fMask->GetBin(xbin, ybin, zbin);
+                return fMap.UserToMinimizerIdx(gbin);
+            }
+
+            void GetExpandedIndex(int reduced_index, int & xbin, int & ybin, int & zbin) const {
+                int expanded_gbin = fMap.MinimizerToUserIdx(reduced_index);
+                fMask->GetBinXYZ(expanded_gbin, xbin, ybin, zbin);
             }
 
             TH1 * Reduce(const TH1 * expanded) const {
@@ -98,7 +110,7 @@ namespace xsec {
             ReducedComponent(const Vector & a, int nouter_bins, int ninner_bins);
             ReducedComponent(const TH1 * h, int nouter_bins, int ninner_bins);
             std::shared_ptr<TH1> GetHist() const { return fHist; }
-            [[nodiscard]] TH1 * ToHist1D() const;
+            //[[nodiscard]] TH1 * ToHist1D() const;
             const Vector & GetArray() const { return fArray; };
             int GetNInnerBins() const { return fNInnerBins; }
             int GetNOuterBins() const { return fNOuterBins; }
@@ -192,6 +204,7 @@ namespace xsec {
                     : fComponents(components) {}
 
             const std::map<std::string, const IUserTemplateComponent*> & GetComponents() const { return fComponents; }
+            std::map<std::string, const IUserTemplateComponent*> & GetComponents() { return fComponents; }
             [[nodiscard]] ReducedComponentCollection Reduce(const ComponentReducer & reducer) const;
             [[nodiscard]] TH1 * NominalProjectedTotal() const;
             [[nodiscard]] TH1 * NominalTotal() const;
@@ -282,4 +295,3 @@ namespace xsec {
         };
     }
 }
-
