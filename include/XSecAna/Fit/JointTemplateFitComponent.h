@@ -13,7 +13,8 @@ namespace xsec {
             Systematic <TH1> _join(const std::vector <Systematic<TH1>> & samples);
             Systematic <TH1> _join(const std::vector <Systematic<TH1>> & samples);
 
-            TemplateFitSample _join(const std::map<std::string, TemplateFitSample> & components);
+            TemplateFitSample _join(const std::map<std::string, TemplateFitSample> & components,
+                                    const std::map<std::string, std::string> & component_conditioning);
 
 
             // templated function to join maps of vectors
@@ -37,7 +38,8 @@ namespace xsec {
         // multiple correlated samples
         class UserJointTemplateComponent : public IUserTemplateComponent {
         public:
-            UserJointTemplateComponent(const std::map<std::string, const IUserTemplateComponent *> & sample_components);
+            UserJointTemplateComponent(const std::map<std::string, const IUserTemplateComponent *> & sample_components,
+                                       std::string conditioning_sample_label);
             [[nodiscard]] IReducedTemplateComponent * Reduce(const ComponentReducer & reducer) const override;
 
             std::shared_ptr<TH1> GetNominal() const override { return fJointTemplateMean; }
@@ -59,6 +61,9 @@ namespace xsec {
 
             const std::map<std::string, const IUserTemplateComponent *> & GetUserTemplateComponents() const
             { return fSamples; }
+
+            std::string GetConditioningSampleLabel() const { return fConditioningSampleLabel; }
+            std::string GetComplimentarySampleLabel() const { return fComplimentarySampleLabel; }
 
         private:
             static std::shared_ptr<TH1> _to1d(const std::shared_ptr<TH1> h);
@@ -95,6 +100,7 @@ namespace xsec {
         class ReducedJointTemplateComponent : public IReducedTemplateComponent {
         public:
             ReducedJointTemplateComponent(std::map<std::string, const IReducedTemplateComponent*> samples,
+                                          std::string conditioning_sample_label,
                                           const ReducedComponent * joined_template_mean,
                                           std::shared_ptr<TH1> joined_normalization,
                                           std::shared_ptr<TH1> joined_normalization_for_error_calc,
@@ -142,6 +148,11 @@ namespace xsec {
 
             bool IsSingular() const { return fIsSingular; }
 
+            std::string GetComplimentarySampleLabel() const { return fComplimentarySampleLabel; }
+            std::string GetConditioningSampleLabel() const { return fConditioningSampleLabel; }
+
+            TH1 * GetPredictionCovariance() const;
+
         private:
             bool _is_singular();
             const ReducedComponent * fJointTemplateMean;
@@ -158,12 +169,15 @@ namespace xsec {
             Matrix fConditioningSampleInvCovariance;
             Matrix fCrossSampleCovariance;
             Matrix fRotationMatrix;
+            Matrix fPredictionCovariance;
 
             Array fConditioningSampleNormalization;
             Vector fComplimentarySampleNormalization;
 
             std::string fConditioningSampleLabel;
             std::string fComplimentarySampleLabel;
+            int fConditioningSampleIdx;
+            int fComplimentarySampleIdx;
             int fNOuterBins;
 
             const IReducedTemplateComponent * fConditioningSample;

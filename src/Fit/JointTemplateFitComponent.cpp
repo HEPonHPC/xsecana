@@ -120,7 +120,8 @@ namespace xsec {
             }
 
             TemplateFitSample
-            _join(const std::map<std::string, TemplateFitSample> & samples) {
+            _join(const std::map<std::string, TemplateFitSample> & samples,
+                  const std::map<std::string, std::string> & component_conditioning) {
                 std::map<std::string, const IUserTemplateComponent *> joined_components;
                 // join components
                 for (const auto & component: samples.begin()->second.components.GetComponents()) {
@@ -130,7 +131,9 @@ namespace xsec {
                                 (UserTemplateComponent *) samples.at(sample.first)
                                         .components.GetComponents().at(component.first);
                     }
-                    joined_components[component.first] = new UserJointTemplateComponent(tmp_comp);
+                    joined_components[component.first] =
+                            new UserJointTemplateComponent(tmp_comp,
+                                                           component_conditioning.at(component.first));
                 }
                 // join shape only systematics
                 std::map<std::string, Systematic<TH1>> joined_shape_only_systematics;
@@ -241,7 +244,8 @@ namespace xsec {
         }
 
         UserJointTemplateComponent::
-        UserJointTemplateComponent(const std::map<std::string, const IUserTemplateComponent *> & sample_components)
+        UserJointTemplateComponent(const std::map<std::string, const IUserTemplateComponent *> & sample_components,
+                                   std::string conditioning_sample_label)
                 : fSamples(sample_components) {
             // joined templates
             std::vector<std::shared_ptr<TH1>> vmeans;
@@ -340,12 +344,13 @@ namespace xsec {
                 }
             }
 
-            auto sample_it = fSampleNormalizations.begin();
-            fConditioningSampleLabel = sample_it->first;
-
-            sample_it++;
-            fComplimentarySampleLabel = sample_it->first;
-
+            fConditioningSampleLabel = conditioning_sample_label;
+            for(auto sample : fSamples) {
+                if(sample.first != fConditioningSampleLabel) {
+                    fComplimentarySampleLabel = sample.first;
+                    break;
+                }
+            }
         }
 
         IReducedTemplateComponent *
@@ -396,6 +401,7 @@ namespace xsec {
             }
 
             return new ReducedJointTemplateComponent(reduced_samples,
+                                                     fConditioningSampleLabel,
                                                      reducer.Reduce(fJointTemplateMean),
                                                      detail::_join(compressed_norm_means_to_join),
                                                      detail::_join(compressed_norm_means_to_join_for_error_calc),
@@ -406,6 +412,7 @@ namespace xsec {
 
         ReducedJointTemplateComponent::
         ReducedJointTemplateComponent(std::map<std::string, const IReducedTemplateComponent *> samples,
+                                      std::string conditioning_sample_label,
                                       const ReducedComponent * joined_template_mean,
                                       std::shared_ptr<TH1> joined_norm_mean,
                                       std::shared_ptr<TH1> joined_norm_mean_for_error_calc,
@@ -420,6 +427,19 @@ namespace xsec {
                   fJointNormSystematics(joint_norm_systematics),
                   fNOuterBins(joined_template_mean->GetNOuterBins()) {
             assert(sample_norm_means.size() == 2 && "Implementation only supports 2 sample joint fits");
+            fConditioningSampleLabel = conditioning_sample_label;
+            int idx = 0;
+            // some ineligant book keeping.
+            // Samples would be better contained in a vector
+            for(const auto & s : samples) {
+                if(s.first != fConditioningSampleLabel) {
+                    fComplimentarySampleLabel = s.first;
+                    fComplimentarySampleIdx = idx;
+                    break;
+                }
+                idx++;
+            }
+            fConditioningSampleIdx = 1 - fComplimentarySampleIdx;
 
             for(const auto & syst : samples.begin()->second->GetSystematics()) {
                 std::vector<Systematic<TH1>> vsysts;
@@ -438,6 +458,12 @@ namespace xsec {
                     fJoinedNormTotalCovariance->Add(fJoinedNormCovariances.at(syst.first));
                 }
             }
+            // add statistical uncertainy (maybe)
+            for (int i = 1; i <= fJoinedNormTotalCovariance->GetNbinsX(); i++) {
+                double v_ii = fJoinedNormTotalCovariance->GetBinContent(i,i);
+                double stat = fJointNormalization->GetBinContent(i);
+                fJoinedNormTotalCovariance->SetBinContent(i,i, v_ii + stat);
+            }
 
             // make sure bins didn't get scrambled at some point
             // errors calculated for the reduced nominal normalization should be
@@ -447,14 +473,10 @@ namespace xsec {
                        std::sqrt(fJoinedNormTotalCovariance->GetBinContent(x, x)));
             }
 
-            auto sample_it = fSampleNormalizations.begin();
-            fConditioningSampleNormalization = root::MapContentsToEigenInner(sample_it->second.get());
-            fConditioningSampleLabel = sample_it->first;
+            fConditioningSampleNormalization = root::MapContentsToEigenInner(fSampleNormalizations.at(fConditioningSampleLabel).get());
             fConditioningSample = samples.at(fConditioningSampleLabel);
 
-            sample_it++;
-            fComplimentarySampleNormalization = root::MapContentsToEigenInner(sample_it->second.get());
-            fComplimentarySampleLabel = sample_it->first;
+            fComplimentarySampleNormalization = root::MapContentsToEigenInner(fSampleNormalizations.at(fComplimentarySampleLabel).get());
             fComplimentarySample = samples.at(fComplimentarySampleLabel);
 
             if(_is_singular()) {
@@ -465,6 +487,9 @@ namespace xsec {
                 inverse = (fConditioningSampleNormalization == 0).select(0, inverse);
                 fConditioningSampleInvCovariance = inverse.matrix().asDiagonal();
                 fCrossSampleCovariance = fComplimentarySampleNormalization.asDiagonal();
+
+                fPredictionCovariance = Matrix::Zero(fCrossSampleCovariance.rows(),
+                                                     fCrossSampleCovariance.cols());
             }
             else {
                 Matrix total_covariance = root::MapContentsToEigenInner(fJoinedNormTotalCovariance)
@@ -472,18 +497,42 @@ namespace xsec {
                               fJoinedNormTotalCovariance->GetNbinsX());
 
                 fConditioningSampleInvCovariance =
-                        total_covariance.block(0,
-                                               0,
+                        total_covariance.block(fConditioningSampleIdx * fNOuterBins,
+                                               fConditioningSampleIdx * fNOuterBins,
                                                fNOuterBins,
                                                fNOuterBins).inverse();
                 fCrossSampleCovariance =
-                        total_covariance.block(fNOuterBins,
-                                               0,
+                        total_covariance.block(fComplimentarySampleIdx * fNOuterBins,
+                                               fConditioningSampleIdx * fNOuterBins,
                                                fNOuterBins,
                                                fNOuterBins);
+
+                Matrix complimentary_block = total_covariance.block(fComplimentarySampleIdx * fNOuterBins,
+                                                                    fComplimentarySampleIdx * fNOuterBins,
+                                                                    fNOuterBins,
+                                                                    fNOuterBins);
+                Matrix off_diag_block = total_covariance.block(fConditioningSampleIdx * fNOuterBins, // 0
+                                                               fComplimentarySampleIdx * fNOuterBins, //fNOuterBins,
+                                                               fNOuterBins,
+                                                               fNOuterBins);
+                fPredictionCovariance = complimentary_block -
+                                        fCrossSampleCovariance *
+                                        fConditioningSampleInvCovariance *
+                                        off_diag_block;
             }
 
             fRotationMatrix = fCrossSampleCovariance * fConditioningSampleInvCovariance;
+        }
+
+        TH1 *
+        ReducedJointTemplateComponent::
+        GetPredictionCovariance() const {
+            auto ret = new TH2D("", "",
+                                fPredictionCovariance.rows(), 0, fPredictionCovariance.rows(),
+                                fPredictionCovariance.cols(), 0, fPredictionCovariance.cols());
+
+            root::FillTH2Contents(ret, fPredictionCovariance);
+            return ret;
         }
 
         bool
@@ -506,7 +555,9 @@ namespace xsec {
                     fCrossSampleCovariance * fConditioningSampleInvCovariance *
                     (rescaled_condi_sample - fConditioningSampleNormalization).matrix();
             Array complimentary_params = rescaled_comp_sample / fComplimentarySampleNormalization.array();
-            return (fComplimentarySampleNormalization.array() == 0).select(0, complimentary_params);
+            complimentary_params = (fComplimentarySampleNormalization.array() == 0).select(0, complimentary_params);
+            //complimentary_params = (complimentary_params.array() < 0).select(0, complimentary_params);
+            return complimentary_params;
         }
 
         Vector
@@ -533,7 +584,13 @@ namespace xsec {
 
             Matrix joint_prediction(condi_prediction.rows() + comp_prediction.rows(),
                                     fNOuterBins);
-            joint_prediction << condi_prediction, comp_prediction;
+            joint_prediction.block(fConditioningSampleIdx * comp_prediction.rows(),
+                                   0,
+                                   condi_prediction.rows(), fNOuterBins) = condi_prediction;
+            joint_prediction.block(fComplimentarySampleIdx * condi_prediction.rows(),
+                                   0,
+                                   comp_prediction.rows(), fNOuterBins) = comp_prediction;
+            //joint_prediction << condi_prediction, comp_prediction;
             return joint_prediction.reshaped();
         }
 
@@ -542,8 +599,14 @@ namespace xsec {
         PredictProjected(const Vector & condi_params) const {
             Vector comp_params = this->ComplimentaryParams(condi_params);
             Vector joint_projection(condi_params.size() + comp_params.size());
-            joint_projection << fConditioningSample->PredictProjected(condi_params),
-                                fComplimentarySample->PredictProjected(comp_params);
+
+            joint_projection(Eigen::seqN(fComplimentarySampleIdx * condi_params.size(), comp_params.size())) =
+                    fComplimentarySample->PredictProjected(comp_params);
+            joint_projection(Eigen::seqN(fConditioningSampleIdx * comp_params.size(), condi_params.size())) =
+                    fConditioningSample->PredictProjected(condi_params);
+
+            //joint_projection << fConditioningSample->PredictProjected(condi_params),
+            //fComplimentarySample->PredictProjected(comp_params);
             return joint_projection;
         }
 

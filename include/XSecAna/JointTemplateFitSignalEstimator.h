@@ -8,6 +8,7 @@ namespace xsec {
     class JointTemplateFitSignalEstimator {
     public:
         JointTemplateFitSignalEstimator(const std::map<std::string, fit::TemplateFitSample> & samples,
+                                        const std::map<std::string, std::string> & component_conditioning,
                                         const TH1 * mask = 0);
         
         [[nodiscard]] std::map<std::string, TemplateFitResult> Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
@@ -39,8 +40,9 @@ namespace xsec {
 
         double Chi2(const std::shared_ptr<TH1> data, const std::map<std::string, TH1*> & params) const;
 
-        TH2D * GetTotalCovariance() const;
-        TH2D * GetCovariance(const std::string & systematic_name) const;
+        TH2D * GetTotalCovariance(const std::map<std::string, TH1*> & params) const;
+        TH2D * GetTotalSystematicCovariance() const;
+        TH2D * GetSystematicCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;
 
         static std::shared_ptr<TH1> JoinData(const std::map<std::string, std::shared_ptr<TH1>> & data_samples);

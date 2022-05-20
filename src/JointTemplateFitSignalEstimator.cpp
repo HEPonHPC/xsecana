@@ -20,20 +20,22 @@ namespace xsec {
 
     JointTemplateFitSignalEstimator::
     JointTemplateFitSignalEstimator(const std::map<std::string, fit::TemplateFitSample> & samples,
+                                    const std::map<std::string, std::string> & component_conditioning,
                                     const TH1 * mask)
             : fReducer(mask) {
-        fJointEstimator = new TemplateFitSignalEstimator(fit::detail::_join(samples), mask);
+        fJointEstimator = new TemplateFitSignalEstimator(fit::detail::_join(samples, component_conditioning), mask);
         for(const auto & sample : samples) {
             fSampleEstimators[sample.first] = new TemplateFitSignalEstimator(sample.second, mask);
         }
-        std::map<std::string, fit::TemplateFitSample> inverted_samples = _invert_samples(samples);
-        fJointEstimatorInverse = new TemplateFitSignalEstimator(fit::detail::_join(inverted_samples), mask);
-
-        auto sample_it = fSampleEstimators.begin();
-        fCondiSampleLabel = sample_it->first;
-        sample_it++;
-
-        fComplimentarySampleLabel = sample_it->first;
+        //std::map<std::string, fit::TemplateFitSample> inverted_samples = _invert_samples(samples);
+        // TODO remove the inverted fit
+        //fJointEstimatorInverse = new TemplateFitSignalEstimator(fit::detail::_join(inverted_samples, component_conditioning), mask);
+        //
+        //auto sample_it = fSampleEstimators.begin();
+        //fCondiSampleLabel = sample_it->first;
+        //sample_it++;
+        //
+        //fComplimentarySampleLabel = sample_it->first;
     }
 
     void
@@ -44,7 +46,7 @@ namespace xsec {
             sample.second->FixComponent(template_name, val);
         }
         fJointEstimator->FixComponent(template_name, val);
-        fJointEstimatorInverse->FixComponent(template_name, val);
+        //fJointEstimatorInverse->FixComponent(template_name, val);
     }
 
     void
@@ -78,14 +80,20 @@ namespace xsec {
 
     TH2D *
     JointTemplateFitSignalEstimator::
-    GetTotalCovariance() const {
-        return fJointEstimator->GetTotalCovariance();
+    GetTotalSystematicCovariance() const {
+        return fJointEstimator->GetTotalSystematicCovariance();
     }
 
     TH2D *
     JointTemplateFitSignalEstimator::
-    GetCovariance(const std::string & systematic_name) const {
-        return fJointEstimator->GetCovariance(systematic_name);
+    GetTotalCovariance(const std::map<std::string, TH1*> & params) const {
+        return fJointEstimator->GetTotalCovariance(params);
+    }
+
+    TH2D *
+    JointTemplateFitSignalEstimator::
+    GetSystematicCovariance(const std::string & systematic_name) const {
+        return fJointEstimator->GetSystematicCovariance(systematic_name);
     }
 
     TH2D *
@@ -293,53 +301,59 @@ namespace xsec {
 
     std::map<std::string, TemplateFitResult>
     JointTemplateFitSignalEstimator::
-    _joint_fit_result(const TemplateFitResult & condi_sample_fit_result) const {
-        std::map<std::string, TemplateFitResult> joint_results;
+    _joint_fit_result(const TemplateFitResult & joint_fit_result) const {
+        std::map<std::string, TemplateFitResult> all_results;
 
-
-        auto sample_it = fSampleEstimators.begin();
-        joint_results[sample_it->first] = condi_sample_fit_result;
+        all_results["joint"] = joint_fit_result;
         // Normalization uncertainty for fixed components need to be re-calculated
         // since the joint template fitter projects all samples into the phase space,
         // but we calculate this separately for each sample
-        for(const auto & fixed_component_label : fFixedComponentLabels) {
-            auto prefit_uncertainty = fSampleEstimators.at(sample_it->first)->PrefitComponentUncertainty(fixed_component_label);
-            joint_results[sample_it->first].component_params_error_up.at(fixed_component_label) =
-                    (TH1*) prefit_uncertainty.Up()->Clone();
-            joint_results[sample_it->first].component_params_error_down.at(fixed_component_label) =
-                    (TH1*) prefit_uncertainty.Down()->Clone();
-            joint_results[sample_it->first].component_params_error_up.at(fixed_component_label)->Multiply(
-                    joint_results[sample_it->first].component_params.at(fixed_component_label)
-            );
-            joint_results[sample_it->first].component_params_error_down.at(fixed_component_label)->Multiply(
-                    joint_results[sample_it->first].component_params.at(fixed_component_label)
-            );
+        for(const auto & sample : fSampleEstimators) {
+            for (const auto & fixed_component_label: fFixedComponentLabels) {
+                auto prefit_uncertainty = fSampleEstimators.at(sample.first)->PrefitComponentUncertainty(
+                        fixed_component_label);
+                all_results[sample.first].component_params[fixed_component_label] =
+                        (TH1*) joint_fit_result.component_params.at(fixed_component_label)->Clone();
+                all_results[sample.first].component_params_error_up[fixed_component_label] =
+                        (TH1 *) prefit_uncertainty.Up()->Clone();
+                all_results[sample.first].component_params_error_down[fixed_component_label] =
+                        (TH1 *) prefit_uncertainty.Down()->Clone();
+                all_results[sample.first].component_params_error_up.at(fixed_component_label)->Multiply(
+                        all_results.at(sample.first).component_params.at(fixed_component_label)
+                );
+                all_results[sample.first].component_params_error_down.at(fixed_component_label)->Multiply(
+                        all_results.at(sample.first).component_params.at(fixed_component_label)
+                );
+            }
         }
+        
+        for (const auto & component: joint_fit_result.component_params) {
+            if(fFixedComponentLabels.find(component.first) != fFixedComponentLabels.end()) continue;
 
-        std::map<std::string, TH1*> comp_params;
-        std::map<std::string, TH1*> comp_params_error_up;
-        std::map<std::string, TH1*> comp_params_error_down;
-        for (const auto & component: condi_sample_fit_result.component_params) {
-            comp_params[component.first] =
+            fit::ReducedJointTemplateComponent * joint_component =
+                    (fit::ReducedJointTemplateComponent*) fJointEstimator->GetReducedComponent(component.first);
+            std::string condi_sample_label = joint_component->GetConditioningSampleLabel();
+            std::string comp_sample_label = joint_component->GetComplimentarySampleLabel();
+
+            all_results[condi_sample_label].component_params[component.first] =
+                    joint_fit_result.component_params.at(component.first);
+            all_results[condi_sample_label].component_params_error_up[component.first] =
+                    joint_fit_result.component_params_error_up.at(component.first);
+            all_results[condi_sample_label].component_params_error_down[component.first] =
+                    joint_fit_result.component_params_error_down.at(component.first);
+
+
+            all_results[comp_sample_label].component_params[component.first] =
                     _condi_params_to_comp_params(component.first,
-                                                 condi_sample_fit_result.component_params.at(component.first));
-            comp_params_error_up[component.first] =
+                                                 joint_fit_result.component_params.at(component.first));
+            all_results[comp_sample_label].component_params_error_up[component.first] =
                     _condi_params_to_comp_params(component.first,
-                                                 condi_sample_fit_result.component_params_error_up.at(component.first));
-            comp_params_error_down[component.first] =
+                                                 joint_fit_result.component_params_error_up.at(component.first));
+            all_results[comp_sample_label].component_params_error_down[component.first] =
                     _condi_params_to_comp_params(component.first,
-                                                 condi_sample_fit_result.component_params_error_down.at(component.first));
+                                                 joint_fit_result.component_params_error_down.at(component.first));
         }
-        sample_it++;
-        joint_results[sample_it->first] = {
-                condi_sample_fit_result.fun_val,
-                comp_params,
-                comp_params_error_up,
-                comp_params_error_down,
-                0, // is there a way to calculate this? Not sure yet so don't return anything misleading
-                condi_sample_fit_result.fun_calls,
-        };
-        return joint_results;
+        return all_results;
     }
 
     std::shared_ptr<TH1>
@@ -356,10 +370,10 @@ namespace xsec {
     JointTemplateFitSignalEstimator::
     Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
         int nrandom_seeds) const {
-        //return _joint_fit_result(fJointEstimator->Fit(data, nrandom_seeds));
-        return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), nrandom_seeds),
-                                             JoinData(_invert_samples(data)),
-                                             nrandom_seeds);
+        return _joint_fit_result(fJointEstimator->Fit(JoinData(data), nrandom_seeds));
+        //return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), nrandom_seeds),
+        //                                     JoinData(_invert_samples(data)),
+        //                                     nrandom_seeds);
         //return this->Fit(JoinData(data), nrandom_seeds);
     }
 
@@ -368,19 +382,20 @@ namespace xsec {
     Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
         fit::IFitter * fitter,
         int nrandom_seeds) {
-        return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), fitter, nrandom_seeds),
-                                             JoinData(_invert_samples(data)),
-                                             nrandom_seeds);
-        //return this->Fit(JoinData(data), fitter, nrandom_seeds);
+        //return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), fitter, nrandom_seeds),
+        //                                     JoinData(_invert_samples(data)),
+        //                                     nrandom_seeds);
+        return _joint_fit_result(fJointEstimator->Fit(JoinData(data), fitter, nrandom_seeds));
     }
 
     std::map<std::string, TemplateFitResult>
     JointTemplateFitSignalEstimator::
     Fit(const std::map<std::string, std::shared_ptr<TH1>> data,
         const std::map<std::string, TH1*> & seed) const {
-        return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), seed),
-                                             JoinData(_invert_samples(data)),
-                                             seed);
+        //return _joint_fit_result_run_inverse(fJointEstimator->Fit(JoinData(data), seed),
+        //                                     JoinData(_invert_samples(data)),
+        //                                     seed);
+        return _joint_fit_result(fJointEstimator->Fit(JoinData(data), seed));
 
     }
 
