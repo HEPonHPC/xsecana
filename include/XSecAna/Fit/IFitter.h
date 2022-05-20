@@ -67,13 +67,13 @@ namespace xsec {
                 std::cout << "Seeding fit with the following parameter configurations:" << std::endl;
                 std::cout << "--------------------------------------------------------" << std::endl;
                 std::cout << std::left;
-                std::cout << std::setw(20) << "chi-squared" << "|" << " (seed - 1) l^2 norm" << std::endl;
+                std::cout << std::setw(20) << "chi-squared" << "|" << " (seed - 1) l^2 norm / N" << std::endl;
                 std::cout << "--------------------------------------------------------" << std::endl;
                 std::vector<Vector> best_seeds(take);
                 for (auto iseed = 0u; iseed < take; iseed++) {
                     best_seeds[iseed] = seeds[seed_idx[iseed]];
                     std::cout << std::setw(20) << chi2[seed_idx[iseed]] << "| ";
-                    std::cout << (best_seeds[iseed] - Vector::Ones(best_seeds[iseed].size())).lpNorm<2>() << std::endl;
+                    std::cout << (best_seeds[iseed] - Vector::Ones(best_seeds[iseed].size())).lpNorm<2>() / best_seeds[iseed].size()<< std::endl;
                 }
                 return best_seeds;
             }
