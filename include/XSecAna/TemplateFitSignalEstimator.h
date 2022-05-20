@@ -58,8 +58,9 @@ namespace xsec {
 
         double Chi2(const std::shared_ptr<TH1> data,
                     const std::map<std::string, TH1*> & params = std::map<std::string, TH1*>()) const;
-        TH2D * GetTotalCovariance() const;
-        TH2D * GetCovariance(const std::string & systematic_name) const;
+        TH2D * GetTotalSystematicCovariance() const;
+        TH2D * GetTotalCovariance(const std::map<std::string, TH1*> & params) const;
+        TH2D * GetSystematicCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;
 
         TCanvas * DrawParameterCovariance(const TemplateFitResult & fit_result) const;
@@ -87,12 +88,14 @@ namespace xsec {
                           std::map<std::string, TH1 *> & params) const;
         TH1 * ToUserParamsComponent(const fit::Vector & calc_params) const;
 
+        TH1 * GetRandomSampleFakeData(const std::map<std::string, TH1*> & params, int seed = 0) const;
+        TH1 * _to_template_binning(const Array & reduced_templates) const;
     protected:
         bool _is_component_fixed(std::string label) const;
         void _draw_covariance_helper(TCanvas * c, TH1 * mat, const TemplateFitResult & fit_result) const;
         TemplateFitResult _template_fit_result(const fit::FitResult & fit_result) const;
         TemplateFitResult _fit(const std::shared_ptr<TH1> data, const std::vector<Vector> & seeds) const;
-        TH1 * _to_template_binning(const Array & reduced_templates) const;
+
         TH1 * _project_prediction(const Array & prediction) const;
 
 

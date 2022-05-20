@@ -197,7 +197,21 @@ namespace xsec {
 
     TH2D *
     TemplateFitSignalEstimator::
-    GetTotalCovariance() const {
+    GetTotalCovariance(const std::map<std::string, TH1*> & params) const {
+        Matrix mat = fFitCalc->GetTotalCovariance(ToCalculatorParams(params));
+        auto ret = new TH2D("", "",
+                            fTotalTemplate->GetNbinsX(), 0, fTotalTemplate->GetNbinsX(),
+                            fTotalTemplate->GetNbinsX(), 0, fTotalTemplate->GetNbinsX());
+        ret->SetTitle("Total Covariance");
+        ret->GetXaxis()->SetTitle("Template Bins");
+        ret->GetYaxis()->SetTitle("Template Bins");
+        root::FillTH2Contents(ret, mat);
+        return ret;
+    }
+
+    TH2D *
+    TemplateFitSignalEstimator::
+    GetTotalSystematicCovariance() const {
         return (TH2D *) fTotalCovariance;
     }
 
@@ -209,7 +223,7 @@ namespace xsec {
 
     TH2D *
     TemplateFitSignalEstimator::
-    GetCovariance(const std::string & systematic_name) const {
+    GetSystematicCovariance(const std::string & systematic_name) const {
         return (TH2D *) fCovarianceMatrices.at(systematic_name);
     }
 
@@ -301,6 +315,19 @@ namespace xsec {
                         .transpose().reshaped(),
                 fPredictionProps
         );
+    }
+
+    TH1 *
+    TemplateFitSignalEstimator::
+    GetRandomSampleFakeData(const std::map<std::string, TH1*> & params,
+                            int seed) const {
+        TH2D * cov = this->GetTotalCovariance(params);
+        auto prediction = std::shared_ptr<TH1>(this->PredictTotal(params));
+        auto fake1d = Systematic<TH1>::RandomSample(this->fReducer.Reduce(prediction)->GetHist().get(),
+                                                    cov,
+                                                    seed);
+        return this->_to_template_binning(root::MapContentsToEigenInner(fake1d));
+        return fake1d;
     }
 
     TH1 *
