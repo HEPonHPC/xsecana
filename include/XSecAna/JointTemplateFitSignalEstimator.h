@@ -45,6 +45,8 @@ namespace xsec {
         TH2D * GetSystematicCovariance(const std::string & systematic_name) const;
         TH2D * GetInverseCovariance() const;
 
+	void UpdateSampleFitCovariances(std::map<std::string, TemplateFitResult> & fit_results) const;
+
         static std::shared_ptr<TH1> JoinData(const std::map<std::string, std::shared_ptr<TH1>> & data_samples);
     private:
         std::map<std::string, TemplateFitResult> _joint_fit_result(const TemplateFitResult & condi_sample_fit_result) const;

@@ -353,7 +353,95 @@ namespace xsec {
                     _condi_params_to_comp_params(component.first,
                                                  joint_fit_result.component_params_error_down.at(component.first));
         }
+
+
         return all_results;
+    }
+
+    void
+    JointTemplateFitSignalEstimator::
+    UpdateSampleFitCovariances(std::map<std::string, TemplateFitResult> & fit_results) const {
+	Matrix joint_fit_covariance = root::MapContentsToEigenInner(fit_results["joint"].covariance)
+	  .reshaped(fit_results["joint"].covariance->GetNbinsX(),
+		    fit_results["joint"].covariance->GetNbinsY());
+	std::map<std::string, Matrix> sample_fit_covariances;
+	for(const auto & sample : fit_results) {
+	    if(sample.first == "joint") continue;
+	    sample_fit_covariances[sample.first] = Matrix::Zero(joint_fit_covariance.rows(), joint_fit_covariance.cols());
+	}
+
+	int component_idx = -1;
+	int nouter_bins = ((fit::TemplateFitCalculator*) this->fJointEstimator->GetFitCalc())
+	  ->GetNOuterBins();
+        for (const auto & component: fit_results.at("joint").component_params) {
+	    component_idx++;
+            if(fFixedComponentLabels.find(component.first) != fFixedComponentLabels.end()) continue;
+
+            fit::ReducedJointTemplateComponent * joint_component =
+                    (fit::ReducedJointTemplateComponent*) fJointEstimator->GetReducedComponent(component.first);
+            std::string condi_sample_label = joint_component->GetConditioningSampleLabel();
+            std::string comp_sample_label = joint_component->GetComplimentarySampleLabel();
+
+	    Array vcondi_param_variance_up = this->GetSampleTemplateFit(condi_sample_label)
+	      ->ToCalculatorParamsComponent(fit_results[condi_sample_label].component_params_error_up[component.first]);
+	    vcondi_param_variance_up = vcondi_param_variance_up.square();
+	    Array vcondi_param_variance_down = this->GetSampleTemplateFit(condi_sample_label)
+	      ->ToCalculatorParamsComponent(fit_results[condi_sample_label].component_params_error_down[component.first]);
+	    vcondi_param_variance_down = vcondi_param_variance_down.square();
+	    Array vcondi_param_variance = (vcondi_param_variance_up > vcondi_param_variance_down).select(vcondi_param_variance_up,
+													 vcondi_param_variance_down);
+
+	    Array vcomp_param_variance_up = this->GetSampleTemplateFit(comp_sample_label)
+	      ->ToCalculatorParamsComponent(fit_results[comp_sample_label].component_params_error_up[component.first]);
+	    vcomp_param_variance_up = vcomp_param_variance_up.square();
+	    Array vcomp_param_variance_down = this->GetSampleTemplateFit(comp_sample_label)
+	      ->ToCalculatorParamsComponent(fit_results[comp_sample_label].component_params_error_down[component.first]);
+	    vcomp_param_variance_down = vcomp_param_variance_down.square();
+	    Array vcomp_param_variance = (vcomp_param_variance_up > vcomp_param_variance_down).select(vcomp_param_variance_up,
+												      vcomp_param_variance_down);
+
+	    sample_fit_covariances.at(condi_sample_label)
+	      .block(component_idx * nouter_bins,
+		     component_idx * nouter_bins,
+		     nouter_bins,
+		     nouter_bins).diagonal() = vcondi_param_variance;
+
+	    sample_fit_covariances.at(comp_sample_label)
+	      .block(component_idx * nouter_bins,
+		     component_idx * nouter_bins,
+		     nouter_bins,
+		     nouter_bins).diagonal() = vcomp_param_variance;
+
+	    int cross_component_idx = -1;
+	    for (const auto & cross_component: fit_results.at("joint").component_params) {
+		cross_component_idx++;
+		if(fFixedComponentLabels.find(cross_component.first) != fFixedComponentLabels.end()) continue;
+
+		fit::ReducedJointTemplateComponent * joint_cross_component =
+		  (fit::ReducedJointTemplateComponent*) fJointEstimator->GetReducedComponent(cross_component.first);
+		std::string cross_condi_sample_label = joint_cross_component->GetConditioningSampleLabel();
+		std::string cross_comp_sample_label = joint_cross_component->GetComplimentarySampleLabel();
+
+		if(cross_condi_sample_label == condi_sample_label) {
+		    sample_fit_covariances.at(cross_condi_sample_label)
+		      .block(cross_component_idx * nouter_bins,
+			     component_idx * nouter_bins,
+			     nouter_bins,
+			     nouter_bins) = joint_fit_covariance
+		      .block(cross_component_idx * nouter_bins,
+			     component_idx * nouter_bins,
+			     nouter_bins,
+			     nouter_bins);
+		}
+	    }
+	}
+	for(const auto & sample : fit_results) {
+	    if(sample.first == "joint") continue;
+	    fit_results.at(sample.first).covariance = (TH2D*) fit_results.at("joint").covariance->Clone();
+	    fit_results.at(sample.first).covariance->Reset("ICEM");
+	    root::FillTH2Contents(fit_results.at(sample.first).covariance,
+				  sample_fit_covariances.at(sample.first));
+	}
     }
 
     std::shared_ptr<TH1>
