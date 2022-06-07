@@ -458,19 +458,19 @@ namespace xsec {
                     fJoinedNormTotalCovariance->Add(fJoinedNormCovariances.at(syst.first));
                 }
             }
-            // add statistical uncertainy (maybe)
-            for (int i = 1; i <= fJoinedNormTotalCovariance->GetNbinsX(); i++) {
-                double v_ii = fJoinedNormTotalCovariance->GetBinContent(i,i);
-                double stat = fJointNormalization->GetBinContent(i);
-                fJoinedNormTotalCovariance->SetBinContent(i,i, v_ii + stat);
-            }
-
             // make sure bins didn't get scrambled at some point
             // errors calculated for the reduced nominal normalization should be
             // the same as the newly created covariance matrix from reduced systematics
             for (int x = 1; x < fJointNormalization->GetNbinsX() + 2; x++) {
                 assert(fJointNormalization->GetBinError(x) ==
                        std::sqrt(fJoinedNormTotalCovariance->GetBinContent(x, x)));
+            }
+
+            // add statistical uncertainy
+            for (int i = 1; i <= fJoinedNormTotalCovariance->GetNbinsX(); i++) {
+                double v_ii = fJoinedNormTotalCovariance->GetBinContent(i,i);
+                double stat = fJointNormalization->GetBinContent(i);
+                fJoinedNormTotalCovariance->SetBinContent(i,i, v_ii + stat);
             }
 
             fConditioningSampleNormalization = root::MapContentsToEigenInner(fSampleNormalizations.at(fConditioningSampleLabel).get());
