@@ -200,7 +200,7 @@ namespace xsec {
                         auto dj = (std::abs(dj_0) > std::abs(dj_1)) ? dj_0 : dj_1;
 
                         //cov(i, j) = di * dj;
-                        cov(i, j) = di_0 * dj_0 + di_1 * dj_1;
+                        cov(i, j) = (di_0 * dj_0 + di_1 * dj_1) / 2;
                     }
                 }
             }
@@ -223,7 +223,7 @@ namespace xsec {
                             v += (shifts[u](i) - multiverse_means[i]) *
                                  (shifts[u](j) - multiverse_means[j]);
                         }
-                        cov(i, j) =  v / (fContainer.size()-1);
+                        cov(i, j) =  v / (fContainer.size());
                     }
                 }
             }
