@@ -138,6 +138,7 @@ namespace xsec {
             }
             else {
                 std::cout << "Warning: Invalid Global Minimum" << std::endl;
+		throw xsec::fit::InvalidMinimumError();
             }
 
             // disown fit calc
