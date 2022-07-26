@@ -9,6 +9,14 @@
 
 namespace xsec {
     namespace fit {
+        class InvalidMinimumError : public std::exception {
+        public:
+	  const char * what() const noexcept override {
+	      // be explicit or compiler complains
+	      return std::string("Invalid Minimum Error").c_str();
+	  }
+        };
+
         typedef Eigen::VectorXd Vector;
         typedef Eigen::MatrixXd Matrix;
         typedef Eigen::Map<Eigen::VectorXd> VectorMap;
