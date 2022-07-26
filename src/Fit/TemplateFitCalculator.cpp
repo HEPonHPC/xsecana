@@ -46,7 +46,16 @@ namespace xsec {
             Matrix total_covariance = fSystematicCovariance;
             // add statistical uncertainty of reweighted prediction
             if(!fIgnoreStatisticalUncertainty) {
-                total_covariance += u.asDiagonal();
+                Vector stat_cnp = Vector::Zero(u.size());
+                for(auto i = 0u; i < stat_cnp.size(); i++) {
+                    if(data(i)) {
+                        stat_cnp(i) = 3. / (1. / data(i) + 2. / u(i));
+                    }
+                    else {
+                        stat_cnp(i) = u(i) / 2.;
+                    }
+                }
+                total_covariance += stat_cnp.asDiagonal();
             }
             fDecomp.compute(total_covariance);
             return v.dot(fDecomp.solve(v));// + LogDetV(fDecomp);
