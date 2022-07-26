@@ -93,6 +93,8 @@ namespace xsec {
                 }
             }
 
+	    const TH1 * GetMask() const { return fMask; }
+
         private:
             const TH1 * fMask;
             detail::ParamMap fMap;
